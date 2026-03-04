@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "8Gbg9lfbwV4=",
+  "dgSpecHash": "PHnrcIBXYZs=",
   "success": true,
-  "projectFilePath": "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\StokTakip.csproj",
+  "projectFilePath": "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\StokTakip.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\tolga.acar\\.nuget\\packages\\closedxml\\0.102.3\\closedxml.0.102.3.nupkg.sha512",
     "C:\\Users\\tolga.acar\\.nuget\\packages\\documentformat.openxml\\2.16.0\\documentformat.openxml.2.16.0.nupkg.sha512",

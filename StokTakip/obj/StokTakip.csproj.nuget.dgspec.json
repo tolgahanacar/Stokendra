@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\StokTakip.csproj": {}
+    "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\StokTakip.csproj": {}
   },
   "projects": {
-    "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\StokTakip.csproj": {
+    "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\StokTakip.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\StokTakip.csproj",
+        "projectUniqueName": "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\StokTakip.csproj",
         "projectName": "Stokendra",
-        "projectPath": "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\StokTakip.csproj",
+        "projectPath": "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\StokTakip.csproj",
         "packagesPath": "C:\\Users\\tolga.acar\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\tolga.acar\\Downloads\\Stokendra\\StokTakip\\obj\\",
+        "outputPath": "C:\\Users\\tolga.acar\\Documents\\GitHub\\Stokendra\\StokTakip\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\tolga.acar\\AppData\\Roaming\\NuGet\\NuGet.Config"

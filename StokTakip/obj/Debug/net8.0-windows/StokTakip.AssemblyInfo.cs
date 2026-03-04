@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Stokendra")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ee007dc3a343ec5627a995773ddddcbcfe973272")]
 [assembly: System.Reflection.AssemblyProductAttribute("Stokendra")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Stokendra")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
