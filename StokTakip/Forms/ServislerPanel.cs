@@ -74,6 +74,7 @@ public class ServislerPanel : Panel
             new DataGridViewTextBoxColumn { Name = "Id", HeaderText = "ID", Visible = false },
             new DataGridViewTextBoxColumn { Name = "CihazAdi", HeaderText = L("device_name", "Cihaz Adı"), FillWeight = 130 },
             new DataGridViewTextBoxColumn { Name = "SeriNumarasi", HeaderText = L("serial_number", "Seri Numarası"), FillWeight = 100 },
+            new DataGridViewTextBoxColumn { Name = "Firma", HeaderText = L("company", "Firma"), FillWeight = 120 },
             new DataGridViewTextBoxColumn { Name = "BakimTarihi", HeaderText = L("maintenance_date", "Bakım Tarihi"), FillWeight = 100 },
             new DataGridViewTextBoxColumn { Name = "Aciklama", HeaderText = L("description", "Açıklama"), FillWeight = 250 }
         );
@@ -102,7 +103,7 @@ public class ServislerPanel : Panel
         dgv.Rows.Clear();
         foreach (var s in _kayitlar)
         {
-            dgv.Rows.Add(s.Id, s.CihazAdi, s.SeriNumarasi, s.BakimTarihi.ToShortDateString(), s.Aciklama);
+            dgv.Rows.Add(s.Id, s.CihazAdi, s.SeriNumarasi, s.Firma, s.BakimTarihi.ToShortDateString(), s.Aciklama);
         }
         lblInfo.Text = $"{_kayitlar.Count} servis kaydı listelendi.";
     }
@@ -175,7 +176,7 @@ public class ServislerPanel : Panel
             using var wb = new ClosedXML.Excel.XLWorkbook();
             var ws = wb.AddWorksheet("Servis Kayıtları");
 
-            string[] headers = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
+            string[] headers = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -189,8 +190,9 @@ public class ServislerPanel : Panel
             {
                 ws.Cell(row, 1).Value = s.CihazAdi;
                 ws.Cell(row, 2).Value = s.SeriNumarasi;
-                ws.Cell(row, 3).Value = s.BakimTarihi.ToShortDateString();
-                ws.Cell(row, 4).Value = s.Aciklama;
+                ws.Cell(row, 3).Value = s.Firma;
+                ws.Cell(row, 4).Value = s.BakimTarihi.ToShortDateString();
+                ws.Cell(row, 5).Value = s.Aciklama;
                 row++;
             }
 
@@ -229,10 +231,10 @@ public class ServislerPanel : Panel
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 6; 
             }
             
-            float[] w = { 200, 150, 100, 0 }; 
+            float[] w = { 150, 100, 150, 80, 0 }; 
             float u = 0; foreach (var ww in w) u += ww; w[^1] = pw - u;
             
-            string[] hdr = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
+            string[] hdr = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
             using var brHd = new SolidBrush(Color.FromArgb(230, 235, 245)); g.FillRectangle(brHd, lm, y, pw, 18); float x = lm;
             for (int i = 0; i < hdr.Length; i++) { g.DrawString(hdr[i], fH, br, x + 2, y + 2); x += w[i]; } y += 20;
             
@@ -240,7 +242,7 @@ public class ServislerPanel : Panel
             for (int i = ps; i < end; i++) 
             {
                 var h = sorted[i]; if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 18); x = lm;
-                string[] cells = { h.CihazAdi, h.SeriNumarasi, h.BakimTarihi.ToShortDateString(), h.Aciklama };
+                string[] cells = { h.CihazAdi, h.SeriNumarasi, h.Firma, h.BakimTarihi.ToShortDateString(), h.Aciklama };
                 for (int c = 0; c < cells.Length; c++) 
                 { 
                     g.DrawString(cells[c], fC, br, new RectangleF(x + 2, y + 2, w[c] - 4, 16), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); 

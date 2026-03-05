@@ -9,7 +9,7 @@ namespace StokTakip.Data;
 public class Database
 {
     private readonly string _connectionString;
-    private const int CurrentSchemaVersion = 7;
+    private const int CurrentSchemaVersion = 8;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
 
     public Database(string dbPath)
@@ -79,6 +79,7 @@ public class Database
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 CihazAdi TEXT NOT NULL,
                 SeriNumarasi TEXT DEFAULT '',
+                Firma TEXT DEFAULT '',
                 BakimTarihi TEXT NOT NULL,
                 Aciklama TEXT DEFAULT ''
             );
@@ -93,6 +94,7 @@ public class Database
         if (version < 5) MigrateToV5(con);
         if (version < 6) MigrateToV6(con);
         if (version < 7) MigrateToV7(con);
+        if (version < 8) MigrateToV8(con);
         SetSchemaVersion(con, CurrentSchemaVersion);
         SeedDefaults(con);
     }
@@ -126,6 +128,11 @@ public class Database
             Aciklama TEXT DEFAULT ''
         )");
         TryAlter(c, "CREATE INDEX IF NOT EXISTS IX_ServisKayit_Tarih ON ServisKayitlari(BakimTarihi)");
+    }
+
+    private static void MigrateToV8(SqliteConnection c)
+    {
+        TryAlter(c, "ALTER TABLE ServisKayitlari ADD COLUMN Firma TEXT DEFAULT ''");
     }
 
     private static void SeedDefaults(SqliteConnection c)
@@ -354,7 +361,7 @@ public class Database
 
             string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
             
-            m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, BakimTarihi, Aciklama FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
+            m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Aciklama FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
             using var r = m.ExecuteReader();
             while (r.Read())
             {
@@ -363,8 +370,9 @@ public class Database
                     Id = r.GetInt32(0),
                     CihazAdi = r.GetString(1),
                     SeriNumarasi = r.IsDBNull(2) ? "" : r.GetString(2),
-                    BakimTarihi = ParseDateSafe(r.GetString(3)),
-                    Aciklama = r.IsDBNull(4) ? "" : r.GetString(4)
+                    Firma = r.IsDBNull(3) ? "" : r.GetString(3),
+                    BakimTarihi = ParseDateSafe(r.GetString(4)),
+                    Aciklama = r.IsDBNull(5) ? "" : r.GetString(5)
                 });
             }
         }
@@ -378,9 +386,10 @@ public class Database
         {
             using var c = OpenConnection();
             var m = c.CreateCommand();
-            m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, BakimTarihi, Aciklama) VALUES ($ca, $sn, $bt, $ac)";
+            m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Aciklama) VALUES ($ca, $sn, $f, $bt, $ac)";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
             m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
+            m.Parameters.AddWithValue("$f", s.Firma ?? "");
             m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
             m.ExecuteNonQuery();
@@ -395,9 +404,10 @@ public class Database
         {
             using var c = OpenConnection();
             var m = c.CreateCommand();
-            m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, BakimTarihi=$bt, Aciklama=$ac WHERE Id=$id";
+            m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, Firma=$f, BakimTarihi=$bt, Aciklama=$ac WHERE Id=$id";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
             m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
+            m.Parameters.AddWithValue("$f", s.Firma ?? "");
             m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
             m.Parameters.AddWithValue("$id", s.Id);

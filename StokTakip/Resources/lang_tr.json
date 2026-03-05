@@ -153,6 +153,7 @@
   "cat_toner": "Toner/Kartuş",
   "cat_spare": "Yedek Parça",
   "cat_other": "Diğer",
+  "cat_drum": "Drum Ünitesi",
   "stocks_subtitle": "Alt kart stoklarına genel bakış",
   "card_type": "Kart Tipi",
   "parent_card": "Üst Kart",
@@ -202,5 +203,6 @@
   "edit_service_record": "Servis Kaydı Düzenle",
   "new_service_record": "Yeni Servis Kaydı",
   "confirm_service_delete": "Bu servis kaydı silinsin mi?",
-  "device_name_required": "Cihaz adı zorunludur."
+  "device_name_required": "Cihaz adı zorunludur.",
+  "company": "Firma"
 }

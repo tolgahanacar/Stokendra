@@ -9,6 +9,7 @@ public class ServisEkleForm : Form
 
     private TextBox txtCihazAdi = new();
     private TextBox txtSeriNumarasi = new();
+    private TextBox txtFirma = new();
     private DateTimePicker dtBakimTarihi = new();
     private TextBox txtAciklama = new();
 
@@ -40,6 +41,10 @@ public class ServisEkleForm : Form
         // Seri Numarası
         tbl.Controls.Add(MakeLabel(L("serial_number", "Seri Numarası")), 0, row);
         txtSeriNumarasi = MakeTextBox(); tbl.Controls.Add(txtSeriNumarasi, 1, row); row++;
+
+        // Firma
+        tbl.Controls.Add(MakeLabel(L("company", "Firma")), 0, row);
+        txtFirma = MakeTextBox(); tbl.Controls.Add(txtFirma, 1, row); row++;
 
         // Bakım Tarihi
         tbl.Controls.Add(MakeLabel(L("maintenance_date", "Bakım Tarihi *")), 0, row);
@@ -76,6 +81,7 @@ public class ServisEkleForm : Form
     {
         txtCihazAdi.Text = Kayit.CihazAdi;
         txtSeriNumarasi.Text = Kayit.SeriNumarasi;
+        txtFirma.Text = Kayit.Firma;
         if (Kayit.BakimTarihi >= dtBakimTarihi.MinDate && Kayit.BakimTarihi <= dtBakimTarihi.MaxDate)
             dtBakimTarihi.Value = Kayit.BakimTarihi;
         txtAciklama.Text = Kayit.Aciklama;
@@ -91,6 +97,7 @@ public class ServisEkleForm : Form
 
         Kayit.CihazAdi = txtCihazAdi.Text.Trim();
         Kayit.SeriNumarasi = txtSeriNumarasi.Text.Trim();
+        Kayit.Firma = txtFirma.Text.Trim();
         Kayit.BakimTarihi = dtBakimTarihi.Value;
         Kayit.Aciklama = txtAciklama.Text.Trim();
 

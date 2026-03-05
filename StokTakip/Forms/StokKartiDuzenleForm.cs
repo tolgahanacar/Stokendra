@@ -69,7 +69,7 @@ public class StokKartiDuzenleForm : Form
 
         // Kategori
         tbl.Controls.Add(MakeLabel(L("category")), 0, row);
-        cmbKategori = MakeCombo(new[] { L("cat_printer"), L("cat_toner"), L("cat_spare"), L("cat_other") }, 3);
+        cmbKategori = MakeCombo(new[] { L("cat_printer"), L("cat_toner"), L("cat_spare"), L("cat_drum", "Drum Ünitesi"), L("cat_other") }, 3);
         tbl.Controls.Add(cmbKategori, 1, row); row++;
 
         // Min Stok
