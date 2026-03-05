@@ -9,12 +9,12 @@ namespace StokTakip.Data;
 public class Database
 {
     private readonly string _connectionString;
-    private const int CurrentSchemaVersion = 6;
+    private const int CurrentSchemaVersion = 7;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
 
     public Database(string dbPath)
     {
-        _connectionString = $"Data Source={dbPath}";
+        _connectionString = $"Data Source={dbPath};Foreign Keys=True;";
         Initialize();
     }
 
@@ -22,15 +22,16 @@ public class Database
     {
         var con = new SqliteConnection(_connectionString);
         con.Open();
-        using var pragma = con.CreateCommand();
-        pragma.CommandText = "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;";
-        pragma.ExecuteNonQuery();
         return con;
     }
 
     private void Initialize()
     {
         using var con = OpenConnection();
+        using var pragma = con.CreateCommand();
+        pragma.CommandText = "PRAGMA journal_mode=WAL;";
+        pragma.ExecuteNonQuery();
+
         var cmd = con.CreateCommand();
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS StokKartlari (
@@ -74,6 +75,13 @@ public class Database
                 Tuz TEXT NOT NULL,
                 Rol TEXT DEFAULT 'admin'
             );
+            CREATE TABLE IF NOT EXISTS ServisKayitlari (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CihazAdi TEXT NOT NULL,
+                SeriNumarasi TEXT DEFAULT '',
+                BakimTarihi TEXT NOT NULL,
+                Aciklama TEXT DEFAULT ''
+            );
         ";
         cmd.ExecuteNonQuery();
 
@@ -84,6 +92,7 @@ public class Database
         if (version < 4) MigrateToV4(con);
         if (version < 5) MigrateToV5(con);
         if (version < 6) MigrateToV6(con);
+        if (version < 7) MigrateToV7(con);
         SetSchemaVersion(con, CurrentSchemaVersion);
         SeedDefaults(con);
     }
@@ -105,6 +114,18 @@ public class Database
         TryAlter(c, "CREATE INDEX IF NOT EXISTS IX_StokKart_KodNo ON StokKartlari(KodNo)");
         TryAlter(c, "CREATE INDEX IF NOT EXISTS IX_StokKart_KartTipi ON StokKartlari(KartTipi)");
         TryAlter(c, "CREATE INDEX IF NOT EXISTS IX_AuditLog_Tarih ON AuditLog(Tarih)");
+    }
+
+    private static void MigrateToV7(SqliteConnection c)
+    {
+        TryAlter(c, @"CREATE TABLE IF NOT EXISTS ServisKayitlari (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            CihazAdi TEXT NOT NULL,
+            SeriNumarasi TEXT DEFAULT '',
+            BakimTarihi TEXT NOT NULL,
+            Aciklama TEXT DEFAULT ''
+        )");
+        TryAlter(c, "CREATE INDEX IF NOT EXISTS IX_ServisKayit_Tarih ON ServisKayitlari(BakimTarihi)");
     }
 
     private static void SeedDefaults(SqliteConnection c)
@@ -304,6 +325,101 @@ public class Database
     public void NotSil(int id) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Notlar WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
 
     private static DateTime ParseDateSafe(string s) { if (string.IsNullOrWhiteSpace(s)) return DateTime.MinValue; string[] f = { "yyyy-MM-dd HH:mm:ss","yyyy-MM-dd","dd.MM.yyyy HH:mm:ss","dd.MM.yyyy HH:mm","dd.MM.yyyy","MM/dd/yyyy HH:mm:ss","MM/dd/yyyy" }; if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d; if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) return d; return DateTime.MinValue; }
+
+    // ═══ SERVIS KAYITLARI ═══
+    public List<ServisKaydi> ServisKayitlariniGetir(DateTime? baslangic = null, DateTime? bitis = null, string? arama = null)
+    {
+        var liste = new List<ServisKaydi>();
+        try
+        {
+            using var c = OpenConnection();
+            var m = c.CreateCommand();
+            
+            var conditions = new List<string>();
+            if (baslangic.HasValue)
+            {
+                conditions.Add("BakimTarihi >= $bas");
+                m.Parameters.AddWithValue("$bas", baslangic.Value.ToString(DateFormat, CultureInfo.InvariantCulture));
+            }
+            if (bitis.HasValue)
+            {
+                conditions.Add("BakimTarihi <= $bit");
+                m.Parameters.AddWithValue("$bit", bitis.Value.ToString(DateFormat, CultureInfo.InvariantCulture));
+            }
+            if (!string.IsNullOrWhiteSpace(arama))
+            {
+                conditions.Add("(CihazAdi LIKE $ara OR SeriNumarasi LIKE $ara OR Aciklama LIKE $ara)");
+                m.Parameters.AddWithValue("$ara", $"%{arama}%");
+            }
+
+            string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
+            
+            m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, BakimTarihi, Aciklama FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
+            using var r = m.ExecuteReader();
+            while (r.Read())
+            {
+                liste.Add(new ServisKaydi
+                {
+                    Id = r.GetInt32(0),
+                    CihazAdi = r.GetString(1),
+                    SeriNumarasi = r.IsDBNull(2) ? "" : r.GetString(2),
+                    BakimTarihi = ParseDateSafe(r.GetString(3)),
+                    Aciklama = r.IsDBNull(4) ? "" : r.GetString(4)
+                });
+            }
+        }
+        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        return liste;
+    }
+
+    public void ServisKaydiEkle(ServisKaydi s)
+    {
+        try
+        {
+            using var c = OpenConnection();
+            var m = c.CreateCommand();
+            m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, BakimTarihi, Aciklama) VALUES ($ca, $sn, $bt, $ac)";
+            m.Parameters.AddWithValue("$ca", s.CihazAdi);
+            m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
+            m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
+            m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
+            m.ExecuteNonQuery();
+            AuditLogYaz("EKLE", "ServisKayitlari", 0, s.CihazAdi);
+        }
+        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+    }
+
+    public void ServisKaydiGuncelle(ServisKaydi s)
+    {
+        try
+        {
+            using var c = OpenConnection();
+            var m = c.CreateCommand();
+            m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, BakimTarihi=$bt, Aciklama=$ac WHERE Id=$id";
+            m.Parameters.AddWithValue("$ca", s.CihazAdi);
+            m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
+            m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
+            m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
+            m.Parameters.AddWithValue("$id", s.Id);
+            m.ExecuteNonQuery();
+            AuditLogYaz("GUNCELLE", "ServisKayitlari", s.Id, s.CihazAdi);
+        }
+        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+    }
+
+    public void ServisKaydiSil(int id)
+    {
+        try
+        {
+            using var c = OpenConnection();
+            var m = c.CreateCommand();
+            m.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
+            m.Parameters.AddWithValue("$id", id);
+            m.ExecuteNonQuery();
+            AuditLogYaz("SIL", "ServisKayitlari", id, "Silindi");
+        }
+        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+    }
 
     // ═══ AUTH ═══
     private static string GenerateSalt()

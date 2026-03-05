@@ -150,7 +150,7 @@ public class AyarlarPanel : UserControl
             using var con = new SqliteConnection($"Data Source={Program.Settings.DbPath}");
             con.Open();
 
-            string[] tables = { "StokKartlari", "StokHareketleri", "Notlar", "Birimler", "Departmanlar", "AppConfig", "AuditLog", "Kullanicilar" };
+            string[] tables = { "StokKartlari", "StokHareketleri", "Notlar", "Birimler", "Departmanlar", "AppConfig", "AuditLog", "Kullanicilar", "ServisKayitlari" };
             foreach (var table in tables)
             {
                 try

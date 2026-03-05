@@ -16,10 +16,6 @@ public class StokKartlariPanel : UserControl
 
         // Header
         var pnlH = UIHelper.MakeHeader(L("stock_cards"));
-        lblInfo = new Label { Font = UIHelper.FontSubtitle, ForeColor = UIHelper.TextMuted, Left = 28, Top = 36, AutoSize = true };
-        pnlH.Controls.Add(lblInfo);
-
-        // Toolbar — FlowLayoutPanel (otomatik sarma, taşmaz)
         var pnlT = UIHelper.MakeToolbar();
         txtAra = UIHelper.MakeSearchBox(L("search_placeholder")); txtAra.TextChanged += (_, _) => FilterGrid();
         var btnE  = UIHelper.MakeFlowButton(L("new_card"),    UIHelper.AccentBlue, 110);
@@ -50,18 +46,22 @@ public class StokKartlariPanel : UserControl
         {
             if (e.RowIndex < 0) return;
             string cn = grid.Columns[e.ColumnIndex].Name;
-            if (cn == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
-            { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold); }
-            else if (cn == "KartTipi")
-            { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI Semibold", 9f); }
+            if (e.CellStyle != null)
+            {
+                if (cn == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
+                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold); }
+                else if (cn == "KartTipi")
+                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI Semibold", 9f); }
+            }
         };
         grid.DoubleClick += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
         grid.SelectionChanged += (_, _) => Info();
 
         // Status
-        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 28, BackColor = UIHelper.BgPanel };
-        lblStatus = new Label { Left = 20, Top = 5, AutoSize = true, Font = new Font("Segoe UI Semibold", 8.5f), ForeColor = UIHelper.TextMuted };
-        pnlSt.Controls.Add(lblStatus);
+        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblStatus = new Label { Left = 250, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.AccentBlue };
+        pnlSt.Controls.Add(lblInfo); pnlSt.Controls.Add(lblStatus);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);
         YukleGrid();

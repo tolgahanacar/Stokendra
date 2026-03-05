@@ -193,5 +193,14 @@
   "password_changed": "Şifre başarıyla değiştirildi!",
   "password_mismatch": "Yeni şifreler eşleşmiyor!",
   "password_wrong": "Mevcut şifre hatalı!",
-  "password_empty": "Tüm alanları doldurun."
+  "password_empty": "Tüm alanları doldurun.",
+  "services": "Servisler (Bakım)",
+  "services_subtitle": "Cihaz servis ve bakım kayıtlarını takip edin",
+  "device_name": "Cihaz Adı",
+  "serial_number": "Seri Numarası",
+  "maintenance_date": "Bakım Tarihi",
+  "edit_service_record": "Servis Kaydı Düzenle",
+  "new_service_record": "Yeni Servis Kaydı",
+  "confirm_service_delete": "Bu servis kaydı silinsin mi?",
+  "device_name_required": "Cihaz adı zorunludur."
 }

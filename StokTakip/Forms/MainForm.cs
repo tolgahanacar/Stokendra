@@ -14,7 +14,8 @@ public class MainForm : Form
         ("📋", "stock_cards",     UIHelper.AccentBlue),
         ("📦", "stocks",          UIHelper.AccentGreen),
         ("🔄", "stock_movements", UIHelper.AccentOrange),
-        ("📝", "notes",           UIHelper.AccentPurple),
+        ("🛠", "services",        UIHelper.AccentPurple),
+        ("📝", "notes",           UIHelper.AccentCyan),
         ("🏢", "departments",     UIHelper.AccentYellow),
         ("⚙️", "settings",        UIHelper.TextSecondary),
     };
@@ -90,7 +91,7 @@ public class MainForm : Form
         pnlContent.SuspendLayout(); pnlContent.Controls.Clear();
         Control content = key switch {
             "dashboard" => new DashboardPanel(), "stock_cards" => new StokKartlariPanel(), "stocks" => new StoklarPanel(),
-            "stock_movements" => new StokHareketPanel(), "notes" => new NotlarPanel(), "departments" => new DepartmanlarPanel(),
+            "stock_movements" => new StokHareketPanel(), "services" => new ServislerPanel(), "notes" => new NotlarPanel(), "departments" => new DepartmanlarPanel(),
             "settings" => new AyarlarPanel(), _ => new DashboardPanel()
         };
         content.Dock = DockStyle.Fill; pnlContent.Controls.Add(content); pnlContent.ResumeLayout(true);

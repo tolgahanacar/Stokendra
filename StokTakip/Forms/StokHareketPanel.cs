@@ -19,8 +19,6 @@ public class StokHareketPanel : UserControl
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
 
         var pnlH = UIHelper.MakeHeader(L("stock_movements"));
-        lblInfo = new Label { Font = UIHelper.FontSubtitle, ForeColor = UIHelper.TextMuted, Left = 28, Top = 36, AutoSize = true };
-        pnlH.Controls.Add(lblInfo);
 
         // Filter bar
         var pnlF = UIHelper.MakeToolbar(40); pnlF.BackColor = UIHelper.BgPanel;
@@ -86,13 +84,21 @@ public class StokHareketPanel : UserControl
             if (grid.Columns[e.ColumnIndex].Name == "GirisCikis")
             {
                 string v = e.Value?.ToString() ?? "";
-                e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : UIHelper.AccentGreen;
-                e.CellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                if (e.CellStyle != null)
+                {
+                    e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : UIHelper.AccentGreen;
+                    e.CellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                }
             }
         };
         grid.DoubleClick += (_, _) => DuzenleHareket();
 
-        Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlF); Controls.Add(pnlH);
+        // Status
+        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        pnlSt.Controls.Add(lblInfo);
+
+        Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlF); Controls.Add(pnlH); Controls.Add(pnlSt);
         Filtrele();
     }
 

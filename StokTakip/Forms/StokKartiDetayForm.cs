@@ -55,7 +55,15 @@ public class StokKartiDetayForm : Form
         grid.Columns.Add("TeslimEdilen", L("delivered_to")); grid.Columns["TeslimEdilen"]!.FillWeight = 120;
         grid.Columns.Add("Dept", L("department")); grid.Columns["Dept"]!.FillWeight = 100;
         grid.Columns.Add("Aciklama", L("description")); grid.Columns["Aciklama"]!.FillWeight = 200;
-        grid.CellFormatting += (_, e) => { if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "GC") { string v = e.Value?.ToString() ?? ""; e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold); } };
+        grid.CellFormatting += (_, e) => {
+            if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "GC") {
+                string v = e.Value?.ToString() ?? "";
+                if (e.CellStyle != null) {
+                    e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : UIHelper.AccentGreen;
+                    e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                }
+            }
+        };
 
         // Toolbar
         var pnlBar = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = UIHelper.BgPanel };

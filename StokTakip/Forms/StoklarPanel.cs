@@ -15,8 +15,6 @@ public class StoklarPanel : UserControl
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
 
         var pnlH = UIHelper.MakeHeader(L("stocks"));
-        lblInfo = new Label { Font = UIHelper.FontSubtitle, ForeColor = UIHelper.TextMuted, Left = 28, Top = 36, AutoSize = true };
-        pnlH.Controls.Add(lblInfo);
 
         var pnlT = UIHelper.MakeToolbar(40);
         txtAra = UIHelper.MakeSearchBox(L("stock_code_search"), 300); txtAra.TextChanged += (_, _) => FilterGrid();
@@ -36,11 +34,15 @@ public class StoklarPanel : UserControl
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
             if (grid.Columns[e.ColumnIndex].Name == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
             {
-                e.CellStyle.ForeColor = UIHelper.StokRengi(s);
-                e.CellStyle.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+                if (e.CellStyle != null)
+                {
+                    e.CellStyle.ForeColor = UIHelper.StokRengi(s);
+                    e.CellStyle.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+                }
+                
                 if (s <= 3)
                     foreach (DataGridViewCell cell in grid.Rows[e.RowIndex].Cells)
-                        if (cell.ColumnIndex != e.ColumnIndex)
+                        if (cell.ColumnIndex != e.ColumnIndex && cell.Style != null)
                             cell.Style.ForeColor = s <= 0 ? UIHelper.StokWarning : UIHelper.StokLow;
             }
         };
@@ -52,7 +54,12 @@ public class StoklarPanel : UserControl
             f.ShowDialog(); YukleGrid();
         };
 
-        Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH);
+        // Status
+        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        pnlSt.Controls.Add(lblInfo);
+
+        Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);
         YukleGrid();
     }
 

@@ -66,7 +66,14 @@ public class TopluHareketForm : Form
         foreach (var k in _kartlar)
             grid.Rows.Add(false, k.Id, k.KodNo, k.Ad, UIHelper.FormatMiktar(k.MevcutStok), "");
 
-        grid.CellFormatting += (_, e) => { if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "Mevcut" && double.TryParse(e.Value?.ToString(), out double s)) { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold); } };
+        grid.CellFormatting += (_, e) => {
+            if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "Mevcut" && double.TryParse(e.Value?.ToString(), out double s)) {
+                if (e.CellStyle != null) {
+                    e.CellStyle.ForeColor = UIHelper.StokRengi(s);
+                    e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                }
+            }
+        };
 
         // Toolbar
         var pnlBar = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = UIHelper.BgPanel };

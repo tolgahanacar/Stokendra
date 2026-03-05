@@ -130,7 +130,7 @@ public static class UIHelper
     // ═══ FORM LABEL ═══
     public static void AddFormLabel(Control parent, string text, int top, int left = 16, int width = 120)
     {
-        parent.Controls.Add(new Label { Text = text, Left = left, Top = top + 3, Width = width, Font = FontLabel, ForeColor = TextSecondary });
+        parent.Controls.Add(new Label { Text = text, Left = left, Top = top + 3, Width = width, AutoSize = true, Font = FontLabel, ForeColor = TextSecondary });
     }
 
     // ═══ STOK RENK ═══
