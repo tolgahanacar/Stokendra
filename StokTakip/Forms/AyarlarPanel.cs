@@ -1,4 +1,7 @@
+using System.Diagnostics;
+using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using static StokTakip.LocalizationManager;
 
@@ -114,6 +117,12 @@ public class AyarlarPanel : UserControl
         pnlAbout.Controls.Add(new Label { Text = "Geliştirici: Tolgahan Acar", Left = 20, Top = 48, AutoSize = true, Font = new Font("Segoe UI Semibold", 9.5f), ForeColor = UIHelper.TextPrimary });
         pnlAbout.Controls.Add(new Label { Text = "© 2026 Tolgahan Acar. Tüm hakları saklıdır.", Left = 20, Top = 72, AutoSize = true, Font = new Font("Segoe UI", 9), ForeColor = UIHelper.TextSecondary });
         pnlAbout.Controls.Add(new Label { Text = "Bu yazılım lisanslıdır. İzinsiz kopyalanması, dağıtılması veya\ntersine mühendislik yapılması yasaktır.", Left = 20, Top = 96, AutoSize = true, Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim });
+        
+        var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 330, 80, 210, 32);
+        btnUpdate.ForeColor = Color.Black;
+        btnUpdate.Click += async (_, _) => await CheckForUpdates();
+        pnlAbout.Controls.Add(btnUpdate);
+        
         pnlBody.Controls.Add(pnlAbout);
 
         Controls.Add(pnlBody); Controls.Add(pnlH);
@@ -201,5 +210,66 @@ public class AyarlarPanel : UserControl
         Program.Settings.Kaydet();
         if (dilDegisti) MessageBox.Show(L("saved_restart"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         else MessageBox.Show(L("settings_saved"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+    
+    private async Task CheckForUpdates()
+    {
+        Cursor.Current = Cursors.WaitCursor;
+        try
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-App");
+            string url = "https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest";
+            var response = await client.GetAsync(url);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                using var jsonDoc = JsonDocument.Parse(jsonString);
+                string latestVersion = jsonDoc.RootElement.GetProperty("tag_name").GetString() ?? "";
+                string htmlUrl = jsonDoc.RootElement.GetProperty("html_url").GetString() ?? "";
+                
+                string currentVersion = "v" + Application.ProductVersion;
+                if (currentVersion.Count(c => c == '.') > 1 && currentVersion.EndsWith(".0"))
+                {
+                    // Clean up typically generated versions like "1.0.0.0" -> "v1.0.0"
+                    currentVersion = currentVersion.Substring(0, currentVersion.LastIndexOf(".0"));
+                }
+
+                if (string.Compare(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase) > 0)
+                {
+                    if (MessageBox.Show(L("update_available", latestVersion, currentVersion), 
+                                        L("update_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = htmlUrl,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                else
+                {
+                    MessageBox.Show(L("up_to_date", currentVersion), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    MessageBox.Show("GitHub deposu bulunamadı veya gizli. Eğer depo gizli ise erişim için Personal Access Token gereklidir.", L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+                    MessageBox.Show("GitHub API hız sınırına ulaşıldı (Rate Limit). Lütfen daha sonra tekrar deneyin.", L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else
+                    throw new Exception($"GitHub API responded with: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(L("update_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            Cursor.Current = Cursors.Default;
+        }
     }
 }

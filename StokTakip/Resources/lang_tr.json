@@ -202,7 +202,11 @@
   "maintenance_date": "Bakım Tarihi",
   "edit_service_record": "Servis Kaydı Düzenle",
   "new_service_record": "Yeni Servis Kaydı",
-  "confirm_service_delete": "Bu servis kaydı silinsin mi?",
   "device_name_required": "Cihaz adı zorunludur.",
+  "check_updates": "Güncelleştirmeleri Denetle",
+  "update_available": "Yeni bir sürüm ({0}) mevcut!\nŞu anki sürüm: {1}\n\nİndirme sayfasına gitmek ister misiniz?",
+  "update_title": "Güncelleme Mevcut",
+  "up_to_date": "Uygulamanız güncel. (Sürüm: {0})",
+  "update_error": "Güncelleme kontrolü sırasında bir hata oluştu:\n{0}",
   "company": "Firma"
 }
