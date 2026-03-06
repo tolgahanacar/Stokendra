@@ -1,0 +1,27 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+StokTakip/bin/
+StokTakip/obj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
