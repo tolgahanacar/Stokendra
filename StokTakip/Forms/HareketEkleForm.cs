@@ -58,7 +58,7 @@ public class HareketEkleForm : Form
         // Tür
         tbl.Controls.Add(ML(L("operation_type")), 0, row);
         cmbTur = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList, Width = 140 }; UIHelper.StyleComboBox(cmbTur);
-        cmbTur.Items.AddRange(new object[] { L("entry"), L("exit") }); cmbTur.SelectedIndex = 0;
+        cmbTur.Items.AddRange(new object[] { L("entry"), L("exit"), L("type_empty") }); cmbTur.SelectedIndex = 0;
         tbl.Controls.Add(cmbTur, 1, row); row++;
 
         // Miktar
@@ -104,7 +104,7 @@ public class HareketEkleForm : Form
         if (edit && mevcut != null)
         {
             int idx = _altKartlar.FindIndex(k => k.Id == mevcut.StokKartId); if (idx >= 0) cmbStok.SelectedIndex = idx;
-            cmbTur.SelectedIndex = mevcut.Tur == "Cikis" ? 1 : 0;
+            cmbTur.SelectedIndex = mevcut.Tur == "Giris" ? 0 : (mevcut.Tur == "Cikis" ? 1 : 2);
             txtMiktar.Text = UIHelper.FormatMiktar(mevcut.Miktar);
             txtTeslim.Text = mevcut.TeslimEdilen;
             txtAciklama.Text = mevcut.Aciklama;
@@ -143,15 +143,20 @@ public class HareketEkleForm : Form
     private void Kaydet(object? s, EventArgs e)
     {
         if (cmbStok.SelectedItem is not StokKarti sk) { MessageBox.Show(L("select_stock_card")); return; }
-        if (!double.TryParse(txtMiktar.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double m) || m <= 0)
-        { if (!double.TryParse(txtMiktar.Text, out m) || m <= 0) { MessageBox.Show(L("enter_valid_qty")); return; } }
+        
+        bool isBos = cmbTur.SelectedIndex == 2;
+        if (!double.TryParse(txtMiktar.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double m) || (!isBos && m <= 0))
+        {
+            if (isBos) m = 0; // Allow parsing to fail gracefully to 0 for Empty type if txtMiktar is completely blank
+            else { MessageBox.Show(L("enter_valid_qty")); return; }
+        }
         if (cmbDept.SelectedIndex < 0) { MessageBox.Show(L("select_dept")); return; }
 
         var h = new StokHareketi
         {
             Id = _mevcut?.Id ?? 0,
-            StokKartId = sk.Id, Tur = cmbTur.SelectedIndex == 0 ? "Giris" : "Cikis",
-            Miktar = m, TeslimEdilen = txtTeslim.Text.Trim(),
+            StokKartId = sk.Id, Tur = cmbTur.SelectedIndex == 0 ? "Giris" : (cmbTur.SelectedIndex == 1 ? "Cikis" : "Bos"),
+            Miktar = isBos ? 0 : m, TeslimEdilen = txtTeslim.Text.Trim(),
             Departman = cmbDept.SelectedItem!.ToString()!, Tarih = dtpTarih.Value, Aciklama = txtAciklama.Text.Trim()
         };
 

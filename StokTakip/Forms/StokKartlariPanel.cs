@@ -1,4 +1,6 @@
 using StokTakip.Models;
+using StokTakip.Data;
+using ClosedXML.Excel;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -24,12 +26,18 @@ public class StokKartlariPanel : UserControl
         var btnTS = UIHelper.MakeFlowButton(L("bulk_delete"), Color.FromArgb(153, 27, 27), 100);
         var btnDet = UIHelper.MakeFlowButton(L("detail"),     UIHelper.AccentGreen, 85);
         var btnTG = UIHelper.MakeFlowButton(L("bulk_entry"),  UIHelper.AccentCyan, 110);
+        var btnExcel = UIHelper.MakeFlowButton(L("export_excel"), UIHelper.AccentGreen, 130);
+        var btnImport = UIHelper.MakeFlowButton(L("import_csv"), UIHelper.AccentPurple, 130);
+
         btnE.Click += (_, _) => { using var f = new StokKartiDuzenleForm(null); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
         btnD.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDuzenleForm(k); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); } };
         btnS.Click += (_, _) => SilKart(); btnTS.Click += (_, _) => TopluSil();
         btnDet.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
         btnTG.Click += (_, _) => { using var f = new TopluHareketForm(); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
-        pnlT.Controls.AddRange(new Control[] { txtAra, btnE, btnD, btnS, btnTS, btnDet, btnTG });
+        btnExcel.Click += (_, _) => ExcelExport();
+        btnImport.Click += (_, _) => CsvImport();
+        
+        pnlT.Controls.AddRange(new Control[] { txtAra, btnE, btnD, btnS, btnTS, btnDet, btnTG, btnExcel, btnImport });
 
         // Grid
         grid = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(grid, multiSelect: true);
@@ -88,5 +96,72 @@ public class StokKartlariPanel : UserControl
         if (MessageBox.Show(L("confirm_bulk_delete", c), L("confirm_bulk_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
         foreach (DataGridViewRow r in grid.SelectedRows) Program.DB!.StokKartiSil(Convert.ToInt32(r.Cells["Id"].Value));
         YukleGrid(); MessageBox.Show(L("bulk_delete_success", c));
+    }
+
+    private void ExcelExport()
+    {
+        if (_tumListe.Count == 0) return;
+        using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = $"StokKartlari_{DateTime.Now:yyyyMMdd}.xlsx" };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("StokKartlari");
+        ws.Cell(1, 1).Value = "KodNo"; ws.Cell(1, 2).Value = "Ad";
+        ws.Cell(1, 3).Value = "KartTipi"; ws.Cell(1, 4).Value = "UstKartAd";
+        ws.Cell(1, 5).Value = "Kategori"; ws.Cell(1, 6).Value = "MevcutStok";
+        ws.Cell(1, 7).Value = "KritikStok"; ws.Cell(1, 8).Value = "Aciklama";
+
+        var hR = ws.Range("A1:H1");
+        hR.Style.Font.Bold = true; hR.Style.Fill.BackgroundColor = XLColor.AirForceBlue; hR.Style.Font.FontColor = XLColor.White;
+
+        for (int i = 0; i < _tumListe.Count; i++)
+        {
+            var k = _tumListe[i];
+            ws.Cell(i + 2, 1).Value = k.KodNo; ws.Cell(i + 2, 2).Value = k.Ad;
+            ws.Cell(i + 2, 3).Value = k.KartTipi; ws.Cell(i + 2, 4).Value = k.UstKartAd;
+            ws.Cell(i + 2, 5).Value = k.Kategori; ws.Cell(i + 2, 6).Value = k.MevcutStok;
+            ws.Cell(i + 2, 7).Value = k.MinStok; ws.Cell(i + 2, 8).Value = k.Aciklama;
+        }
+        ws.Columns().AdjustToContents();
+        try { wb.SaveAs(dlg.FileName); MessageBox.Show(L("export_success", dlg.FileName)); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
+    }
+
+    private void CsvImport()
+    {
+        using var dlg = new OpenFileDialog { Filter = "CSV|*.csv", Title = L("import_csv") };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        try
+        {
+            var lines = File.ReadAllLines(dlg.FileName);
+            if (lines.Length <= 1) return;
+
+            int eklenen = 0;
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var row = lines[i].Split(';');
+                if (row.Length < 3) continue;
+
+                var k = new StokKarti
+                {
+                    KodNo = row[0].Trim(),
+                    Ad = row[1].Trim(),
+                    KartTipi = "Alt",
+                    Kategori = row[2].Trim(),
+                    MevcutStok = 0,
+                    MinStok = row.Length > 3 && int.TryParse(row[3].Trim(), out int ms) ? ms : 0,
+                    Aciklama = "" // Ignore Aciklama for CSV import simplicity or format it if provided
+                };
+                if (!string.IsNullOrEmpty(k.KodNo) && !string.IsNullOrEmpty(k.Ad))
+                {
+                    Program.DB!.StokKartiEkle(k);
+                    eklenen++;
+                }
+            }
+            YukleGrid();
+            MessageBox.Show(L("import_success", eklenen), "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
     }
 }
