@@ -9,12 +9,13 @@ public class MainForm : Form
     private Panel pnlSidebar = new();
     private readonly List<Panel> _sidebarItems = new();
 
-    private static readonly (string icon, string key, Color accent)[] NavItems = {
+    private static readonly (string icon, string key, System.Drawing.Color accent)[] NavItems = {
         ("📊", "dashboard",       UIHelper.AccentCyan),
-        ("📋", "stock_cards",     UIHelper.AccentBlue),
-        ("📦", "stocks",          UIHelper.AccentGreen),
-        ("🔄", "stock_movements", UIHelper.AccentOrange),
-        ("🛠", "services",        UIHelper.AccentPurple),
+        ("📈", "reports",         UIHelper.AccentBlue),
+        ("📋", "stock_cards",     UIHelper.AccentGreen),
+        ("📦", "stocks",          UIHelper.AccentOrange),
+        ("🔄", "stock_movements", UIHelper.AccentPurple),
+        ("🛠", "services",        System.Drawing.Color.FromArgb(231, 76, 60)),
         ("📝", "notes",           UIHelper.AccentCyan),
         ("🏢", "departments",     UIHelper.AccentYellow),
         ("⚙️", "settings",        UIHelper.TextSecondary),
@@ -90,7 +91,8 @@ public class MainForm : Form
         UpdateSidebarSelection(key);
         pnlContent.SuspendLayout(); pnlContent.Controls.Clear();
         Control content = key switch {
-            "dashboard" => new DashboardPanel(), "stock_cards" => new StokKartlariPanel(), "stocks" => new StoklarPanel(),
+            "dashboard" => new DashboardPanel(), "reports" => new RaporlarPanel(),
+            "stock_cards" => new StokKartlariPanel(), "stocks" => new StoklarPanel(),
             "stock_movements" => new StokHareketPanel(), "services" => new ServislerPanel(), "notes" => new NotlarPanel(), "departments" => new DepartmanlarPanel(),
             "settings" => new AyarlarPanel(), _ => new DashboardPanel()
         };

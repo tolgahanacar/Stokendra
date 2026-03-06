@@ -29,13 +29,15 @@ public class DashboardPanel : UserControl
             new System.Windows.Forms.Label { Text = L("dashboard_subtitle"), Font = new System.Drawing.Font("Segoe UI Semibold", 10), ForeColor = UIHelper.TextSecondary, Left = 28, Top = 38, AutoSize = true }
         });
 
-        // ═══ STAT CARDS — responsive TableLayoutPanel ═══
-        var tblCards = new TableLayoutPanel
+        // ═══ STAT CARDS — responsive FlowLayoutPanel ═══
+        var pnlCards = new FlowLayoutPanel
         {
-            Dock = DockStyle.Top, Height = 108, ColumnCount = 6, RowCount = 1,
-            BackColor = UIHelper.BgDark, Padding = new Padding(20, 4, 20, 4)
+            Dock = DockStyle.Top, 
+            AutoSize = true,
+            WrapContents = true,
+            BackColor = UIHelper.BgDark, 
+            Padding = new Padding(16, 4, 16, 4)
         };
-        for (int i = 0; i < 6; i++) tblCards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16.66f));
 
         var cards = new (string title, string value, string sub, System.Drawing.Color accent)[] {
             (L("total_stock_cards"), toplamKart.ToString(), L("total_stock_cards_sub"), UIHelper.AccentBlue),
@@ -48,7 +50,7 @@ public class DashboardPanel : UserControl
         for (int i = 0; i < cards.Length; i++)
         {
             var c = cards[i];
-            var card = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgCard, Margin = new Padding(4, 2, 4, 2) };
+            var card = new Panel { Width = 180, Height = 100, BackColor = UIHelper.BgCard, Margin = new Padding(4, 2, 4, 2) };
             var aLine = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = c.accent };
             var lblT = new System.Windows.Forms.Label { Text = c.title.ToUpperInvariant(), Left = 12, Top = 8, AutoSize = true, Font = new System.Drawing.Font("Segoe UI", 7.5f, System.Drawing.FontStyle.Bold), ForeColor = UIHelper.TextMuted };
             var lblV = new System.Windows.Forms.Label { Text = c.value, Left = 12, Top = 28, AutoSize = true, Font = new System.Drawing.Font("Segoe UI", 20, System.Drawing.FontStyle.Bold), ForeColor = c.accent };
@@ -56,7 +58,7 @@ public class DashboardPanel : UserControl
             card.Controls.AddRange(new Control[] { aLine, lblT, lblV, lblS });
             card.MouseEnter += (_, _) => card.BackColor = UIHelper.BgHover; card.MouseLeave += (_, _) => card.BackColor = UIHelper.BgCard;
             foreach (Control cc in card.Controls) { cc.MouseEnter += (_, _) => card.BackColor = UIHelper.BgHover; cc.MouseLeave += (_, _) => card.BackColor = UIHelper.BgCard; }
-            tblCards.Controls.Add(card, i, 0);
+            pnlCards.Controls.Add(card);
         }
 
         // ═══ CHARTS (ScottPlot 5.0) ═══
@@ -142,9 +144,20 @@ public class DashboardPanel : UserControl
 
         // ═══ SPLIT — SplitContainer for low stock + recent ═══
         var pnlBody = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark, Padding = new Padding(24, 4, 24, 10) };
+        
+        var splitVertical = new SplitContainer 
+        { 
+            Dock = DockStyle.Fill, 
+            Orientation = System.Windows.Forms.Orientation.Horizontal, 
+            SplitterDistance = 180, // Allow dynamic dragging
+            BackColor = UIHelper.BgDark,
+            SplitterWidth = 8
+        };
 
+        // Low Stock Panel (Top)
+        var pnlLow = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark };
         var lblLow = new System.Windows.Forms.Label { Text = L("low_stock_alerts"), Font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold), ForeColor = UIHelper.StokWarning, Dock = DockStyle.Top, Height = 28, Padding = new Padding(2, 4, 0, 0) };
-        var gridLow = new DataGridView { Dock = DockStyle.Top, Height = 160 }; UIHelper.StyleGrid(gridLow);
+        var gridLow = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(gridLow);
         gridLow.Columns.Add("KodNo", L("code_no")); gridLow.Columns["KodNo"]!.FillWeight = 55;
         gridLow.Columns.Add("Ad", L("stock_name")); gridLow.Columns["Ad"]!.FillWeight = 160;
         gridLow.Columns.Add("Kategori", L("category")); gridLow.Columns["Kategori"]!.FillWeight = 90;
@@ -161,6 +174,10 @@ public class DashboardPanel : UserControl
         foreach (var k in kartlar.Where(k => k.MevcutStok <= 3 && k.KartTipi == "Alt").OrderBy(k => k.MevcutStok).Take(10))
             gridLow.Rows.Add(k.KodNo, k.Ad, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.MinStok);
 
+        pnlLow.Controls.Add(gridLow); pnlLow.Controls.Add(lblLow);
+
+        // Recent Movements Panel (Bottom)
+        var pnlRec = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark };
         var lblRec = new System.Windows.Forms.Label { Text = L("recent_movements"), Font = new System.Drawing.Font("Segoe UI", 12, System.Drawing.FontStyle.Bold), ForeColor = UIHelper.TextPrimary, Dock = DockStyle.Top, Height = 28, Padding = new Padding(2, 6, 0, 0) };
         var gridRec = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(gridRec);
         gridRec.Columns.Add("Tarih", L("date")); gridRec.Columns["Tarih"]!.FillWeight = 70;
@@ -185,7 +202,12 @@ public class DashboardPanel : UserControl
             gridRec.Rows.Add(h.Tarih.ToString("dd.MM.yyyy HH:mm"), h.StokKartKodNo, h.StokKartAd, gc, h.Departman, h.TeslimEdilen);
         }
 
-        pnlBody.Controls.Add(gridRec); pnlBody.Controls.Add(lblRec); pnlBody.Controls.Add(gridLow); pnlBody.Controls.Add(lblLow);
-        Controls.Add(pnlBody); Controls.Add(pnlCharts); Controls.Add(tblCards); Controls.Add(pnlH);
+        pnlRec.Controls.Add(gridRec); pnlRec.Controls.Add(lblRec);
+
+        splitVertical.Panel1.Controls.Add(pnlLow);
+        splitVertical.Panel2.Controls.Add(pnlRec);
+        
+        pnlBody.Controls.Add(splitVertical);
+        Controls.Add(pnlBody); Controls.Add(pnlCharts); Controls.Add(pnlCards); Controls.Add(pnlH);
     }
 }

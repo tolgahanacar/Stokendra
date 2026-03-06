@@ -12,6 +12,7 @@ public class StokHareketPanel : UserControl
     private ComboBox cmbStok = new(), cmbDept = new(), cmbTur = new();
     private DateTimePicker dtpBas = new(), dtpBit = new();
     private Label lblInfo = new();
+    private TextBox txtSearch = new();
     private List<StokHareketi> _liste = new();
 
     public StokHareketPanel()
@@ -21,7 +22,10 @@ public class StokHareketPanel : UserControl
         var pnlH = UIHelper.MakeHeader(L("stock_movements"));
 
         // Filter bar
-        var pnlF = UIHelper.MakeToolbar(40); pnlF.BackColor = UIHelper.BgPanel;
+        var pnlF = UIHelper.MakeToolbar(46); 
+        pnlF.BackColor = UIHelper.BgPanel;
+        pnlF.AutoSize = true;
+        pnlF.WrapContents = true;
         pnlF.Controls.Add(FL(L("date_filter")));
         dtpBas = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2), Value = DateTime.Now.AddMonths(-1) };
         pnlF.Controls.Add(dtpBas); pnlF.Controls.Add(FL("-"));
@@ -42,12 +46,19 @@ public class StokHareketPanel : UserControl
         var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 28);
         var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 28);
         btnFil.Click += (_, _) => Filtrele(); btnClr.Click += (_, _) => Temizle();
-        pnlF.Controls.AddRange(new Control[] { btnFil, btnClr });
+        
+        txtSearch = new TextBox { Width = 160, Margin = new Padding(10, 5, 2, 2), PlaceholderText = L("search_placeholder") };
+        txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
+        
+        pnlF.Controls.AddRange(new Control[] { btnFil, btnClr, txtSearch });
 
         // Toolbar
-        var pnlT = UIHelper.MakeToolbar();
+        var pnlT = UIHelper.MakeToolbar(46);
+        pnlT.AutoSize = true;
+        pnlT.WrapContents = true;
         var btnEkle  = UIHelper.MakeFlowButton(L("add_movement"), UIHelper.AccentGreen, 130);
         var btnDuz   = UIHelper.MakeFlowButton(L("edit"), UIHelper.AccentOrange, 85);
+        var btnTopluDuz = UIHelper.MakeFlowButton("✏️ " + L("bulk_edit"), UIHelper.AccentOrange, 120);
         var btnSil   = UIHelper.MakeFlowButton(L("delete"), UIHelper.AccentRed, 70);
         var btnTSil  = UIHelper.MakeFlowButton(L("bulk_delete"), Color.FromArgb(153, 27, 27), 100);
         var btnYaz   = UIHelper.MakeFlowButton(L("print"), UIHelper.BtnMid, 90);
@@ -55,12 +66,13 @@ public class StokHareketPanel : UserControl
         var btnImport = UIHelper.MakeFlowButton(L("import_csv"), UIHelper.AccentPurple, 120);
         btnEkle.Click += (_, _) => { using var f = new HareketEkleForm(); if (f.ShowDialog() == DialogResult.OK) Filtrele(); };
         btnDuz.Click += (_, _) => DuzenleHareket();
+        btnTopluDuz.Click += (_, _) => TopluDuzenle();
         btnSil.Click += (_, _) => Sil(); btnTSil.Click += (_, _) => TopluSil();
         btnYaz.Click += (_, _) => Yazdir(); btnExcel.Click += (_, _) => ExcelExport();
         btnImport.Click += (_, _) => XlsxImport();
         var btnOrnek = UIHelper.MakeFlowButton("\ud83d\udccb \u00d6rnek XLSX", UIHelper.BtnDark, 110);
         btnOrnek.Click += (_, _) => OrnekDosya();
-        pnlT.Controls.AddRange(new Control[] { btnEkle, btnDuz, btnSil, btnTSil, btnYaz, btnExcel, btnImport, btnOrnek });
+        pnlT.Controls.AddRange(new Control[] { btnEkle, btnDuz, btnTopluDuz, btnSil, btnTSil, btnYaz, btnExcel, btnImport, btnOrnek });
 
         // Grid
         grid = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(grid, multiSelect: true);
@@ -114,17 +126,36 @@ public class StokHareketPanel : UserControl
         if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
         if (cmbTur.SelectedIndex == 1) tur = "Giris"; else if (cmbTur.SelectedIndex == 2) tur = "Cikis"; else if (cmbTur.SelectedIndex == 3) tur = "Bos";
         _liste = Program.DB!.HareketleriGetir(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
+        ApplyLiveSearch();
+    }
+    
+    void ApplyLiveSearch()
+    {
+        string term = txtSearch.Text.Trim().ToLowerInvariant();
+        var data = _liste;
+        
+        if (!string.IsNullOrEmpty(term))
+        {
+            data = data.Where(h =>
+                (h.StokKartKodNo != null && h.StokKartKodNo.ToLowerInvariant().Contains(term)) ||
+                (h.StokKartAd != null && h.StokKartAd.ToLowerInvariant().Contains(term)) ||
+                (h.TeslimEdilen != null && h.TeslimEdilen.ToLowerInvariant().Contains(term)) ||
+                (h.Departman != null && h.Departman.ToLowerInvariant().Contains(term)) ||
+                (h.Aciklama != null && h.Aciklama.ToLowerInvariant().Contains(term))
+            ).ToList();
+        }
+
         grid.Rows.Clear();
-        foreach (var h in _liste)
+        foreach (var h in data)
         {
             string gc = h.Tur == "Giris" ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == "Cikis" ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
             grid.Rows.Add(h.Id, h.StokKartId, h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih, h.Aciklama,
                 h.Tur, h.Miktar.ToString(CultureInfo.InvariantCulture), h.Tarih.ToString("o"));
         }
-        lblInfo.Text = L("movements_count", _liste.Count);
+        lblInfo.Text = L("movements_count", data.Count);
     }
 
-    void Temizle() { dtpBas.Value = DateTime.Now.AddMonths(-1); dtpBit.Value = DateTime.Now; cmbStok.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbTur.SelectedIndex = 0; Filtrele(); }
+    void Temizle() { dtpBas.Value = DateTime.Now.AddMonths(-1); dtpBit.Value = DateTime.Now; cmbStok.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbTur.SelectedIndex = 0; txtSearch.Clear(); Filtrele(); }
     void Sil() { if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_rows_to_delete")); return; } if (MessageBox.Show(L("confirm_movement_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo) == DialogResult.Yes) { Program.DB!.HareketSil(Convert.ToInt32(grid.SelectedRows[0].Cells["Id"].Value)); Filtrele(); } }
     void TopluSil() { if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("select_rows_to_delete")); return; } int c = grid.SelectedRows.Count; if (MessageBox.Show(L("confirm_bulk_movement_delete", c), L("confirm_delete_title"), MessageBoxButtons.YesNo) != DialogResult.Yes) return; foreach (DataGridViewRow r in grid.SelectedRows) Program.DB!.HareketSil(Convert.ToInt32(r.Cells["Id"].Value)); Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c)); }
 
@@ -146,6 +177,35 @@ public class StokHareketPanel : UserControl
         };
         using var f = new HareketEkleForm(null, h);
         if (f.ShowDialog() == DialogResult.OK) Filtrele();
+    }
+
+    // ═══ TOPLU DÜZENLE ═══
+    void TopluDuzenle()
+    {
+        if (grid.SelectedRows.Count < 2)
+        {
+            MessageBox.Show(L("bulk_delete_min")); // Reusing localization for multiple selection requirement
+            return;
+        }
+
+        var seciliHareketler = new List<StokHareketi>();
+        foreach (DataGridViewRow row in grid.SelectedRows)
+        {
+            seciliHareketler.Add(new StokHareketi
+            {
+                Id = Convert.ToInt32(row.Cells["Id"].Value),
+                StokKartId = Convert.ToInt32(row.Cells["StokKartId"].Value),
+                Tur = row.Cells["RawTur"].Value?.ToString() ?? "Giris",
+                Miktar = double.TryParse(row.Cells["RawMiktar"].Value?.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out double m) ? m : 0,
+                TeslimEdilen = row.Cells["TeslimEdilen"].Value?.ToString() ?? "",
+                Departman = row.Cells["Dept"].Value?.ToString() ?? "",
+                Aciklama = row.Cells["Aciklama"].Value?.ToString() ?? "",
+                Tarih = DateTime.TryParse(row.Cells["RawTarih"].Value?.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt) ? dt : DateTime.Now
+            });
+        }
+
+        using var tf = new TopluHareketDuzenleForm(seciliHareketler);
+        if (tf.ShowDialog() == DialogResult.OK) Filtrele();
     }
 
     // ═══ XLSX IMPORT (ClosedXML) ═══

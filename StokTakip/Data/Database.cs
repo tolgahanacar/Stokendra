@@ -297,6 +297,13 @@ public class Database
         return liste;
     }
 
+    public List<string> GetTeslimEdilenler()
+    {
+        var liste = new List<string>();
+        try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi != '' ORDER BY KimeVerildi"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
+        return liste;
+    }
+
     public void HareketEkle(StokHareketi h)
     {
         try { using var c = OpenConnection(); var m = c.CreateCommand();

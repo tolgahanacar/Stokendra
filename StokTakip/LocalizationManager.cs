@@ -25,13 +25,14 @@ public static class LocalizationManager
     private static void LoadLanguage(string lang)
     {
         _strings.Clear();
-        string resDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources");
+        string baseDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppDomain.CurrentDomain.BaseDirectory;
+        string resDir = Path.Combine(baseDir, "Resources");
         string filePath = Path.Combine(resDir, $"lang_{lang}.json");
 
         if (!File.Exists(filePath))
         {
             // Fallback: kaynak dosya Resources klasöründe yoksa, uygulama dizininde ara
-            filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"lang_{lang}.json");
+            filePath = Path.Combine(baseDir, $"lang_{lang}.json");
         }
 
         if (File.Exists(filePath))
