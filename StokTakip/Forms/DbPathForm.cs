@@ -30,6 +30,7 @@ public class DbPathForm : Form
             {
                 Title = L("db_location"),
                 Filter = "SQLite DB|*.db",
+                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra"),
                 FileName = "stok.db"
             };
             if (dlg.ShowDialog() == DialogResult.OK)

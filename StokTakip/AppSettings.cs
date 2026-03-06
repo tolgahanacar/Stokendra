@@ -9,8 +9,17 @@ public class AppSettings
     public string CompanyName { get; set; } = "";
     public string Theme { get; set; } = "dark";
 
-    private static readonly string SettingsFile =
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ayarlar.json");
+    private static readonly string SettingsFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
+        "Stokendra", 
+        "ayarlar.json");
+
+    static AppSettings()
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra");
+        if (!Directory.Exists(dir))
+            Directory.CreateDirectory(dir);
+    }
 
     public static AppSettings Yukle()
     {

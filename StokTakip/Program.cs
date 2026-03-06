@@ -15,6 +15,14 @@ static class Program
         Application.SetHighDpiMode(HighDpiMode.SystemAware);
         ApplicationConfiguration.Initialize();
 
+        // Setup global error handling to track installation crashes
+        Application.ThreadException += (s, e) => {
+            LogError(e.Exception);
+        };
+        AppDomain.CurrentDomain.UnhandledException += (s, e) => {
+            if (e.ExceptionObject is Exception ex) LogError(ex);
+        };
+
         Settings = AppSettings.Yukle();
         LocalizationManager.Initialize(Settings.Language);
 
@@ -35,5 +43,17 @@ static class Program
             return;
 
         Application.Run(new MainForm());
+    }
+
+    private static void LogError(Exception ex)
+    {
+        try
+        {
+            var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra");
+            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "crash_log.txt"), ex.ToString());
+            MessageBox.Show("Kritik Hata: " + ex.Message + "\n\nLog: " + System.IO.Path.Combine(dir, "crash_log.txt"), "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        catch { }
     }
 }
