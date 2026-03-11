@@ -107,11 +107,13 @@ public class StoklarPanel : UserControl
             raporVerisi.Add((kart.KodNo, kart.Ad, kartGiris, kartCikis, kart.MevcutStok));
         }
 
-        int ps = 0; const int rpp = 40; 
-        int tp = Math.Max(1, (int)Math.Ceiling((double)raporVerisi.Count / rpp));
+        int ps = 0;
+        int pageNum = 0;
         
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
+            float bottomLimit = e.MarginBounds.Bottom - 30; // Reserve space for footer
+            pageNum++;
             
             using var fTitle = new Font("Segoe UI", 16, FontStyle.Bold); 
             using var fSub = new Font("Segoe UI", 9); 
@@ -130,7 +132,12 @@ public class StoklarPanel : UserControl
             using var brHd = new SolidBrush(Color.FromArgb(230, 235, 245));
             using var brAlt = new SolidBrush(Color.FromArgb(245, 247, 252));
 
-            // Draw Header
+            // Table column widths
+            float[] w = { 90, 270, 110, 110, 110 }; 
+            float u = 0; foreach (var ww in w) u += ww; w[w.Length - 1] = pw - (u - w[w.Length - 1]);
+            string[] hdr = { "Stok Kodu", "Stok Adı", "Top. Giriş", "Top. Çıkış", "Mevcut" };
+
+            // Draw Report Header (first page only)
             if (ps == 0) { 
                 if (!string.IsNullOrWhiteSpace(firma)) { 
                     using var ff = new Font("Segoe UI", 11, FontStyle.Bold); 
@@ -142,27 +149,35 @@ public class StoklarPanel : UserControl
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 15; 
             }
 
-            // Table Headers
-            float[] w = { 90, 270, 110, 110, 110 }; 
-            float u = 0; foreach (var ww in w) u += ww; w[w.Length - 1] = pw - (u - w[w.Length - 1]);
-            
-            string[] hdr = { "Stok Kodu", "Stok Adı", "Top. Giriş", "Top. Çıkış", "Mevcut" };
-            g.FillRectangle(brHd, lm, y, pw, 22);
-            float x = lm;
-            for (int i = 0; i < hdr.Length; i++) { 
-                var sf = new StringFormat{ Alignment = i >= 2 ? StringAlignment.Far : StringAlignment.Near };
-                g.DrawString(hdr[i], fHeader, br, new RectangleF(x, y + 3, w[i] - 5, 20), sf); 
-                x += w[i]; 
-            } 
-            y += 26;
+            // Draw Table Headers
+            void DrawTableHeaders()
+            {
+                g.FillRectangle(brHd, lm, y, pw, 22);
+                float x = lm;
+                for (int i = 0; i < hdr.Length; i++) { 
+                    var sf = new StringFormat{ Alignment = i >= 2 ? StringAlignment.Far : StringAlignment.Near };
+                    g.DrawString(hdr[i], fHeader, br, new RectangleF(x, y + 3, w[i] - 5, 20), sf); 
+                    x += w[i]; 
+                } 
+                y += 26;
+            }
 
-            int end = Math.Min(ps + rpp, raporVerisi.Count);
-            
-            for (int i = ps; i < end; i++) {
-                var item = raporVerisi[i];
-                if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 20);
+            DrawTableHeaders();
+
+            // Print data rows until we run out of space or data
+            while (ps < raporVerisi.Count)
+            {
+                // Check if there is room for a data row (20px) + possible totals section (90px)
+                if (y + 20 > bottomLimit)
+                {
+                    // No room — break to next page
+                    break;
+                }
+
+                var item = raporVerisi[ps];
+                if (ps % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 20);
                 
-                x = lm;
+                float x = lm;
                 g.DrawString(item.KodNo, fRow, br, new RectangleF(x, y + 2, w[0], 20)); x += w[0];
                 g.DrawString(item.Ad, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); x += w[1];
                 
@@ -173,35 +188,48 @@ public class StoklarPanel : UserControl
                 
                 g.DrawLine(pen, lm, y + 20, lm + pw, y + 20); 
                 y += 20;
+                ps++;
             }
 
-            // Print Grand Totals
-            if (end == raporVerisi.Count)
+            // Print Grand Totals (only after all rows are printed)
+            if (ps >= raporVerisi.Count)
             {
+                // Check if there is room for the totals box (90px)
+                if (y + 90 > e.MarginBounds.Bottom)
+                {
+                    // Not enough room — totals go to next page
+                    int tp = (int)Math.Ceiling((double)raporVerisi.Count / 40.0);
+                    g.DrawString(L("total_records_page", raporVerisi.Count, pageNum, Math.Max(tp, pageNum + 1)), fSub, brMuted, lm, e.MarginBounds.Bottom - 8);
+                    e.HasMorePages = true;
+                    return;
+                }
+
                 y += 15;
-                g.FillRectangle(new SolidBrush(Color.FromArgb(235, 240, 245)), lm, y, pw, 60);
-                g.DrawRectangle(new Pen(Color.FromArgb(150, 160, 180)), lm, y, pw, 60);
+                using var brTotBg = new SolidBrush(Color.FromArgb(235, 240, 245));
+                using var penTot = new Pen(Color.FromArgb(150, 160, 180));
+                g.FillRectangle(brTotBg, lm, y, pw, 60);
+                g.DrawRectangle(penTot, lm, y, pw, 60);
                 
                 y += 8;
                 g.DrawString("GENEL TOPLAMLAR", fTotalLbl, brMuted, lm + 10, y + 10);
                 
                 float totalX = lm + w[0] + w[1];
-                var sfRight = new StringFormat{ Alignment = StringAlignment.Far };
+                var sfR = new StringFormat{ Alignment = StringAlignment.Far };
                 
-                g.DrawString("Toplam Giriş:", fSub, brMuted, new RectangleF(totalX, y - 2, w[2]-5, 20), sfRight);
-                g.DrawString(UIHelper.FormatMiktar(grandGiris), fTotal, brGreen, new RectangleF(totalX, y + 15, w[2]-5, 30), sfRight);
+                g.DrawString("Toplam Giriş:", fSub, brMuted, new RectangleF(totalX, y - 2, w[2]-5, 20), sfR);
+                g.DrawString(UIHelper.FormatMiktar(grandGiris), fTotal, brGreen, new RectangleF(totalX, y + 15, w[2]-5, 30), sfR);
                 totalX += w[2];
 
-                g.DrawString("Toplam Çıkış:", fSub, brMuted, new RectangleF(totalX, y - 2, w[3]-5, 20), sfRight);
-                g.DrawString(UIHelper.FormatMiktar(grandCikis), fTotal, brRed, new RectangleF(totalX, y + 15, w[3]-5, 30), sfRight);
+                g.DrawString("Toplam Çıkış:", fSub, brMuted, new RectangleF(totalX, y - 2, w[3]-5, 20), sfR);
+                g.DrawString(UIHelper.FormatMiktar(grandCikis), fTotal, brRed, new RectangleF(totalX, y + 15, w[3]-5, 30), sfR);
                 totalX += w[3];
                 
-                g.DrawString("Mevcut:", fSub, brMuted, new RectangleF(totalX, y - 2, w[4]-5, 20), sfRight);
-                g.DrawString(UIHelper.FormatMiktar(grandMevcut), fTotal, brBlue, new RectangleF(totalX, y + 15, w[4]-5, 30), sfRight);
+                g.DrawString("Mevcut:", fSub, brMuted, new RectangleF(totalX, y - 2, w[4]-5, 20), sfR);
+                g.DrawString(UIHelper.FormatMiktar(grandMevcut), fTotal, brBlue, new RectangleF(totalX, y + 15, w[4]-5, 30), sfR);
             }
 
-            g.DrawString(L("total_records_page", raporVerisi.Count, ps / rpp + 1, tp), fSub, brMuted, lm, e.MarginBounds.Bottom - 8); 
-            ps += rpp; 
+            int totalPages = (int)Math.Ceiling((double)raporVerisi.Count / 40.0);
+            g.DrawString(L("total_records_page", raporVerisi.Count, pageNum, Math.Max(totalPages, pageNum)), fSub, brMuted, lm, e.MarginBounds.Bottom - 8); 
             e.HasMorePages = ps < raporVerisi.Count;
         };
 

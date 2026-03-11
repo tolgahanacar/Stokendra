@@ -15,8 +15,8 @@ public static class UIHelper
     public static readonly Color BgToolbar    = Color.FromArgb(20, 24, 36);
 
     // Aksan renkleri — canlı ve okunaklı
-    public static readonly Color AccentBlue   = Color.FromArgb(96, 165, 250);   // Daha parlak mavi
-    public static readonly Color AccentGreen  = Color.FromArgb(52, 211, 153);   // Canlı yeşil
+    public static readonly Color AccentBlue   = Color.FromArgb(96, 165, 250);
+    public static readonly Color AccentGreen  = Color.FromArgb(52, 211, 153);
     public static readonly Color AccentYellow = Color.FromArgb(251, 191, 36);
     public static readonly Color AccentRed    = Color.FromArgb(248, 113, 113);
     public static readonly Color AccentPurple = Color.FromArgb(167, 139, 250);
@@ -24,11 +24,11 @@ public static class UIHelper
     public static readonly Color AccentOrange = Color.FromArgb(251, 146, 60);
 
     // Metin — yüksek kontrast
-    public static readonly Color TextWhite    = Color.FromArgb(250, 250, 255);
-    public static readonly Color TextPrimary  = Color.FromArgb(235, 240, 250);  // Daha parlak
-    public static readonly Color TextSecondary = Color.FromArgb(170, 180, 200); // Daha okunabilir
-    public static readonly Color TextMuted    = Color.FromArgb(120, 135, 160);
-    public static readonly Color TextDim      = Color.FromArgb(85, 100, 125);
+    public static readonly Color TextWhite     = Color.FromArgb(250, 250, 255);
+    public static readonly Color TextPrimary   = Color.FromArgb(235, 240, 250);
+    public static readonly Color TextSecondary = Color.FromArgb(170, 180, 200);
+    public static readonly Color TextMuted     = Color.FromArgb(120, 135, 160);
+    public static readonly Color TextDim       = Color.FromArgb(85, 100, 125);
 
     public static readonly Color GridLine     = Color.FromArgb(35, 42, 60);
     public static readonly Color Divider      = Color.FromArgb(38, 48, 70);
@@ -44,13 +44,20 @@ public static class UIHelper
     public static readonly Color SidebarDivider = Color.FromArgb(35, 48, 68);
 
     // ═══ FONT ═══
-    public static readonly Font FontGrid      = new("Segoe UI Semibold", 9.5f);
+    public static readonly Font FontGrid       = new("Segoe UI Semibold", 9.5f);
     public static readonly Font FontGridHeader = new("Segoe UI", 9f, FontStyle.Bold);
-    public static readonly Font FontInput     = new("Segoe UI Semibold", 10f);
-    public static readonly Font FontButton    = new("Segoe UI Semibold", 9f);
-    public static readonly Font FontLabel     = new("Segoe UI Semibold", 9.5f);
-    public static readonly Font FontTitle     = new("Segoe UI", 20f, FontStyle.Bold);
-    public static readonly Font FontSubtitle  = new("Segoe UI", 10f);
+    public static readonly Font FontInput      = new("Segoe UI Semibold", 10f);
+    public static readonly Font FontButton     = new("Segoe UI Semibold", 9f);
+    public static readonly Font FontLabel      = new("Segoe UI Semibold", 9.5f);
+    public static readonly Font FontTitle      = new("Segoe UI", 20f, FontStyle.Bold);
+    public static readonly Font FontSubtitle   = new("Segoe UI", 10f);
+
+    // ═══ Türkçe büyük harf dönüşümü ═══
+    private static readonly System.Globalization.CultureInfo TrCulture =
+        new System.Globalization.CultureInfo("tr-TR");
+
+    /// <summary>Türkçe karakterleri doğru büyüten ToUpper (ı→I, i→İ vs.)</summary>
+    public static string ToUpperTr(this string s) => s.ToUpper(TrCulture);
 
     // ═══ GRID STİLLENDİRME ═══
     public static void StyleGrid(DataGridView g, bool multiSelect = false)
@@ -130,7 +137,11 @@ public static class UIHelper
     // ═══ FORM LABEL ═══
     public static void AddFormLabel(Control parent, string text, int top, int left = 16, int width = 120)
     {
-        parent.Controls.Add(new Label { Text = text, Left = left, Top = top + 3, Width = width, AutoSize = true, Font = FontLabel, ForeColor = TextSecondary });
+        parent.Controls.Add(new Label
+        {
+            Text = text, Left = left, Top = top + 3, Width = width,
+            AutoSize = true, Font = FontLabel, ForeColor = TextSecondary
+        });
     }
 
     // ═══ STOK RENK ═══
@@ -152,14 +163,18 @@ public static class UIHelper
     {
         var card = new Panel { Left = left, Top = top, Width = width, Height = height, BackColor = BgCard, Margin = new Padding(4) };
         var accentLine = new Panel { Left = 0, Top = 0, Width = 4, Height = height, BackColor = accent };
-        var lblT = new Label { Text = title.ToUpperInvariant(), Left = 14, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = TextMuted };
+        var lblT = new Label { Text = title.ToUpperTr(), Left = 14, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = TextMuted };
         var lblV = new Label { Text = value, Left = 14, Top = 30, AutoSize = true, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = accent };
         var lblS = new Label { Text = subtitle, Left = 14, Top = height - 24, AutoSize = true, Font = new Font("Segoe UI Semibold", 8), ForeColor = TextDim };
         card.Controls.AddRange(new Control[] { accentLine, lblT, lblV, lblS });
 
         card.MouseEnter += (_, _) => card.BackColor = BgHover;
         card.MouseLeave += (_, _) => card.BackColor = BgCard;
-        foreach (Control c in card.Controls) { c.MouseEnter += (_, _) => card.BackColor = BgHover; c.MouseLeave += (_, _) => card.BackColor = BgCard; }
+        foreach (Control c in card.Controls)
+        {
+            c.MouseEnter += (_, _) => card.BackColor = BgHover;
+            c.MouseLeave += (_, _) => card.BackColor = BgCard;
+        }
         return card;
     }
 
@@ -202,7 +217,12 @@ public static class UIHelper
         lblText.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
         lblText.MouseLeave += (_, _) => { if (!active) pnl.BackColor = Color.Transparent; };
 
-        EventHandler bubble = (s, e) => { pnl.GetType().GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(pnl, new object[] { e }); };
+        EventHandler bubble = (s, e) =>
+        {
+            pnl.GetType()
+               .GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+               ?.Invoke(pnl, new object[] { e });
+        };
         lblIcon.Click += bubble; lblText.Click += bubble;
 
         pnl.Controls.AddRange(new Control[] { accentBar, lblIcon, lblText });
@@ -223,5 +243,137 @@ public static class UIHelper
     {
         var tip = new ToolTip { BackColor = BgCard, ForeColor = TextPrimary, InitialDelay = 300, ReshowDelay = 200 };
         tip.SetToolTip(control, text);
+    }
+
+    /// <summary>Blend two colors for smooth transitions</summary>
+    public static Color BlendColor(Color from, Color to, float amount)
+    {
+        int r = (int)(from.R + (to.R - from.R) * amount);
+        int g = (int)(from.G + (to.G - from.G) * amount);
+        int b = (int)(from.B + (to.B - from.B) * amount);
+        return Color.FromArgb(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
+    }
+}
+
+/// <summary>Custom-painted card with gradient background, accent glow, and hover effects.</summary>
+public class GlowCard : Panel
+{
+    private Color _accent = UIHelper.AccentBlue;
+    private bool _hovered = false;
+    private int _cornerRadius = 10;
+
+    public Color AccentColor { get => _accent; set { _accent = value; Invalidate(); } }
+    public int CornerRadius { get => _cornerRadius; set { _cornerRadius = value; Invalidate(); } }
+
+    public GlowCard()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
+               | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        BackColor = UIHelper.BgCard;
+    }
+
+    protected override void OnMouseEnter(EventArgs e) { _hovered = true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        var pos = PointToClient(Cursor.Position);
+        if (!ClientRectangle.Contains(pos)) { _hovered = false; Invalidate(); }
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        using var path = RoundedRect(rect, _cornerRadius);
+
+        var bgTop = _hovered ? UIHelper.BlendColor(UIHelper.BgCard, _accent, 0.10f) : UIHelper.BgCard;
+        var bgBot = _hovered ? UIHelper.BlendColor(Color.FromArgb(20, 24, 34), _accent, 0.05f) : Color.FromArgb(20, 24, 34);
+        using var bgBrush = new System.Drawing.Drawing2D.LinearGradientBrush(rect, bgTop, bgBot, 90f);
+        g.FillPath(bgBrush, path);
+
+        var glowRect = new Rectangle(0, 4, 4, Height - 8);
+        using var glowBrush = new SolidBrush(_hovered ? _accent : Color.FromArgb(180, _accent));
+        g.FillRectangle(glowBrush, glowRect);
+
+        using var borderPen = new Pen(Color.FromArgb(_hovered ? 50 : 22, _accent), 1);
+        g.DrawPath(borderPen, path);
+    }
+
+    internal static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle bounds, int radius)
+    {
+        int d = radius * 2;
+        var gp = new System.Drawing.Drawing2D.GraphicsPath();
+        if (d > 0)
+        {
+            gp.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+            gp.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+            gp.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            gp.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+        }
+        gp.CloseFigure();
+        return gp;
+    }
+
+    protected override void OnControlAdded(ControlEventArgs e)
+    {
+        base.OnControlAdded(e);
+        if (e.Control == null) return;
+        e.Control.MouseEnter += (_, _) => { _hovered = true; Invalidate(); };
+        e.Control.MouseLeave += (_, _) =>
+        {
+            var pos = PointToClient(Cursor.Position);
+            if (!ClientRectangle.Contains(pos)) { _hovered = false; Invalidate(); }
+        };
+    }
+}
+
+/// <summary>Section panel with gradient header</summary>
+public class SectionPanel : Panel
+{
+    private string _title = "";
+    private Color _accent = UIHelper.StokWarning;
+    private string _icon = "⚠";
+
+    public string Title { get => _title; set { _title = value; Invalidate(); } }
+    public Color AccentColor { get => _accent; set { _accent = value; Invalidate(); } }
+    public string Icon { get => _icon; set { _icon = value; Invalidate(); } }
+
+    public int HeaderHeight { get; set; } = 42;
+
+    public SectionPanel()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
+               | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        BackColor = UIHelper.BgDark;
+        Padding = new Padding(0, 42, 0, 0);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+        using var bgBrush = new SolidBrush(UIHelper.BgDark);
+        g.FillRectangle(bgBrush, ClientRectangle);
+
+        var headerRect = new Rectangle(0, 0, Width, HeaderHeight);
+        using var hdrBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
+            headerRect,
+            Color.FromArgb(30, _accent.R, _accent.G, _accent.B),
+            UIHelper.BgDark, 0f);
+        g.FillRectangle(hdrBrush, headerRect);
+
+        using var linePen = new Pen(Color.FromArgb(60, _accent), 2);
+        g.DrawLine(linePen, 8, HeaderHeight - 1, Width - 8, HeaderHeight - 1);
+
+        using var fIcon = new Font("Segoe UI", 14);
+        using var fTitle = new Font("Segoe UI", 12.5f, FontStyle.Bold);
+        using var accentBrush = new SolidBrush(_accent);
+        g.DrawString(_icon, fIcon, accentBrush, 10, 8);
+        g.DrawString(_title, fTitle, accentBrush, 38, 10);
+
+        base.OnPaint(e);
     }
 }

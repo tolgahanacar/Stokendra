@@ -213,6 +213,35 @@ public class Database
     public List<StokKarti> UstKartlariGetir() => StokKartlariniGetir().Where(k => k.KartTipi == "Ust").ToList();
     public List<StokKarti> AltKartlariGetir(int? ustId = null) { var t = StokKartlariniGetir().Where(k => k.KartTipi == "Alt").ToList(); return ustId.HasValue ? t.Where(k => k.UstKartId == ustId).ToList() : t; }
 
+    /// <summary>Get dashboard stats in a single query — much faster than loading all records</summary>
+    public (int toplamKart, double toplamStok, int dusuk, int tukenmis, int toplamHareket, int bugunHareket) DashboardIstatistikleriGetir()
+    {
+        try
+        {
+            using var c = OpenConnection();
+            var m = c.CreateCommand();
+            m.CommandText = @"
+                WITH altStok AS (
+                    SELECT s.Id, s.MinStok,
+                        COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0) AS Mevcut
+                    FROM StokKartlari s WHERE s.KartTipi='Alt'
+                )
+                SELECT
+                    (SELECT COUNT(*) FROM altStok),
+                    (SELECT COALESCE(SUM(CASE WHEN Mevcut>0 THEN Mevcut ELSE 0 END),0) FROM altStok),
+                    (SELECT COUNT(*) FROM altStok WHERE Mevcut>0 AND Mevcut<=3),
+                    (SELECT COUNT(*) FROM altStok WHERE Mevcut<=0),
+                    (SELECT COUNT(*) FROM StokHareketleri),
+                    (SELECT COUNT(*) FROM StokHareketleri WHERE Tarih >= $today)";
+            m.Parameters.AddWithValue("$today", DateTime.Today.ToString(DateFormat, CultureInfo.InvariantCulture));
+            using var r = m.ExecuteReader();
+            if (r.Read())
+                return (r.GetInt32(0), r.GetDouble(1), r.GetInt32(2), r.GetInt32(3), r.GetInt32(4), r.GetInt32(5));
+        }
+        catch { }
+        return (0, 0, 0, 0, 0, 0);
+    }
+
     public StokKarti? StokKartiDetayGetir(int id)
     {
         try

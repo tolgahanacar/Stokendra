@@ -227,5 +227,13 @@
     "update_date": "Update Date",
     "update_description": "Update Description",
     "apply_changes": "Apply Changes",
-    "bulk_edit_success": "Selected {0} records updated successfully."
+    "bulk_edit_success": "Selected {0} records updated successfully.",
+    "note_edit_title": "Edit Note",
+    "note_new_title": "New Note",
+    "note_date_col": "Date",
+    "note_preview_col": "Content Preview",
+    "no_low_stock": "✔ All stocks are at adequate levels",
+    "depleted": "Depleted",
+    "category_stock_diversity": "Stock Diversity by Category",
+    "last_7_days_movements": "Last 7 Days Stock Movements"
 }
