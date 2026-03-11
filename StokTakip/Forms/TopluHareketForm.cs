@@ -18,8 +18,13 @@ public class TopluHareketForm : Form
 
         // Header
         var pnlH = new Panel { Dock = DockStyle.Top, Height = 48, BackColor = UIHelper.BgPanel };
+        var bulkTitle = UIHelper.MakeIconTitle(
+            L("bulk_movement"),
+            UIHelper.TextWhite,
+            new Font("Segoe UI", 13, FontStyle.Bold),
+            left: 20, top: 10, gap: 6, iconSize: 13f, iconTop: 1, textTop: 0);
         pnlH.Controls.AddRange(new Control[] {
-            new Label { Text = L("bulk_movement"), Font = new Font("Segoe UI", 13, FontStyle.Bold), ForeColor = UIHelper.TextWhite, Left = 20, Top = 10, AutoSize = true },
+            bulkTitle,
             new Label { Text = L("bulk_movement_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextMuted, Left = 340, Top = 16, AutoSize = true }
         });
 

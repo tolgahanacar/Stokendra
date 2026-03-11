@@ -125,6 +125,7 @@ public static class UIHelper
         btn.FlatAppearance.BorderSize = 0;
         btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(bg, 0.15f);
         btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(bg, 0.1f);
+        UIIcons.EnableButtonIcon(btn, text);
         return btn;
     }
 
@@ -142,6 +143,47 @@ public static class UIHelper
             Text = text, Left = left, Top = top + 3, Width = width,
             AutoSize = true, Font = FontLabel, ForeColor = TextSecondary
         });
+    }
+
+    /// <summary>Label with leading icon (parsed from text) rendered using the icon font.</summary>
+    public static Panel MakeIconTitle(string text, Color color, Font textFont, int left = 0, int top = 0, int gap = 6, float iconSize = 12f, int iconTop = 0, int textTop = 0)
+    {
+        var pnl = new Panel
+        {
+            Left = left, Top = top,
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent
+        };
+
+        string labelText = text;
+        int x = 0;
+        if (UIIcons.TrySplitLeadingIcon(text, out var icon, out var rest))
+        {
+            var lblIcon = new Label
+            {
+                Text = UIIcons.ResolveIcon(icon),
+                AutoSize = true,
+                Font = UIIcons.GetFont(iconSize),
+                ForeColor = color,
+                Left = 0,
+                Top = iconTop
+            };
+            pnl.Controls.Add(lblIcon);
+            x = lblIcon.PreferredWidth + gap;
+            labelText = rest;
+        }
+
+        var lblText = new Label
+        {
+            Text = labelText,
+            AutoSize = true,
+            Font = textFont,
+            ForeColor = color,
+            Left = x,
+            Top = textTop
+        };
+        pnl.Controls.Add(lblText);
+        return pnl;
     }
 
     // ═══ STOK RENK ═══
@@ -207,7 +249,7 @@ public static class UIHelper
     {
         var pnl = new Panel { Left = 0, Top = top, Width = 240, Height = 46, BackColor = active ? SidebarActive : Color.Transparent, Cursor = Cursors.Hand, Tag = text };
         var accentBar = new Panel { Left = 0, Top = 0, Width = 4, Height = 46, BackColor = active ? accent : Color.Transparent };
-        var lblIcon = new Label { Text = icon, Left = 20, Top = 10, Width = 32, Height = 28, Font = new Font("Segoe UI", 14), ForeColor = active ? accent : TextMuted, Cursor = Cursors.Hand, TextAlign = ContentAlignment.MiddleCenter };
+        var lblIcon = new Label { Text = UIIcons.ResolveIcon(icon), Left = 20, Top = 10, Width = 32, Height = 28, Font = UIIcons.GetFont(14), ForeColor = active ? accent : TextMuted, Cursor = Cursors.Hand, TextAlign = ContentAlignment.MiddleCenter };
         var lblText = new Label { Text = text, Left = 56, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 10.5f, active ? FontStyle.Bold : FontStyle.Regular), ForeColor = active ? TextWhite : TextSecondary, Cursor = Cursors.Hand };
 
         pnl.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
@@ -284,6 +326,7 @@ public class GlowCard : Panel
     {
         var g = e.Graphics;
         g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
         var rect = new Rectangle(0, 0, Width - 1, Height - 1);
         using var path = RoundedRect(rect, _cornerRadius);
@@ -368,10 +411,10 @@ public class SectionPanel : Panel
         using var linePen = new Pen(Color.FromArgb(60, _accent), 2);
         g.DrawLine(linePen, 8, HeaderHeight - 1, Width - 8, HeaderHeight - 1);
 
-        using var fIcon = new Font("Segoe UI", 14);
+        using var fIcon = UIIcons.GetFont(14);
         using var fTitle = new Font("Segoe UI", 12.5f, FontStyle.Bold);
         using var accentBrush = new SolidBrush(_accent);
-        g.DrawString(_icon, fIcon, accentBrush, 10, 8);
+        g.DrawString(UIIcons.ResolveIcon(_icon), fIcon, accentBrush, 10, 8);
         g.DrawString(_title, fTitle, accentBrush, 38, 10);
 
         base.OnPaint(e);

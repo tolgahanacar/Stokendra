@@ -130,7 +130,33 @@ public class AyarlarPanel : UserControl
 
     static Label MakeLbl(string t, int x, int y) => new Label { Text = t, Left = x, Top = y + 3, Width = 190, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary };
     static Panel MakeDiv(ref int y) { var p = new Panel { Left = 0, Top = y, Width = 600, Height = 1, BackColor = UIHelper.Divider }; y += 14; return p; }
-    static Label SectionHeader(string icon, string text, Color c, ref int y) { var l = new Label { Text = $"{icon}  {text.ToUpperInvariant()}", Left = 0, Top = y, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = c }; y += 30; return l; }
+    static Panel SectionHeader(string icon, string text, Color c, ref int y)
+    {
+        var pnl = new Panel
+        {
+            Left = 0, Top = y,
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent
+        };
+        var lblIcon = new Label
+        {
+            Text = UIIcons.ResolveIcon(icon),
+            Left = 0, Top = 0, AutoSize = true,
+            Font = UIIcons.GetFont(12f),
+            ForeColor = c
+        };
+        var lblText = new Label
+        {
+            Text = text.ToUpperInvariant(),
+            Left = lblIcon.PreferredWidth + 6,
+            Top = 0, AutoSize = true,
+            Font = new Font("Segoe UI", 10, FontStyle.Bold),
+            ForeColor = c
+        };
+        pnl.Controls.AddRange(new Control[] { lblIcon, lblText });
+        y += 30;
+        return pnl;
+    }
 
     private void BackupDb()
     {

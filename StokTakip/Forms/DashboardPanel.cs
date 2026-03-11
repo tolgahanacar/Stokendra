@@ -57,10 +57,11 @@ internal class StatCard : Control
         // FIX 2 ► İkon sağ üstte çiziliyor
         if (!string.IsNullOrEmpty(Icon))
         {
-            using var fIcon = new System.Drawing.Font("Segoe UI Emoji", 11f);
+            using var fIcon = UIIcons.GetFont(12f);
             using var iconBrush = new SolidBrush(System.Drawing.Color.FromArgb(_hovered ? 200 : 130, Accent));
-            var iconSize = g.MeasureString(Icon, fIcon);
-            g.DrawString(Icon, fIcon, iconBrush, Width - iconSize.Width - 8, 7);
+            var iconText = UIIcons.ResolveIcon(Icon);
+            var iconSize = g.MeasureString(iconText, fIcon);
+            g.DrawString(iconText, fIcon, iconBrush, Width - iconSize.Width - 8, 7);
         }
 
         // FIX 3 ► Türkçe büyük harf (ı→I, i→İ, ş→Ş vs.) — ToUpperTr extension
@@ -317,9 +318,9 @@ public class DashboardPanel : UserControl
         var pnlBody = new SectionPanel
         {
             Dock       = DockStyle.Fill,
-            Title      = L("low_stock_alerts").Replace("⚠ ", "").Replace("⚠  ", ""),
+            Title      = UIIcons.StripLeadingIcon(L("low_stock_alerts")),
             AccentColor = UIHelper.StokWarning,
-            Icon       = "⚠",
+            Icon       = "🔔",
             Padding    = new Padding(8, 46, 8, 8)
         };
 

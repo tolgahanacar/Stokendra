@@ -37,14 +37,14 @@ public class NotDuzenleForm : Form
         var pnlBody = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark, Padding = new Padding(24, 16, 24, 8) };
 
         // Tarih — simple label
-        var lblTarih = new Label
-        {
-            Dock = DockStyle.Top, Height = 24,
-            Text = "📅  " + (mevcut?.Tarih ?? DateTime.Now).ToString("dd MMMM yyyy, HH:mm"),
-            Font = new Font("Segoe UI Semibold", 9),
-            ForeColor = UIHelper.AccentCyan,
-            Padding = new Padding(0, 4, 0, 4)
-        };
+        var tarihText = (mevcut?.Tarih ?? DateTime.Now).ToString("dd MMMM yyyy, HH:mm");
+        var pnlTarih = new Panel { Dock = DockStyle.Top, Height = 24, BackColor = UIHelper.BgDark };
+        var tarihTitle = UIHelper.MakeIconTitle(
+            "📅  " + tarihText,
+            UIHelper.AccentCyan,
+            new Font("Segoe UI Semibold", 9),
+            left: 0, top: 2, gap: 6, iconSize: 12f, iconTop: 0, textTop: 0);
+        pnlTarih.Controls.Add(tarihTitle);
 
         // Başlık label
         var lblBaslikLabel = new Label
@@ -124,7 +124,7 @@ public class NotDuzenleForm : Form
         pnlBody.Controls.Add(spacer);
         pnlBody.Controls.Add(txtBaslik);
         pnlBody.Controls.Add(lblBaslikLabel);
-        pnlBody.Controls.Add(lblTarih);
+        pnlBody.Controls.Add(pnlTarih);
 
         Controls.Add(pnlBody);
         Controls.Add(pnlFooter);

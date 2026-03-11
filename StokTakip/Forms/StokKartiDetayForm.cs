@@ -45,7 +45,12 @@ public class StokKartiDetayForm : Form
 
         // Hareket başlığı
         var pnlMH = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = UIHelper.BgDark };
-        pnlMH.Controls.Add(new Label { Text = L("movement_history"), Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = UIHelper.TextPrimary, Left = 20, Top = 6, AutoSize = true });
+        var mhTitle = UIHelper.MakeIconTitle(
+            L("movement_history"),
+            UIHelper.TextPrimary,
+            new Font("Segoe UI", 10, FontStyle.Bold),
+            left: 20, top: 6, gap: 6, iconSize: 12f, iconTop: 1, textTop: 0);
+        pnlMH.Controls.Add(mhTitle);
 
         // Grid
         grid = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(grid);

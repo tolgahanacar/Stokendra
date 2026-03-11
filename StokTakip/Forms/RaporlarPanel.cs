@@ -243,13 +243,11 @@ public class RaporlarPanel : UserControl
             Dock = DockStyle.Top, Height = 36,
             BackColor = UIHelper.BgDark
         };
-        var lblG = new System.Windows.Forms.Label
-        {
-            Text = L("movement_history"),
-            Font = new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold),
-            ForeColor = UIHelper.TextPrimary,
-            Left = 0, Top = 8, AutoSize = true
-        };
+        var lblG = UIHelper.MakeIconTitle(
+            L("movement_history"),
+            UIHelper.TextPrimary,
+            new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold),
+            left: 0, top: 8, gap: 6, iconSize: 12f, iconTop: 1, textTop: 0);
         pnlGridHeader.Controls.Add(lblG);
 
         grid = new DataGridView { Dock = DockStyle.Fill };
