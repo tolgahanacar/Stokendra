@@ -1,6 +1,8 @@
 using System.Data;
 using System.Drawing.Printing;
 using System.Drawing.Drawing2D;
+using System.Threading;
+using System.Threading.Tasks;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
@@ -21,6 +23,14 @@ public class RaporlarPanel : UserControl
     private System.Windows.Forms.Label lblTotalInfo    = new();
     private System.Windows.Forms.Label lblUniqueInfo   = new();
     private System.Windows.Forms.Label lblInfo         = new();
+    private Button btnGen = new(), btnClr = new(), btnPrint = new();
+    private CancellationTokenSource? reportCts;
+    private int reportVersion;
+    private string[] chartLabels = Array.Empty<string>();
+    private double[] chartValues = Array.Empty<double>();
+    private readonly ToolTip chartTip = new();
+    private int chartHoverIndex = -1;
+    private static readonly Font QtyFont = new("Segoe UI Semibold", 9.5f, FontStyle.Bold);
 
     public RaporlarPanel()
     {
@@ -30,25 +40,56 @@ public class RaporlarPanel : UserControl
         var pnlH = UIHelper.MakeHeader(L("reports"), L("reports_subtitle"));
 
         // ═══ FILTER BAR ═══
-        var pnlF = new FlowLayoutPanel
+        var pnlFWrap = new TableLayoutPanel
         {
-            Dock = DockStyle.Top, AutoSize = true,
-            WrapContents = true, BackColor = UIHelper.BgPanel,
-            FlowDirection = FlowDirection.LeftToRight,
+            Dock = DockStyle.Top,
+            Height = 92,
+            BackColor = UIHelper.BgPanel,
+            ColumnCount = 2,
+            RowCount = 1,
             Padding = new Padding(16, 8, 16, 8)
         };
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        pnlFWrap.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        void AddFilterGroup(string label, Control ctrl)
+        var pnlFFilters = new FlowLayoutPanel
         {
-            pnlF.Controls.Add(new System.Windows.Forms.Label
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            WrapContents = true,
+            BackColor = UIHelper.BgPanel,
+            FlowDirection = FlowDirection.LeftToRight,
+            Margin = new Padding(0),
+            Padding = new Padding(0)
+        };
+
+        var pnlFActions = new FlowLayoutPanel
+        {
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            WrapContents = false,
+            FlowDirection = FlowDirection.LeftToRight,
+            BackColor = UIHelper.BgPanel,
+            Margin = new Padding(8, 0, 0, 0),
+            Padding = new Padding(0),
+            Anchor = AnchorStyles.Right
+        };
+
+        pnlFWrap.Controls.Add(pnlFFilters, 0, 0);
+        pnlFWrap.Controls.Add(pnlFActions, 1, 0);
+
+        void AddFilterGroup(string label, Control ctrl, int labelTop = 12)
+        {
+            pnlFFilters.Controls.Add(new System.Windows.Forms.Label
             {
                 Text = label, AutoSize = true,
                 Font = new Font("Segoe UI Semibold", 8f),
                 ForeColor = UIHelper.TextMuted,
-                Margin = new Padding(6, 12, 4, 0)
+                Margin = new Padding(6, labelTop, 4, 0)
             });
             ctrl.Margin = new Padding(0, 6, 8, 6);
-            pnlF.Controls.Add(ctrl);
+            pnlFFilters.Controls.Add(ctrl);
         }
 
         dtpStart = new DateTimePicker
@@ -66,6 +107,16 @@ public class RaporlarPanel : UserControl
             Value = DateTime.Today
         };
         UIHelper.StyleDatePicker(dtpEnd);
+        dtpStart.ValueChanged += (_, _) =>
+        {
+            if (dtpStart.Value.Date > dtpEnd.Value.Date)
+                dtpEnd.Value = dtpStart.Value.Date;
+        };
+        dtpEnd.ValueChanged += (_, _) =>
+        {
+            if (dtpEnd.Value.Date < dtpStart.Value.Date)
+                dtpStart.Value = dtpEnd.Value.Date;
+        };
 
         cmbUser = MakeCombo(140);
         cmbUser.Items.Add(L("all"));
@@ -89,15 +140,7 @@ public class RaporlarPanel : UserControl
         AddFilterGroup(L("end_date"),      dtpEnd);
         AddFilterGroup(L("select_user"),   cmbUser);
         AddFilterGroup(L("dept_filter"),   cmbDept);
-        AddFilterGroup(L("select_category"), cmbCategory);
-
-        // Divider
-        pnlF.Controls.Add(new Panel
-        {
-            Width = 1, Height = 28,
-            BackColor = UIHelper.Divider,
-            Margin = new Padding(4, 10, 4, 10)
-        });
+        AddFilterGroup(L("select_category"), cmbCategory, 16);
 
         var btnGen = UIHelper.MakeFlowButton("⚡ " + L("generate_report"), UIHelper.AccentBlue, 120, 28);
         var btnClr = UIHelper.MakeFlowButton("✕ " + L("clear_filter"),    UIHelper.BtnDark,   90,  28);
@@ -113,7 +156,10 @@ public class RaporlarPanel : UserControl
             cmbCategory.SelectedIndex = 0;
             GenerateReport();
         };
-        pnlF.Controls.AddRange(new Control[] { btnGen, btnClr });
+        this.btnGen = btnGen;
+        this.btnClr = btnClr;
+        pnlFActions.Controls.AddRange(new Control[] { btnGen, btnClr });
+        pnlFWrap.Height = Math.Max(92, cmbUser.Height + 40);
 
         // ═══ ACTION TOOLBAR ═══
         var pnlT = new FlowLayoutPanel
@@ -125,6 +171,7 @@ public class RaporlarPanel : UserControl
         var btnPrint = UIHelper.MakeFlowButton("🖨 " + L("print"), UIHelper.BtnMid, 110, 28);
         btnPrint.Margin = new Padding(0, 2, 6, 2);
         btnPrint.Click += (_, _) => PrintReport();
+        this.btnPrint = btnPrint;
         pnlT.Controls.Add(btnPrint);
 
         // ═══ CHART + STAT CARDS AREA ═══
@@ -148,15 +195,28 @@ public class RaporlarPanel : UserControl
         plotChart.Plot.DataBackground.Color   = ScottPlot.Color.FromColor(Color.FromArgb(20, 24, 34));
         plotChart.Plot.Axes.Color(ScottPlot.Color.FromColor(Color.FromArgb(140, 145, 160)));
         plotChart.Plot.Grid.LineColor = ScottPlot.Color.FromColor(Color.FromArgb(35, 40, 50));
+        chartTip.BackColor = UIHelper.BgCard;
+        chartTip.ForeColor = UIHelper.TextPrimary;
+        chartTip.InitialDelay = 200;
+        chartTip.ReshowDelay = 100;
+        chartTip.AutoPopDelay = 1500;
+        chartTip.ShowAlways = true;
+        plotChart.MouseMove += PlotChart_MouseMove;
+        plotChart.MouseLeave += (_, _) => { chartTip.Hide(plotChart); chartHoverIndex = -1; };
 
         // Stat cards (right column — stacked)
-        var pnlStats = new Panel
+        var pnlStats = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             BackColor = UIHelper.BgDark,
             Margin = new Padding(8, 0, 0, 0),
-            Padding = new Padding(0)
+            Padding = new Padding(0),
+            ColumnCount = 1,
+            RowCount = 2
         };
+        pnlStats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+        pnlStats.RowStyles.Add(new RowStyle(SizeType.Absolute, 148f));
+        pnlStats.RowStyles.Add(new RowStyle(SizeType.Absolute, 148f));
 
         var cardTotal  = MakeReportStatCard(L("total_consumption"), UIHelper.AccentPurple, 0);
         var cardUnique = MakeReportStatCard(L("unique_items"),       UIHelper.AccentCyan,   148);
@@ -164,7 +224,8 @@ public class RaporlarPanel : UserControl
         lblUniqueInfo = (System.Windows.Forms.Label)cardUnique.Controls["val"]!;
         lblTotalInfo.Text  = "0";
         lblUniqueInfo.Text = "0";
-        pnlStats.Controls.AddRange(new Control[] { cardTotal, cardUnique });
+        pnlStats.Controls.Add(cardTotal, 0, 0);
+        pnlStats.Controls.Add(cardUnique, 0, 1);
 
         pnlTop.Controls.Add(plotChart, 0, 0);
         pnlTop.Controls.Add(pnlStats,  1, 0);
@@ -205,15 +266,9 @@ public class RaporlarPanel : UserControl
         AddCol("Teslim",   L("delivered_to"), 155);
         AddCol("Kategori", L("category"),     115);
         grid.Columns["Tarih"]!.DefaultCellStyle.Format = "dd.MM.yyyy HH:mm";
-
-        grid.CellFormatting += (_, e) =>
-        {
-            if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "Miktar" && e.CellStyle != null)
-            {
-                e.CellStyle.ForeColor = UIHelper.StokWarning;
-                e.CellStyle.Font = new Font("Segoe UI Semibold", 9.5f, FontStyle.Bold);
-            }
-        };
+        var qtyCol = grid.Columns["Miktar"]!;
+        qtyCol.DefaultCellStyle.ForeColor = UIHelper.StokWarning;
+        qtyCol.DefaultCellStyle.Font = QtyFont;
 
         pnlGrid.Controls.Add(grid);
         pnlGrid.Controls.Add(pnlGridHeader);
@@ -235,9 +290,9 @@ public class RaporlarPanel : UserControl
         pnlSt.Controls.Add(lblInfo);
 
         Controls.Add(pnlGrid);
-        Controls.Add(pnlT);
         Controls.Add(pnlTop);
-        Controls.Add(pnlF);
+        Controls.Add(pnlT);
+        Controls.Add(pnlFWrap);
         Controls.Add(pnlH);
         Controls.Add(pnlSt);
 
@@ -258,15 +313,15 @@ public class RaporlarPanel : UserControl
     {
         var card = new Panel
         {
-            Left = 0, Top = top, Width = 300, Height = 136,
+            Dock = DockStyle.Fill,
             BackColor = UIHelper.BgCard,
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            Margin = new Padding(0, 0, 0, 12)
         };
 
         // Accent left bar
         card.Controls.Add(new Panel
         {
-            Left = 0, Top = 0, Width = 4, Height = 136,
+            Dock = DockStyle.Left, Width = 4,
             BackColor = accent
         });
 
@@ -302,84 +357,176 @@ public class RaporlarPanel : UserControl
             c.MouseLeave += (_, _) => card.BackColor = UIHelper.BgCard;
         }
 
-        // Resize → keep width in sync with parent
-        card.ParentChanged += (_, _) =>
-        {
-            if (card.Parent == null) return;
-            card.Width = card.Parent.ClientSize.Width;
-            card.Parent.Resize += (_, _) => card.Width = card.Parent.ClientSize.Width;
-        };
-
         return card;
+    }
+
+    private sealed class ReportRow
+    {
+        public DateTime Tarih { get; init; }
+        public string StokAd { get; init; } = "";
+        public double Miktar { get; init; }
+        public string Teslim { get; init; } = "";
+        public string? Kategori { get; init; }
+        public int CardId { get; init; }
+    }
+
+    private sealed class ReportData
+    {
+        public List<ReportRow> Rows { get; } = new();
+        public double TotalConsumption { get; set; }
+        public int UniqueItems { get; set; }
+        public List<(string Name, double Total)> TopItems { get; } = new();
     }
 
     // ── Report Generation ──────────────────────────────────────────────────────
 
-    private void GenerateReport()
+    private async void GenerateReport()
     {
+        reportCts?.Cancel();
+        reportCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        reportCts = cts;
+        var token = cts.Token;
+        int version = Interlocked.Increment(ref reportVersion);
+
         var start = dtpStart.Value.Date;
         var end   = dtpEnd.Value.Date.AddDays(1).AddTicks(-1);
         string? user = cmbUser.SelectedIndex    > 0 ? cmbUser.SelectedItem!.ToString()    : null;
         string? dept = cmbDept.SelectedIndex    > 0 ? cmbDept.SelectedItem!.ToString()    : null;
         string? cat  = cmbCategory.SelectedIndex > 0 ? cmbCategory.SelectedItem!.ToString() : null;
 
+        SetBusy(true);
+        try
+        {
+            var data = await Task.Run(() => BuildReportData(start, end, user, dept, cat, token), token);
+            if (token.IsCancellationRequested || version != reportVersion)
+                return;
+
+            ApplyReportData(data, user, dept);
+        }
+        catch (OperationCanceledException)
+        {
+            // ignored
+        }
+        finally
+        {
+            if (version == reportVersion)
+                SetBusy(false);
+        }
+    }
+
+    private ReportData BuildReportData(DateTime start, DateTime end, string? user, string? dept, string? cat, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
         var allMoves = Program.DB!.HareketleriGetir(null, start, end, null, "Cikis");
+        token.ThrowIfCancellationRequested();
         var filtered = allMoves.Where(h =>
             (user == null || h.TeslimEdilen == user) &&
             (dept == null || h.Departman    == dept)
         ).ToList();
 
         var kartlar = Program.DB!.AltKartlariGetir();
-        var query = from h in filtered
-                    join k in kartlar on h.StokKartId equals k.Id
-                    where (cat == null || k.Kategori == cat)
-                    select new { Movement = h, Card = k };
+        var kartMap = kartlar.ToDictionary(k => k.Id);
 
-        var rows = query.OrderBy(q => q.Movement.Tarih).ToList();
+        var rows = new List<ReportRow>(filtered.Count);
+        var totals = new Dictionary<string, double>();
+        var unique = new HashSet<int>();
+        double total = 0;
 
-        // Grid
-        grid.Rows.Clear();
-        double totalConsumption = 0;
-        foreach (var row in rows)
+        foreach (var h in filtered)
         {
-            grid.Rows.Add(
-                row.Movement.Tarih,
-                row.Card.Ad,
-                $"{UIHelper.FormatMiktar(row.Movement.Miktar)} [Ç]",
-                row.Movement.TeslimEdilen,
-                row.Card.Kategori);
-            totalConsumption += row.Movement.Miktar;
+            token.ThrowIfCancellationRequested();
+            if (!kartMap.TryGetValue(h.StokKartId, out var k)) continue;
+            if (cat != null && k.Kategori != cat) continue;
+
+            rows.Add(new ReportRow
+            {
+                Tarih = h.Tarih,
+                StokAd = k.Ad,
+                Miktar = h.Miktar,
+                Teslim = h.TeslimEdilen ?? "",
+                Kategori = k.Kategori,
+                CardId = k.Id
+            });
+
+            total += h.Miktar;
+            unique.Add(k.Id);
+            totals[k.Ad] = totals.TryGetValue(k.Ad, out var cur) ? cur + h.Miktar : h.Miktar;
         }
 
-        int uniqueItems = rows.Select(r => r.Card.Id).Distinct().Count();
-        lblTotalInfo.Text  = UIHelper.FormatMiktar(totalConsumption);
-        lblUniqueInfo.Text = uniqueItems.ToString();
-        lblInfo.Text = rows.Count == 0
-            ? L("report_no_data")
-            : L("records_info", rows.Count, 0);
+        rows.Sort((a, b) => a.Tarih.CompareTo(b.Tarih));
 
-        // Chart
-        plotChart.Plot.Clear();
-        if (rows.Count > 0)
+        var data = new ReportData
         {
-            var grouped = rows
-                .GroupBy(r => r.Card.Ad)
-                .Select(g => new { Ad = g.Key, Miktar = g.Sum(r => r.Movement.Miktar) })
-                .OrderByDescending(x => x.Miktar).Take(10).ToList();
+            TotalConsumption = total,
+            UniqueItems = unique.Count
+        };
+        data.Rows.AddRange(rows);
 
-            double[] pos    = Enumerable.Range(0, grouped.Count).Select(x => (double)x).ToArray();
-            double[] values = grouped.Select(x => x.Miktar).ToArray();
-            string[] labels = grouped.Select(x => x.Ad).ToArray();
+        foreach (var kvp in totals.OrderByDescending(k => k.Value).Take(10))
+            data.TopItems.Add((kvp.Key, kvp.Value));
 
-            var bars = plotChart.Plot.Add.Bars(pos, values);
+        return data;
+    }
+
+    private void ApplyReportData(ReportData data, string? user, string? dept)
+    {
+        var prevAutoSize = grid.AutoSizeColumnsMode;
+        grid.SuspendLayout();
+        grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
+        try
+        {
+            grid.Rows.Clear();
+            foreach (var row in data.Rows)
+            {
+                grid.Rows.Add(
+                    row.Tarih,
+                    row.StokAd,
+                    $"{UIHelper.FormatMiktar(row.Miktar)} [Ç]",
+                    row.Teslim,
+                    row.Kategori);
+            }
+
+            lblTotalInfo.Text  = UIHelper.FormatMiktar(data.TotalConsumption);
+            lblUniqueInfo.Text = data.UniqueItems.ToString();
+            lblInfo.Text = data.Rows.Count == 0
+                ? L("report_no_data")
+                : L("records_info", data.Rows.Count, 0);
+
+            UpdateChart(data.TopItems, user, dept);
+        }
+        finally
+        {
+            grid.AutoSizeColumnsMode = prevAutoSize;
+            grid.ClearSelection();
+            grid.ResumeLayout();
+        }
+    }
+
+    private void UpdateChart(List<(string Name, double Total)> items, string? user, string? dept)
+    {
+        plotChart.Plot.Clear();
+        chartHoverIndex = -1;
+        chartTip.Hide(plotChart);
+        chartLabels = Array.Empty<string>();
+        chartValues = Array.Empty<double>();
+
+        if (items.Count > 0)
+        {
+            chartLabels = items.Select(x => x.Name).ToArray();
+            chartValues = items.Select(x => x.Total).ToArray();
+            double[] pos = Enumerable.Range(0, items.Count).Select(x => (double)x).ToArray();
+
+            var bars = plotChart.Plot.Add.Bars(pos, chartValues);
             bars.Color      = ScottPlot.Color.FromColor(UIHelper.AccentPurple);
             bars.LegendText = L("consumption_chart");
             foreach (var b in bars.Bars) b.Size = 0.6;
 
-            string[] shortLabels = labels
-                .Select(l => l.Length > 16 ? l[..14] + ".." : l).ToArray();
+            int maxChars = GetMaxLabelChars(items.Count);
+            string[] shortLabels = BuildShortLabels(chartLabels, maxChars);
+
             plotChart.Plot.Axes.Bottom.SetTicks(pos, shortLabels);
-            plotChart.Plot.Axes.Bottom.TickLabelStyle.Rotation  = -50;
+            plotChart.Plot.Axes.Bottom.TickLabelStyle.Rotation  = -45;
             plotChart.Plot.Axes.Bottom.TickLabelStyle.Alignment = Alignment.MiddleRight;
             plotChart.Plot.Axes.Bottom.TickLabelStyle.FontSize   = 10f;
             plotChart.Plot.Axes.Left.TickLabelStyle.ForeColor    = ScottPlot.Color.FromColor(Color.LightGray);
@@ -396,12 +543,75 @@ public class RaporlarPanel : UserControl
         {
             plotChart.Plot.Axes.Title.Label.Text     = L("report_no_data");
             plotChart.Plot.Axes.Title.Label.ForeColor = ScottPlot.Color.FromColor(Color.Gray);
+            plotChart.Plot.Axes.Bottom.SetTicks(Array.Empty<double>(), Array.Empty<string>());
         }
 
         plotChart.Refresh();
     }
 
+    private int GetMaxLabelChars(int itemCount)
+    {
+        if (itemCount <= 0) return 12;
+        int plotWidth = Math.Max(1, plotChart.Width);
+        int pxPerBar = Math.Max(1, plotWidth / itemCount);
+        int maxChars = pxPerBar / 7;
+        return Math.Clamp(maxChars, 8, 18);
+    }
+
+    private static string[] BuildShortLabels(string[] labels, int maxChars)
+    {
+        if (maxChars < 4) maxChars = 4;
+        return labels
+            .Select(l => l.Length > maxChars ? l.Substring(0, maxChars - 2) + ".." : l)
+            .ToArray();
+    }
+
+    private void PlotChart_MouseMove(object? sender, MouseEventArgs e)
+    {
+        if (chartLabels.Length == 0 || chartValues.Length != chartLabels.Length)
+            return;
+
+        try
+        {
+            var coords = plotChart.Plot.GetCoordinates(new Pixel(e.X, e.Y));
+            int idx = (int)Math.Round(coords.X);
+            if (idx < 0 || idx >= chartLabels.Length)
+            {
+                if (chartHoverIndex != -1)
+                {
+                    chartTip.Hide(plotChart);
+                    chartHoverIndex = -1;
+                }
+                return;
+            }
+
+            if (idx != chartHoverIndex)
+            {
+                chartHoverIndex = idx;
+                string text = $"{chartLabels[idx]}: {UIHelper.FormatMiktar(chartValues[idx])}";
+                chartTip.Show(text, plotChart, e.Location.X + 12, e.Location.Y + 12, 1500);
+            }
+        }
+        catch
+        {
+            // ignore plotting coordinate errors
+        }
+    }
+
     // ── Print ──────────────────────────────────────────────────────────────────
+
+    private void SetBusy(bool busy)
+    {
+        UseWaitCursor = busy;
+        btnGen.Enabled = !busy;
+        btnClr.Enabled = !busy;
+        btnPrint.Enabled = !busy;
+        dtpStart.Enabled = !busy;
+        dtpEnd.Enabled = !busy;
+        cmbUser.Enabled = !busy;
+        cmbDept.Enabled = !busy;
+        cmbCategory.Enabled = !busy;
+    }
 
     private void PrintReport()
     {

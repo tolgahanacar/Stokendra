@@ -57,7 +57,7 @@ internal class StatCard : Control
         // FIX 2 ► İkon sağ üstte çiziliyor
         if (!string.IsNullOrEmpty(Icon))
         {
-            using var fIcon = new System.Drawing.Font("Segoe UI", 11f);
+            using var fIcon = new System.Drawing.Font("Segoe UI Emoji", 11f);
             using var iconBrush = new SolidBrush(System.Drawing.Color.FromArgb(_hovered ? 200 : 130, Accent));
             var iconSize = g.MeasureString(Icon, fIcon);
             g.DrawString(Icon, fIcon, iconBrush, Width - iconSize.Width - 8, 7);
