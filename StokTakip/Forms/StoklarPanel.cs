@@ -20,7 +20,7 @@ public class StoklarPanel : UserControl
         var pnlT = UIHelper.MakeToolbar(40);
         txtAra = UIHelper.MakeSearchBox(L("stock_code_search"), 300); txtAra.TextChanged += (_, _) => FilterGrid();
         
-        var btnRapor = UIHelper.MakeFlowButton("Rapor Al", UIHelper.AccentBlue, 110);
+        var btnRapor = UIHelper.MakeFlowButton(L("report_al"), UIHelper.AccentBlue, 110);
         btnRapor.Click += (_, _) => RaporAl();
         
         pnlT.Controls.AddRange(new Control[] { txtAra, btnRapor });
@@ -107,8 +107,21 @@ public class StoklarPanel : UserControl
             raporVerisi.Add((kart.KodNo, kart.Ad, kartGiris, kartCikis, kart.MevcutStok));
         }
 
+        // Use filtered data if search is active
+        var filter = txtAra.Text.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(filter))
+        {
+            raporVerisi = raporVerisi.Where(x => x.KodNo.ToLowerInvariant().Contains(filter) || x.Ad.ToLowerInvariant().Contains(filter)).ToList();
+            // Re-calculate totals for filtered data
+            grandGiris = raporVerisi.Sum(x => x.G);
+            grandCikis = raporVerisi.Sum(x => x.C);
+            grandMevcut = raporVerisi.Sum(x => x.M);
+        }
+
         int ps = 0;
         int pageNum = 0;
+
+        pd.BeginPrint += (_, _) => { ps = 0; pageNum = 0; };
         
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;

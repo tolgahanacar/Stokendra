@@ -22,7 +22,7 @@ public class AyarlarPanel : UserControl
         int y = 10, lw = 200, fw = 350;
 
         // ═══ DİL ═══
-        pnlBody.Controls.Add(SectionHeader("🌐", L("language_label"), UIHelper.AccentCyan, ref y));
+        pnlBody.Controls.Add(SectionHeader(L("language_label"), UIHelper.AccentCyan, ref y));
         pnlBody.Controls.Add(MakeLbl(L("language_label"), 0, y));
         cmbDil = new ComboBox { Left = lw, Top = y, Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
         UIHelper.StyleComboBox(cmbDil);
@@ -33,7 +33,7 @@ public class AyarlarPanel : UserControl
 
         // ═══ FİRMA ═══
         pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("🏢", L("company_name_label"), UIHelper.AccentBlue, ref y));
+        pnlBody.Controls.Add(SectionHeader(L("company_name_label"), UIHelper.AccentBlue, ref y));
         pnlBody.Controls.Add(MakeLbl(L("company_name_label"), 0, y));
         txtFirma = new TextBox { Left = lw, Top = y, Width = fw }; txtFirma.Text = Program.Settings.CompanyName; UIHelper.StyleTextBox(txtFirma);
         pnlBody.Controls.Add(txtFirma); y += 26;
@@ -41,7 +41,7 @@ public class AyarlarPanel : UserControl
 
         // ═══ VERİTABANI YOLU ═══
         pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("🗄", L("db_path_label"), UIHelper.AccentPurple, ref y));
+        pnlBody.Controls.Add(SectionHeader(L("db_path_label"), UIHelper.AccentPurple, ref y));
         pnlBody.Controls.Add(MakeLbl(L("db_path_label"), 0, y));
         txtDbPath = new TextBox { Left = lw, Top = y, Width = fw - 100, ReadOnly = true }; txtDbPath.Text = Program.Settings.DbPath;
         UIHelper.StyleTextBox(txtDbPath); txtDbPath.ForeColor = UIHelper.TextDim;
@@ -51,7 +51,7 @@ public class AyarlarPanel : UserControl
 
         // ═══ YEDEKLEME ═══
         pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("💾", L("backup_section"), UIHelper.AccentYellow, ref y));
+        pnlBody.Controls.Add(SectionHeader(L("backup_section"), UIHelper.AccentYellow, ref y));
 
         var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, y, 240, 36);
         btnBackupDb.ForeColor = Color.Black;
@@ -77,7 +77,7 @@ public class AyarlarPanel : UserControl
 
         // ═══ ŞİFRE DEĞİŞTİR ═══
         pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("\ud83d\udd12", L("change_password"), UIHelper.AccentOrange, ref y));
+        pnlBody.Controls.Add(SectionHeader(L("change_password"), UIHelper.AccentOrange, ref y));
 
         pnlBody.Controls.Add(MakeLbl(L("old_password"), 0, y));
         var txtEski = new TextBox { Left = lw, Top = y, Width = fw, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtEski);
@@ -107,7 +107,7 @@ public class AyarlarPanel : UserControl
 
         // ═══ HAKKINDA ═══
         pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("ℹ️", "HAKKINDA", UIHelper.AccentCyan, ref y));
+        pnlBody.Controls.Add(SectionHeader("HAKKINDA", UIHelper.AccentCyan, ref y));
 
         var pnlAbout = new Panel { Left = 0, Top = y, Width = 550, Height = 130, BackColor = UIHelper.BgCard };
         var accentLine = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = UIHelper.AccentCyan };
@@ -130,30 +130,11 @@ public class AyarlarPanel : UserControl
 
     static Label MakeLbl(string t, int x, int y) => new Label { Text = t, Left = x, Top = y + 3, Width = 190, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary };
     static Panel MakeDiv(ref int y) { var p = new Panel { Left = 0, Top = y, Width = 600, Height = 1, BackColor = UIHelper.Divider }; y += 14; return p; }
-    static Panel SectionHeader(string icon, string text, Color c, ref int y)
+    static Panel SectionHeader(string text, Color c, ref int y)
     {
-        var pnl = new Panel
-        {
-            Left = 0, Top = y,
-            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent
-        };
-        var lblIcon = new Label
-        {
-            Text = UIIcons.ResolveIcon(icon),
-            Left = 0, Top = 0, AutoSize = true,
-            Font = UIIcons.GetFont(12f),
-            ForeColor = c
-        };
-        var lblText = new Label
-        {
-            Text = text.ToUpperInvariant(),
-            Left = lblIcon.PreferredWidth + 6,
-            Top = 0, AutoSize = true,
-            Font = new Font("Segoe UI", 10, FontStyle.Bold),
-            ForeColor = c
-        };
-        pnl.Controls.AddRange(new Control[] { lblIcon, lblText });
+        var pnl = new Panel { Left = 0, Top = y, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent };
+        var lblText = new Label { Text = text.ToUpperInvariant(), Left = 0, Top = 0, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = c };
+        pnl.Controls.Add(lblText);
         y += 30;
         return pnl;
     }
@@ -162,11 +143,7 @@ public class AyarlarPanel : UserControl
     {
         using var dlg = new SaveFileDialog { Title = L("backup_db"), Filter = "SQLite DB|*.db", FileName = $"stokendra_yedek_{DateTime.Now:yyyyMMdd_HHmm}.db" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
-        try
-        {
-            File.Copy(Program.Settings.DbPath, dlg.FileName, true);
-            MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
+        try { File.Copy(Program.Settings.DbPath, dlg.FileName, true); MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); }
         catch (Exception ex) { MessageBox.Show(L("backup_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
@@ -179,27 +156,18 @@ public class AyarlarPanel : UserControl
             var sb = new StringBuilder();
             sb.AppendLine("-- Stokendra SQL Backup");
             sb.AppendLine($"-- Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            sb.AppendLine($"-- Developer: Tolgahan Acar");
-            sb.AppendLine();
 
             using var con = new SqliteConnection($"Data Source={Program.Settings.DbPath}");
             con.Open();
-
             string[] tables = { "StokKartlari", "StokHareketleri", "Notlar", "Birimler", "Departmanlar", "AppConfig", "AuditLog", "Kullanicilar", "ServisKayitlari" };
             foreach (var table in tables)
             {
                 try
                 {
-                    sb.AppendLine($"-- Table: {table}");
                     using var cmd = con.CreateCommand();
                     cmd.CommandText = $"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}'";
                     var createSql = cmd.ExecuteScalar()?.ToString();
-                    if (!string.IsNullOrEmpty(createSql))
-                    {
-                        sb.AppendLine($"DROP TABLE IF EXISTS {table};");
-                        sb.AppendLine(createSql + ";");
-                        sb.AppendLine();
-                    }
+                    if (!string.IsNullOrEmpty(createSql)) { sb.AppendLine($"DROP TABLE IF EXISTS {table};"); sb.AppendLine(createSql + ";"); }
 
                     using var cmd2 = con.CreateCommand();
                     cmd2.CommandText = $"SELECT * FROM {table}";
@@ -215,11 +183,9 @@ public class AyarlarPanel : UserControl
                         }
                         sb.AppendLine($"INSERT INTO {table} VALUES ({string.Join(",", vals)});");
                     }
-                    sb.AppendLine();
                 }
-                catch { /* table may not exist */ }
+                catch { }
             }
-
             File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
             MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -247,55 +213,22 @@ public class AyarlarPanel : UserControl
             client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-App");
             string url = "https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest";
             var response = await client.GetAsync(url);
-
             if (response.IsSuccessStatusCode)
             {
                 var jsonString = await response.Content.ReadAsStringAsync();
                 using var jsonDoc = JsonDocument.Parse(jsonString);
                 string latestVersion = jsonDoc.RootElement.GetProperty("tag_name").GetString() ?? "";
                 string htmlUrl = jsonDoc.RootElement.GetProperty("html_url").GetString() ?? "";
-                
                 string currentVersion = "v" + Application.ProductVersion;
-                if (currentVersion.Count(c => c == '.') > 1 && currentVersion.EndsWith(".0"))
-                {
-                    // Clean up typically generated versions like "1.0.0.0" -> "v1.0.0"
-                    currentVersion = currentVersion.Substring(0, currentVersion.LastIndexOf(".0"));
-                }
-
                 if (string.Compare(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase) > 0)
                 {
-                    if (MessageBox.Show(L("update_available", latestVersion, currentVersion), 
-                                        L("update_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = htmlUrl,
-                            UseShellExecute = true
-                        });
-                    }
+                    if (MessageBox.Show(L("update_available", latestVersion, currentVersion), L("update_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    { Process.Start(new ProcessStartInfo { FileName = htmlUrl, UseShellExecute = true }); }
                 }
-                else
-                {
-                    MessageBox.Show(L("up_to_date", currentVersion), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            else
-            {
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    MessageBox.Show("GitHub deposu bulunamadı veya gizli. Eğer depo gizli ise erişim için Personal Access Token gereklidir.", L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                else if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
-                    MessageBox.Show("GitHub API hız sınırına ulaşıldı (Rate Limit). Lütfen daha sonra tekrar deneyin.", L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                else
-                    throw new Exception($"GitHub API responded with: {response.StatusCode}");
+                else MessageBox.Show(L("up_to_date", currentVersion), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show(L("update_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            Cursor.Current = Cursors.Default;
-        }
+        catch (Exception ex) { MessageBox.Show(L("update_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        finally { Cursor.Current = Cursors.Default; }
     }
 }

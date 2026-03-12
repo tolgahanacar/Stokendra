@@ -6,11 +6,13 @@ using StokTakip.Models;
 
 namespace StokTakip.Data;
 
-public class Database
+public class Database : IDisposable
 {
     private readonly string _connectionString;
-    private const int CurrentSchemaVersion = 8;
+    private const int CurrentSchemaVersion = 9;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
+
+    private SqliteConnection? _sharedConnection;
 
     public Database(string dbPath)
     {
@@ -20,14 +22,23 @@ public class Database
 
     private SqliteConnection OpenConnection()
     {
-        var con = new SqliteConnection(_connectionString);
-        con.Open();
-        return con;
+        if (_sharedConnection == null || _sharedConnection.State == System.Data.ConnectionState.Closed)
+        {
+            _sharedConnection = new SqliteConnection(_connectionString);
+            _sharedConnection.Open();
+        }
+        return _sharedConnection;
+    }
+
+    public void Dispose()
+    {
+        _sharedConnection?.Dispose();
+        _sharedConnection = null;
     }
 
     private void Initialize()
     {
-        using var con = OpenConnection();
+        var con = OpenConnection();
         using var pragma = con.CreateCommand();
         pragma.CommandText = "PRAGMA journal_mode=WAL;";
         pragma.ExecuteNonQuery();
@@ -95,6 +106,7 @@ public class Database
         if (version < 6) MigrateToV6(con);
         if (version < 7) MigrateToV7(con);
         if (version < 8) MigrateToV8(con);
+        if (version < 9) MigrateToV9(con);
         SetSchemaVersion(con, CurrentSchemaVersion);
         SeedDefaults(con);
     }
@@ -135,6 +147,12 @@ public class Database
         TryAlter(c, "ALTER TABLE ServisKayitlari ADD COLUMN Firma TEXT DEFAULT ''");
     }
 
+    private static void MigrateToV9(SqliteConnection c)
+    {
+        TryAlter(c, "ALTER TABLE ServisKayitlari ADD COLUMN Sorun TEXT DEFAULT ''");
+        TryAlter(c, "ALTER TABLE ServisKayitlari ADD COLUMN Sonuc TEXT DEFAULT ''");
+    }
+
     private static void SeedDefaults(SqliteConnection c)
     {
         try { using var m = c.CreateCommand(); m.CommandText = "SELECT COUNT(*) FROM Birimler"; if ((long)(m.ExecuteScalar() ?? 0) == 0) { m.CommandText = "INSERT INTO Birimler (Ad) VALUES ('Adet')"; m.ExecuteNonQuery(); } } catch { }
@@ -155,28 +173,28 @@ public class Database
     }
 
     // ═══ APP CONFIG ═══
-    public string GetConfig(string key, string def = "") { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Value FROM AppConfig WHERE Key=$k"; m.Parameters.AddWithValue("$k", key); return m.ExecuteScalar()?.ToString() ?? def; } catch { return def; } }
-    public void SetConfig(string key, string val) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR REPLACE INTO AppConfig (Key,Value) VALUES ($k,$v)"; m.Parameters.AddWithValue("$k", key); m.Parameters.AddWithValue("$v", val); m.ExecuteNonQuery(); } catch { } }
+    public string GetConfig(string key, string def = "") { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Value FROM AppConfig WHERE Key=$k"; m.Parameters.AddWithValue("$k", key); return m.ExecuteScalar()?.ToString() ?? def; } catch { return def; } }
+    public void SetConfig(string key, string val) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR REPLACE INTO AppConfig (Key,Value) VALUES ($k,$v)"; m.Parameters.AddWithValue("$k", key); m.Parameters.AddWithValue("$v", val); m.ExecuteNonQuery(); } catch { } }
 
     // ═══ AUDIT LOG ═══
-    public void AuditLogYaz(string tip, string tablo, int id, string detay) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO AuditLog (Tarih,IslemTipi,TabloAdi,KayitId,Detay) VALUES ($t,$it,$ta,$ki,$d)"; m.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$it", tip); m.Parameters.AddWithValue("$ta", tablo); m.Parameters.AddWithValue("$ki", id); m.Parameters.AddWithValue("$d", detay); m.ExecuteNonQuery(); } catch { } }
+    public void AuditLogYaz(string tip, string tablo, int id, string detay) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO AuditLog (Tarih,IslemTipi,TabloAdi,KayitId,Detay) VALUES ($t,$it,$ta,$ki,$d)"; m.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$it", tip); m.Parameters.AddWithValue("$ta", tablo); m.Parameters.AddWithValue("$ki", id); m.Parameters.AddWithValue("$d", detay); m.ExecuteNonQuery(); } catch { } }
 
     // ═══ DEPARTMANLAR ═══
     public List<string> DepartmanlariGetir()
     {
         var liste = new List<string>();
-        try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Ad FROM Departmanlar ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
+        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Ad FROM Departmanlar ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
         return liste;
     }
-    public void DepartmanEkle(string ad) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR IGNORE INTO Departmanlar (Ad) VALUES ($a)"; m.Parameters.AddWithValue("$a", ad.Trim()); m.ExecuteNonQuery(); } catch { } }
-    public void DepartmanSil(string ad) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Departmanlar WHERE Ad=$a"; m.Parameters.AddWithValue("$a", ad); m.ExecuteNonQuery(); } catch { } }
+    public void DepartmanEkle(string ad) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR IGNORE INTO Departmanlar (Ad) VALUES ($a)"; m.Parameters.AddWithValue("$a", ad.Trim()); m.ExecuteNonQuery(); } catch { } }
+    public void DepartmanSil(string ad) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Departmanlar WHERE Ad=$a"; m.Parameters.AddWithValue("$a", ad); m.ExecuteNonQuery(); } catch { } }
 
     // ═══ OTO STOK KODU ═══
     public string SonrakiStokKodu()
     {
         try
         {
-            using var c = OpenConnection();
+            var c = OpenConnection();
             var m = c.CreateCommand();
             m.CommandText = "SELECT MAX(CAST(KodNo AS INTEGER)) FROM StokKartlari WHERE KodNo GLOB '[0-9]*'";
             var result = m.ExecuteScalar();
@@ -192,7 +210,7 @@ public class Database
         var liste = new List<StokKarti>();
         try
         {
-            using var c = OpenConnection();
+            var c = OpenConnection();
             var m = c.CreateCommand();
             m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
                 COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
@@ -218,7 +236,7 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection();
+            var c = OpenConnection();
             var m = c.CreateCommand();
             m.CommandText = @"
                 WITH altStok AS (
@@ -246,7 +264,7 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
                 COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
                 s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,'')
@@ -265,7 +283,7 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = "INSERT INTO StokKartlari (Ad,KodNo,Aciklama,MinStok,Kategori,KartTipi,UstKartId,OlusturmaTarihi,Birim) VALUES ($a,$k,$ac,$ms,$kat,$kt,$uk,$ot,'Adet')";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
@@ -281,7 +299,7 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = "UPDATE StokKartlari SET Ad=$a,KodNo=$k,Aciklama=$ac,MinStok=$ms,Kategori=$kat,KartTipi=$kt,UstKartId=$uk,GuncellenmeTarihi=$gt WHERE Id=$id";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
@@ -296,7 +314,7 @@ public class Database
 
     public void StokKartiSil(int id)
     {
-        try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE StokKartId=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery();
+        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE StokKartId=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery();
             var m2 = c.CreateCommand(); m2.CommandText = "DELETE FROM StokKartlari WHERE Id=$id"; m2.Parameters.AddWithValue("$id", id); m2.ExecuteNonQuery();
             AuditLogYaz("SIL", "StokKartlari", id, "Silindi");
         } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
@@ -308,7 +326,7 @@ public class Database
         var liste = new List<StokHareketi>();
         try
         {
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection(); var m = c.CreateCommand();
             var w = new List<string>();
             if (stokKartId.HasValue) { w.Add("h.StokKartId=$kid"); m.Parameters.AddWithValue("$kid", stokKartId.Value); }
             if (baslangic.HasValue) { w.Add("h.Tarih>=$ts"); m.Parameters.AddWithValue("$ts", baslangic.Value.ToString(DateFormat, CultureInfo.InvariantCulture)); }
@@ -329,13 +347,13 @@ public class Database
     public List<string> GetTeslimEdilenler()
     {
         var liste = new List<string>();
-        try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi != '' ORDER BY KimeVerildi"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
+        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi != '' ORDER BY KimeVerildi"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
         return liste;
     }
 
     public void HareketEkle(StokHareketi h)
     {
-        try { using var c = OpenConnection(); var m = c.CreateCommand();
+        try { var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = "INSERT INTO StokHareketleri (StokKartId,Tur,Miktar,KimeVerildi,Departman,Tarih,Aciklama) VALUES ($sk,$t,$m,$kv,$d,$ta,$ac)";
             m.Parameters.AddWithValue("$sk", h.StokKartId); m.Parameters.AddWithValue("$t", h.Tur); m.Parameters.AddWithValue("$m", h.Miktar);
             m.Parameters.AddWithValue("$kv", h.TeslimEdilen ?? ""); m.Parameters.AddWithValue("$d", h.Departman ?? "");
@@ -346,7 +364,7 @@ public class Database
 
     public void HareketGuncelle(StokHareketi h)
     {
-        try { using var c = OpenConnection(); var m = c.CreateCommand();
+        try { var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = "UPDATE StokHareketleri SET StokKartId=$sk,Tur=$t,Miktar=$m,KimeVerildi=$kv,Departman=$d,Tarih=$ta,Aciklama=$ac WHERE Id=$id";
             m.Parameters.AddWithValue("$sk", h.StokKartId); m.Parameters.AddWithValue("$t", h.Tur); m.Parameters.AddWithValue("$m", h.Miktar);
             m.Parameters.AddWithValue("$kv", h.TeslimEdilen ?? ""); m.Parameters.AddWithValue("$d", h.Departman ?? "");
@@ -356,16 +374,16 @@ public class Database
     }
 
     public void HareketSil(int id)
-    { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
+    { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
 
     // ═══ BIRIMLER (eski uyumluluk) ═══
-    public List<Birim> BirimleriGetir() { var l = new List<Birim>(); try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Ad FROM Birimler ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Birim { Id = r.GetInt32(0), Ad = r.GetString(1) }); } catch { } return l; }
+    public List<Birim> BirimleriGetir() { var l = new List<Birim>(); try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Ad FROM Birimler ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Birim { Id = r.GetInt32(0), Ad = r.GetString(1) }); } catch { } return l; }
 
     // ═══ NOTLAR ═══
-    public List<Not> NotlariGetir() { var l = new List<Not>(); try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Tarih,Baslik,Icerik FROM Notlar ORDER BY Tarih DESC"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Not { Id = r.GetInt32(0), Tarih = ParseDateSafe(r.GetString(1)), Baslik = r.GetString(2), Icerik = r.IsDBNull(3) ? "" : r.GetString(3) }); } catch { } return l; }
-    public void NotEkle(Not n) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO Notlar (Tarih,Baslik,Icerik) VALUES ($t,$b,$i)"; m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.ExecuteNonQuery(); } catch { } }
-    public void NotGuncelle(Not n) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "UPDATE Notlar SET Baslik=$b,Icerik=$i WHERE Id=$id"; m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.Parameters.AddWithValue("$id", n.Id); m.ExecuteNonQuery(); } catch { } }
-    public void NotSil(int id) { try { using var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Notlar WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
+    public List<Not> NotlariGetir() { var l = new List<Not>(); try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Tarih,Baslik,Icerik FROM Notlar ORDER BY Tarih DESC"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Not { Id = r.GetInt32(0), Tarih = ParseDateSafe(r.GetString(1)), Baslik = r.GetString(2), Icerik = r.IsDBNull(3) ? "" : r.GetString(3) }); } catch { } return l; }
+    public void NotEkle(Not n) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO Notlar (Tarih,Baslik,Icerik) VALUES ($t,$b,$i)"; m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.ExecuteNonQuery(); } catch { } }
+    public void NotGuncelle(Not n) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "UPDATE Notlar SET Baslik=$b,Icerik=$i,Tarih=$t WHERE Id=$id"; m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$id", n.Id); m.ExecuteNonQuery(); } catch { } }
+    public void NotSil(int id) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Notlar WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
 
     private static DateTime ParseDateSafe(string s) { if (string.IsNullOrWhiteSpace(s)) return DateTime.MinValue; string[] f = { "yyyy-MM-dd HH:mm:ss","yyyy-MM-dd","dd.MM.yyyy HH:mm:ss","dd.MM.yyyy HH:mm","dd.MM.yyyy","MM/dd/yyyy HH:mm:ss","MM/dd/yyyy" }; if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d; if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) return d; return DateTime.MinValue; }
 
@@ -375,8 +393,8 @@ public class Database
         var liste = new List<ServisKaydi>();
         try
         {
-            using var c = OpenConnection();
-            var m = c.CreateCommand();
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
             
             var conditions = new List<string>();
             if (baslangic.HasValue)
@@ -391,13 +409,13 @@ public class Database
             }
             if (!string.IsNullOrWhiteSpace(arama))
             {
-                conditions.Add("(CihazAdi LIKE $ara OR SeriNumarasi LIKE $ara OR Aciklama LIKE $ara)");
+                conditions.Add("(CihazAdi LIKE $ara OR SeriNumarasi LIKE $ara OR Firma LIKE $ara OR Sorun LIKE $ara OR Sonuc LIKE $ara)");
                 m.Parameters.AddWithValue("$ara", $"%{arama}%");
             }
 
             string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
             
-            m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Aciklama FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
+            m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
             using var r = m.ExecuteReader();
             while (r.Read())
             {
@@ -408,7 +426,8 @@ public class Database
                     SeriNumarasi = r.IsDBNull(2) ? "" : r.GetString(2),
                     Firma = r.IsDBNull(3) ? "" : r.GetString(3),
                     BakimTarihi = ParseDateSafe(r.GetString(4)),
-                    Aciklama = r.IsDBNull(5) ? "" : r.GetString(5)
+                    Sorun = r.IsDBNull(5) ? "" : r.GetString(5),
+                    Sonuc = r.IsDBNull(6) ? "" : r.GetString(6)
                 });
             }
         }
@@ -420,14 +439,15 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection();
-            var m = c.CreateCommand();
-            m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Aciklama) VALUES ($ca, $sn, $f, $bt, $ac)";
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc) VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
             m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
             m.Parameters.AddWithValue("$f", s.Firma ?? "");
             m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
-            m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
+            m.Parameters.AddWithValue("$sr", s.Sorun ?? "");
+            m.Parameters.AddWithValue("$sc", s.Sonuc ?? "");
             m.ExecuteNonQuery();
             AuditLogYaz("EKLE", "ServisKayitlari", 0, s.CihazAdi);
         }
@@ -438,14 +458,15 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection();
-            var m = c.CreateCommand();
-            m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, Firma=$f, BakimTarihi=$bt, Aciklama=$ac WHERE Id=$id";
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, Firma=$f, BakimTarihi=$bt, Sorun=$sr, Sonuc=$sc WHERE Id=$id";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
             m.Parameters.AddWithValue("$sn", s.SeriNumarasi ?? "");
             m.Parameters.AddWithValue("$f", s.Firma ?? "");
             m.Parameters.AddWithValue("$bt", s.BakimTarihi.ToString(DateFormat, CultureInfo.InvariantCulture));
-            m.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
+            m.Parameters.AddWithValue("$sr", s.Sorun ?? "");
+            m.Parameters.AddWithValue("$sc", s.Sonuc ?? "");
             m.Parameters.AddWithValue("$id", s.Id);
             m.ExecuteNonQuery();
             AuditLogYaz("GUNCELLE", "ServisKayitlari", s.Id, s.CihazAdi);
@@ -457,8 +478,8 @@ public class Database
     {
         try
         {
-            using var c = OpenConnection();
-            var m = c.CreateCommand();
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
             m.Parameters.AddWithValue("$id", id);
             m.ExecuteNonQuery();
@@ -478,21 +499,36 @@ public class Database
 
     private static string HashPassword(string password, string salt)
     {
-        byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(salt + password));
-        return Convert.ToBase64String(bytes);
+        // Upgrade to PBKDF2 with HMAC-SHA512
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes(salt), 20000, HashAlgorithmName.SHA512);
+        byte[] hash = pbkdf2.GetBytes(32);
+        return "v2:" + Convert.ToBase64String(hash);
     }
 
     public bool KullaniciDogrula(string kullaniciAdi, string sifre)
     {
         try
         {
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "SELECT SifreHash, Tuz FROM Kullanicilar WHERE KullaniciAdi=$u";
             m.Parameters.AddWithValue("$u", kullaniciAdi);
             using var r = m.ExecuteReader();
             if (!r.Read()) return false;
             string storedHash = r.GetString(0), storedSalt = r.GetString(1);
-            return HashPassword(sifre, storedSalt) == storedHash;
+            
+            if (storedHash.StartsWith("v2:"))
+            {
+                using var pbkdf2 = new Rfc2898DeriveBytes(sifre, Encoding.UTF8.GetBytes(storedSalt), 20000, HashAlgorithmName.SHA512);
+                byte[] hash = pbkdf2.GetBytes(32);
+                return "v2:" + Convert.ToBase64String(hash) == storedHash;
+            }
+            else
+            {
+                // Fallback for old SHA256 hashes
+                byte[] bytes = SHA256.HashData(Encoding.UTF8.GetBytes(storedSalt + sifre));
+                return Convert.ToBase64String(bytes) == storedHash;
+            }
         }
         catch { return false; }
     }
@@ -504,7 +540,8 @@ public class Database
         {
             string newSalt = GenerateSalt();
             string newHash = HashPassword(yeniSifre, newSalt);
-            using var c = OpenConnection(); var m = c.CreateCommand();
+            var c = OpenConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "UPDATE Kullanicilar SET SifreHash=$h, Tuz=$s WHERE KullaniciAdi=$u";
             m.Parameters.AddWithValue("$h", newHash); m.Parameters.AddWithValue("$s", newSalt); m.Parameters.AddWithValue("$u", kullaniciAdi);
             m.ExecuteNonQuery();

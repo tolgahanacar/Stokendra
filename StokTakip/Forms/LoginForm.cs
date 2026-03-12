@@ -28,6 +28,7 @@ public class LoginForm : Form
             Width = 52, Height = 52, Left = 176, Top = 10,
             TextAlign = ContentAlignment.MiddleCenter
         };
+        lblLogo.Region = new Region(GlowCard.RoundedRect(new Rectangle(0, 0, 52, 52), 26)); 
         var lblBrand = new Label { Text = "Stokendra", Font = new Font("Segoe UI", 18, FontStyle.Bold), ForeColor = UIHelper.TextWhite, AutoSize = true, Left = 135, Top = 66 };
         pnlTop.Controls.AddRange(new Control[] { lblLogo, lblBrand });
 
@@ -44,15 +45,8 @@ public class LoginForm : Form
 
         lblError = new Label { Text = "", Left = 50, Top = 135, Width = 300, Height = 20, Font = new Font("Segoe UI", 8.5f), ForeColor = UIHelper.StokWarning, TextAlign = ContentAlignment.MiddleCenter };
 
-        var btnLogin = new Button
-        {
-            Text = L("login_btn"),
-            Left = 50, Top = 160, Width = 300, Height = 42,
-            Font = new Font("Segoe UI", 11, FontStyle.Bold),
-            FlatStyle = FlatStyle.Flat, BackColor = UIHelper.AccentCyan, ForeColor = Color.White,
-            Cursor = Cursors.Hand
-        };
-        btnLogin.FlatAppearance.BorderSize = 0;
+        var btnLogin = UIHelper.MakeButton("🔑 " + L("login_btn"), UIHelper.AccentCyan, 50, 160, 300, 42);
+        btnLogin.Font = new Font("Segoe UI", 11, FontStyle.Bold);
         btnLogin.Click += Login;
 
         var lblCopy = new Label { Text = "\u00a9 2026 Tolgahan Acar. T\u00fcm haklar\u0131 sakl\u0131d\u0131r.", Left = 50, Top = 215, Width = 300, Font = new Font("Segoe UI", 7.5f), ForeColor = UIHelper.TextDim, TextAlign = ContentAlignment.MiddleCenter };

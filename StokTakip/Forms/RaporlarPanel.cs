@@ -142,8 +142,8 @@ public class RaporlarPanel : UserControl
         AddFilterGroup(L("dept_filter"),   cmbDept);
         AddFilterGroup(L("select_category"), cmbCategory, 16);
 
-        var btnGen = UIHelper.MakeFlowButton("⚡ " + L("generate_report"), UIHelper.AccentBlue, 120, 28);
-        var btnClr = UIHelper.MakeFlowButton("✕ " + L("clear_filter"),    UIHelper.BtnDark,   90,  28);
+        var btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 130, 28);
+        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"),    UIHelper.BtnDark,   100,  28);
         btnGen.Margin = new Padding(0, 8, 4, 8);
         btnClr.Margin = new Padding(0, 8, 0, 8);
         btnGen.Click += (_, _) => GenerateReport();
@@ -168,7 +168,7 @@ public class RaporlarPanel : UserControl
             FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(16, 4, 16, 4), WrapContents = false
         };
-        var btnPrint = UIHelper.MakeFlowButton("🖨 " + L("print"), UIHelper.BtnMid, 110, 28);
+        var btnPrint = UIHelper.MakeFlowButton(L("print"), UIHelper.BtnMid, 110, 28);
         btnPrint.Margin = new Padding(0, 2, 6, 2);
         btnPrint.Click += (_, _) => PrintReport();
         this.btnPrint = btnPrint;
@@ -452,7 +452,7 @@ public class RaporlarPanel : UserControl
             totals[k.Ad] = totals.TryGetValue(k.Ad, out var cur) ? cur + h.Miktar : h.Miktar;
         }
 
-        rows.Sort((a, b) => a.Tarih.CompareTo(b.Tarih));
+        rows.Sort((a, b) => b.Tarih.CompareTo(a.Tarih)); // Newest first
 
         var data = new ReportData
         {
@@ -625,6 +625,11 @@ public class RaporlarPanel : UserControl
         pd.DefaultPageSettings.PaperSize  = new PaperSize("A4", 1169, 827);
         pd.DefaultPageSettings.Margins    = new Margins(40, 40, 50, 50);
 
+        using (var psd = new PageSetupDialog { Document = pd })
+        {
+            if (psd.ShowDialog() != DialogResult.OK) return;
+        }
+
         int ps = 0; const int rpp = 28;
         int tp = Math.Max(1, (int)Math.Ceiling((double)grid.Rows.Count / rpp));
 
@@ -657,8 +662,10 @@ public class RaporlarPanel : UserControl
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 6;
             }
 
-            float[] w = { 100, 300, 80, 200, 0 };
-            float u = 0; foreach (var ww in w) u += ww; w[^1] = pw - u;
+            float[] weights = { 100, 300, 80, 200, 150 };
+            float totalWeight = weights.Sum();
+            float[] w = weights.Select(wt => (wt / totalWeight) * pw).ToArray();
+            
             string[] hdr = { L("date"), L("stock_name"), L("quantity"), L("delivered_to"), L("category") };
 
             using var brHd = new SolidBrush(Color.FromArgb(230, 235, 245));

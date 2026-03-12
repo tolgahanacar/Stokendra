@@ -10,8 +10,9 @@ public class ServisEkleForm : Form
     private TextBox txtCihazAdi = new();
     private TextBox txtSeriNumarasi = new();
     private TextBox txtFirma = new();
+    private TextBox txtSorun = new();
+    private TextBox txtSonuc = new();
     private DateTimePicker dtBakimTarihi = new();
-    private TextBox txtAciklama = new();
 
     public ServisEkleForm(ServisKaydi? kayit = null)
     {
@@ -46,17 +47,20 @@ public class ServisEkleForm : Form
         tbl.Controls.Add(MakeLabel(L("company", "Firma")), 0, row);
         txtFirma = MakeTextBox(); tbl.Controls.Add(txtFirma, 1, row); row++;
 
+        // Sorun
+        tbl.Controls.Add(MakeLabel(L("problem", "Sorun")), 0, row);
+        txtSorun = MakeTextBox(); tbl.Controls.Add(txtSorun, 1, row); row++;
+
+        // Sonuç
+        tbl.Controls.Add(MakeLabel(L("result", "Sonuç")), 0, row);
+        txtSonuc = MakeTextBox(); tbl.Controls.Add(txtSonuc, 1, row); row++;
+
         // Bakım Tarihi
         tbl.Controls.Add(MakeLabel(L("maintenance_date", "Bakım Tarihi *")), 0, row);
         dtBakimTarihi = new DateTimePicker { Dock = DockStyle.Fill, Format = DateTimePickerFormat.Short };
         UIHelper.StyleDatePicker(dtBakimTarihi);
         tbl.Controls.Add(dtBakimTarihi, 1, row); row++;
 
-        // Açıklama
-        tbl.Controls.Add(MakeLabel(L("description", "Açıklama")), 0, row);
-        txtAciklama = new TextBox { Dock = DockStyle.Fill, Multiline = true, Height = 60, MaxLength = 500 };
-        UIHelper.StyleTextBox(txtAciklama);
-        tbl.Controls.Add(txtAciklama, 1, row); row++;
 
         // Buttons
         var pnlBtn = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Height = 40, Padding = new Padding(0, 4, 0, 0) };
@@ -82,9 +86,10 @@ public class ServisEkleForm : Form
         txtCihazAdi.Text = Kayit.CihazAdi;
         txtSeriNumarasi.Text = Kayit.SeriNumarasi;
         txtFirma.Text = Kayit.Firma;
+        txtSorun.Text = Kayit.Sorun;
+        txtSonuc.Text = Kayit.Sonuc;
         if (Kayit.BakimTarihi >= dtBakimTarihi.MinDate && Kayit.BakimTarihi <= dtBakimTarihi.MaxDate)
             dtBakimTarihi.Value = Kayit.BakimTarihi;
-        txtAciklama.Text = Kayit.Aciklama;
     }
 
     private void BtnSave_Click(object? sender, EventArgs e)
@@ -98,8 +103,9 @@ public class ServisEkleForm : Form
         Kayit.CihazAdi = txtCihazAdi.Text.Trim();
         Kayit.SeriNumarasi = txtSeriNumarasi.Text.Trim();
         Kayit.Firma = txtFirma.Text.Trim();
+        Kayit.Sorun = txtSorun.Text.Trim();
+        Kayit.Sonuc = txtSonuc.Text.Trim();
         Kayit.BakimTarihi = dtBakimTarihi.Value;
-        Kayit.Aciklama = txtAciklama.Text.Trim();
 
         DialogResult = DialogResult.OK;
     }

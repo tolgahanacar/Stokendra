@@ -9,16 +9,16 @@ public class MainForm : Form
     private Panel pnlSidebar = new();
     private readonly List<Panel> _sidebarItems = new();
 
-    private static readonly (string icon, string key, System.Drawing.Color accent)[] NavItems = {
-        ("📊", "dashboard",       UIHelper.AccentCyan),
-        ("📈", "reports",         UIHelper.AccentBlue),
-        ("📋", "stock_cards",     UIHelper.AccentGreen),
-        ("📦", "stocks",          UIHelper.AccentOrange),
-        ("🔄", "stock_movements", UIHelper.AccentPurple),
-        ("🛠", "services",        System.Drawing.Color.FromArgb(231, 76, 60)),
-        ("📝", "notes",           UIHelper.AccentCyan),
-        ("🏢", "departments",     UIHelper.AccentYellow),
-        ("⚙️", "settings",        UIHelper.TextSecondary),
+    private static readonly (string key, Color accent)[] NavItems = {
+        ("menu_dashboard",       UIHelper.AccentCyan),
+        ("menu_reports",         UIHelper.AccentBlue),
+        ("menu_stock_cards",     UIHelper.AccentGreen),
+        ("menu_stocks",          UIHelper.AccentOrange),
+        ("menu_stock_movements", UIHelper.AccentPurple),
+        ("menu_services",        Color.FromArgb(231, 76, 60)),
+        ("menu_notes",           UIHelper.AccentCyan),
+        ("menu_departments",     UIHelper.AccentYellow),
+        ("menu_settings",        UIHelper.TextSecondary),
     };
 
     public MainForm()
@@ -59,9 +59,9 @@ public class MainForm : Form
         navPanel.Controls.Add(new Label { Text = L("menu"), Left = 20, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 7.5f, FontStyle.Bold), ForeColor = UIHelper.TextDim });
 
         int y = 36;
-        foreach (var (icon, key, accent) in NavItems)
+        foreach (var (key, accent) in NavItems)
         {
-            var item = UIHelper.MakeSidebarItem(icon, L(key), accent, y, key == "dashboard");
+            var item = UIHelper.MakeSidebarItem("", L(key), accent, y, key == "menu_dashboard");
             item.Tag = key; item.Click += (_, _) => ShowPage(key);
             navPanel.Controls.Add(item); _sidebarItems.Add(item); y += 46;
         }
@@ -89,12 +89,20 @@ public class MainForm : Form
     private void ShowPage(string key)
     {
         UpdateSidebarSelection(key);
-        pnlContent.SuspendLayout(); pnlContent.Controls.Clear();
+        pnlContent.SuspendLayout(); 
+        
+        // FIX: Dispose old controls to prevent memory leaks
+        foreach (Control c in pnlContent.Controls)
+        {
+            if (!c.IsDisposed) c.Dispose();
+        }
+        pnlContent.Controls.Clear();
+
         Control content = key switch {
-            "dashboard" => new DashboardPanel(), "reports" => new RaporlarPanel(),
-            "stock_cards" => new StokKartlariPanel(), "stocks" => new StoklarPanel(),
-            "stock_movements" => new StokHareketPanel(), "services" => new ServislerPanel(), "notes" => new NotlarPanel(), "departments" => new DepartmanlarPanel(),
-            "settings" => new AyarlarPanel(), _ => new DashboardPanel()
+            "menu_dashboard" => new DashboardPanel(), "menu_reports" => new RaporlarPanel(),
+            "menu_stock_cards" => new StokKartlariPanel(), "menu_stocks" => new StoklarPanel(),
+            "menu_stock_movements" => new StokHareketPanel(), "menu_services" => new ServislerPanel(), "menu_notes" => new NotlarPanel(), "menu_departments" => new DepartmanlarPanel(),
+            "menu_settings" => new AyarlarPanel(), _ => new DashboardPanel()
         };
         content.Dock = DockStyle.Fill; pnlContent.Controls.Add(content); pnlContent.ResumeLayout(true);
     }
@@ -103,12 +111,17 @@ public class MainForm : Form
     {
         for (int i = 0; i < _sidebarItems.Count && i < NavItems.Length; i++)
         {
-            var pnl = _sidebarItems[i]; bool a = NavItems[i].key == activeKey;
+            var pnl = _sidebarItems[i]; var nav = NavItems[i]; bool a = nav.key == activeKey;
             pnl.BackColor = a ? UIHelper.SidebarActive : Color.Transparent;
             if (pnl.Controls.Count < 3) continue;
-            if (pnl.Controls[0] is Panel ab) ab.BackColor = a ? NavItems[i].accent : Color.Transparent;
-            if (pnl.Controls[1] is Label li) li.ForeColor = a ? NavItems[i].accent : UIHelper.TextMuted;
-            if (pnl.Controls[2] is Label lt) { lt.ForeColor = a ? UIHelper.TextWhite : UIHelper.TextSecondary; lt.Font = new Font("Segoe UI Semibold", 10.5f, a ? FontStyle.Bold : FontStyle.Regular); }
+            
+            if (pnl.Controls[0] is Panel ab) ab.BackColor = a ? nav.accent : Color.Transparent;
+            if (pnl.Controls[1] is Label li) li.ForeColor = a ? nav.accent : UIHelper.TextSecondary;
+            if (pnl.Controls[2] is Label lt)
+            {
+                lt.ForeColor = a ? UIHelper.TextWhite : UIHelper.TextSecondary;
+                lt.Font = new Font("Segoe UI Semibold", 10.5f, a ? FontStyle.Bold : FontStyle.Regular);
+            }
         }
     }
 }

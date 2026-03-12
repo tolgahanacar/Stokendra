@@ -7,5 +7,6 @@ public class ServisKaydi
     public string SeriNumarasi { get; set; } = "";
     public string Firma { get; set; } = "";
     public DateTime BakimTarihi { get; set; }
-    public string Aciklama { get; set; } = "";
+    public string Sorun { get; set; } = "";
+    public string Sonuc { get; set; } = "";
 }

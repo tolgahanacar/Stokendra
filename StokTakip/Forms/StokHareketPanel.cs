@@ -47,7 +47,7 @@ public class StokHareketPanel : UserControl
         var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 28);
         btnFil.Click += (_, _) => Filtrele(); btnClr.Click += (_, _) => Temizle();
         
-        txtSearch = new TextBox { Width = 160, Margin = new Padding(10, 5, 2, 2), PlaceholderText = L("search_placeholder") };
+        txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 160);
         txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
         
         pnlF.Controls.AddRange(new Control[] { btnFil, btnClr, txtSearch });
@@ -58,7 +58,7 @@ public class StokHareketPanel : UserControl
         pnlT.WrapContents = true;
         var btnEkle  = UIHelper.MakeFlowButton(L("add_movement"), UIHelper.AccentGreen, 130);
         var btnDuz   = UIHelper.MakeFlowButton(L("edit"), UIHelper.AccentOrange, 85);
-        var btnTopluDuz = UIHelper.MakeFlowButton("✏️ " + L("bulk_edit"), UIHelper.AccentOrange, 120);
+        var btnTopluDuz = UIHelper.MakeFlowButton(L("bulk_edit"), UIHelper.AccentOrange, 120);
         var btnSil   = UIHelper.MakeFlowButton(L("delete"), UIHelper.AccentRed, 70);
         var btnTSil  = UIHelper.MakeFlowButton(L("bulk_delete"), Color.FromArgb(153, 27, 27), 100);
         var btnYaz   = UIHelper.MakeFlowButton(L("print"), UIHelper.BtnMid, 90);
@@ -70,7 +70,7 @@ public class StokHareketPanel : UserControl
         btnSil.Click += (_, _) => Sil(); btnTSil.Click += (_, _) => TopluSil();
         btnYaz.Click += (_, _) => Yazdir(); btnExcel.Click += (_, _) => ExcelExport();
         btnImport.Click += (_, _) => XlsxImport();
-        var btnOrnek = UIHelper.MakeFlowButton("\ud83d\udccb \u00d6rnek XLSX", UIHelper.BtnDark, 110);
+        var btnOrnek = UIHelper.MakeFlowButton("📄 Ornek XLSX", UIHelper.BtnDark, 110);
         btnOrnek.Click += (_, _) => OrnekDosya();
         pnlT.Controls.AddRange(new Control[] { btnEkle, btnDuz, btnTopluDuz, btnSil, btnTSil, btnYaz, btnExcel, btnImport, btnOrnek });
 
@@ -360,13 +360,22 @@ public class StokHareketPanel : UserControl
 
         string firma = Program.Settings.CompanyName; var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape = true; pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827); pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
+
+        using (var psd = new PageSetupDialog { Document = pd })
+        {
+            if (psd.ShowDialog() != DialogResult.OK) return;
+        }
+
         int ps = 0; const int rpp = 28; int tp = Math.Max(1, (int)Math.Ceiling((double)sorted.Count / rpp));
+        pd.BeginPrint += (_, _) => { ps = 0; };
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
             using var fT = new Font("Segoe UI", 13, FontStyle.Bold); using var fS = new Font("Segoe UI", 8); using var fH = new Font("Segoe UI", 7.5f, FontStyle.Bold); using var fC = new Font("Segoe UI", 7.5f);
             using var br = new SolidBrush(Color.Black); using var brG = new SolidBrush(Color.Gray); using var pen = new Pen(Color.FromArgb(180, 185, 200));
             if (ps == 0) { if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("Segoe UI", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } g.DrawString(L("movements_report"), fT, br, lm, y); y += 24; g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; g.DrawLine(pen, lm, y, lm + pw, y); y += 6; }
-            float[] w = { 70, 170, 150, 70, 120, 95, 0 }; float u = 0; foreach (var ww in w) u += ww; w[^1] = pw - u;
+            float[] weights = { 70, 170, 150, 70, 120, 100, 150 };
+            float totalWeight = weights.Sum();
+            float[] w = weights.Select(wt => (wt / totalWeight) * pw).ToArray();
             string[] hdr = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
             using var brHd = new SolidBrush(Color.FromArgb(230, 235, 245)); g.FillRectangle(brHd, lm, y, pw, 16); float x = lm;
             for (int i = 0; i < hdr.Length; i++) { g.DrawString(hdr[i], fH, br, x + 2, y + 2); x += w[i]; } y += 18;

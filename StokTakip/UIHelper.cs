@@ -53,8 +53,7 @@ public static class UIHelper
     public static readonly Font FontSubtitle   = new("Segoe UI", 10f);
 
     // ═══ Türkçe büyük harf dönüşümü ═══
-    private static readonly System.Globalization.CultureInfo TrCulture =
-        new System.Globalization.CultureInfo("tr-TR");
+    private static readonly System.Globalization.CultureInfo TrCulture = new System.Globalization.CultureInfo("tr-TR");
 
     /// <summary>Türkçe karakterleri doğru büyüten ToUpper (ı→I, i→İ vs.)</summary>
     public static string ToUpperTr(this string s) => s.ToUpper(TrCulture);
@@ -112,7 +111,7 @@ public static class UIHelper
         d.Font = new Font("Segoe UI Semibold", 9);
     }
 
-    // ═══ PREMIUM BUTON ═══
+    // ═══ PREMIUM BUTON (İkon Destekli) ═══
     public static Button MakeButton(string text, Color bg, int left, int top = 10, int width = 120, int height = 34)
     {
         var btn = new Button
@@ -123,9 +122,15 @@ public static class UIHelper
             Margin = new Padding(2, 2, 2, 2)
         };
         btn.FlatAppearance.BorderSize = 0;
-        btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(bg, 0.15f);
-        btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(bg, 0.1f);
-        UIIcons.EnableButtonIcon(btn, text);
+        btn.FlatAppearance.MouseOverBackColor = ControlPaint.Light(bg, 0.25f);
+        btn.FlatAppearance.MouseDownBackColor = ControlPaint.Dark(bg, 0.15f);
+        
+        btn.Paint += (s, e) => {
+            var g = e.Graphics;
+            using var p = new Pen(Color.FromArgb(40, Color.White), 1);
+            g.DrawRectangle(p, 0, 0, btn.Width - 1, btn.Height - 1);
+        };
+        
         return btn;
     }
 
@@ -133,57 +138,6 @@ public static class UIHelper
     public static Button MakeFlowButton(string text, Color bg, int width = 120, int height = 32)
     {
         return MakeButton(text, bg, 0, 0, width, height);
-    }
-
-    // ═══ FORM LABEL ═══
-    public static void AddFormLabel(Control parent, string text, int top, int left = 16, int width = 120)
-    {
-        parent.Controls.Add(new Label
-        {
-            Text = text, Left = left, Top = top + 3, Width = width,
-            AutoSize = true, Font = FontLabel, ForeColor = TextSecondary
-        });
-    }
-
-    /// <summary>Label with leading icon (parsed from text) rendered using the icon font.</summary>
-    public static Panel MakeIconTitle(string text, Color color, Font textFont, int left = 0, int top = 0, int gap = 6, float iconSize = 12f, int iconTop = 0, int textTop = 0)
-    {
-        var pnl = new Panel
-        {
-            Left = left, Top = top,
-            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            BackColor = Color.Transparent
-        };
-
-        string labelText = text;
-        int x = 0;
-        if (UIIcons.TrySplitLeadingIcon(text, out var icon, out var rest))
-        {
-            var lblIcon = new Label
-            {
-                Text = UIIcons.ResolveIcon(icon),
-                AutoSize = true,
-                Font = UIIcons.GetFont(iconSize),
-                ForeColor = color,
-                Left = 0,
-                Top = iconTop
-            };
-            pnl.Controls.Add(lblIcon);
-            x = lblIcon.PreferredWidth + gap;
-            labelText = rest;
-        }
-
-        var lblText = new Label
-        {
-            Text = labelText,
-            AutoSize = true,
-            Font = textFont,
-            ForeColor = color,
-            Left = x,
-            Top = textTop
-        };
-        pnl.Controls.Add(lblText);
-        return pnl;
     }
 
     // ═══ STOK RENK ═══
@@ -220,20 +174,32 @@ public static class UIHelper
         return card;
     }
 
-    public static Panel MakeStatCard(string title, string value, string subtitle, Color accent, int width = 185, int height = 96)
-    {
-        return MakeStatCard(title, value, subtitle, accent, 0, 0, width, height);
-    }
+    public static Panel MakeStatCard(string title, string value, string subtitle, Color accent, int width = 185, int height = 96) => MakeStatCard(title, value, subtitle, accent, 0, 0, width, height);
 
     // ═══ TOOLBAR (FlowLayoutPanel) ═══
     public static FlowLayoutPanel MakeToolbar(int height = 44)
     {
-        return new FlowLayoutPanel
+        var pnl = new FlowLayoutPanel
         {
             Dock = DockStyle.Top, Height = height, BackColor = BgToolbar,
             FlowDirection = FlowDirection.LeftToRight, WrapContents = true,
-            Padding = new Padding(8, 6, 8, 4), AutoSize = false
+            Padding = new Padding(12, 6, 8, 4), AutoSize = false
         };
+        pnl.Paint += (s, e) => {
+            using var p = new Pen(SidebarDivider, 1);
+            e.Graphics.DrawLine(p, 0, pnl.Height - 1, pnl.Width, pnl.Height - 1);
+        };
+        return pnl;
+    }
+
+    // ═══ FORM LABEL ═══
+    public static void AddFormLabel(Control parent, string text, int top, int left = 16, int width = 120)
+    {
+        parent.Controls.Add(new Label
+        {
+            Text = text, Left = left, Top = top + 3, Width = width,
+            AutoSize = true, Font = FontLabel, ForeColor = TextSecondary
+        });
     }
 
     // ═══ SEARCH BOX ═══
@@ -247,25 +213,19 @@ public static class UIHelper
     // ═══ SIDEBAR ITEM ═══
     public static Panel MakeSidebarItem(string icon, string text, Color accent, int top, bool active = false)
     {
-        var pnl = new Panel { Left = 0, Top = top, Width = 240, Height = 46, BackColor = active ? SidebarActive : Color.Transparent, Cursor = Cursors.Hand, Tag = text };
+        var pnl = new Panel { Left = 0, Top = top, Width = 230, Height = 46, BackColor = active ? SidebarActive : Color.Transparent, Cursor = Cursors.Hand, Tag = text };
         var accentBar = new Panel { Left = 0, Top = 0, Width = 4, Height = 46, BackColor = active ? accent : Color.Transparent };
-        var lblIcon = new Label { Text = UIIcons.ResolveIcon(icon), Left = 20, Top = 10, Width = 32, Height = 28, Font = UIIcons.GetFont(14), ForeColor = active ? accent : TextMuted, Cursor = Cursors.Hand, TextAlign = ContentAlignment.MiddleCenter };
-        var lblText = new Label { Text = text, Left = 56, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 10.5f, active ? FontStyle.Bold : FontStyle.Regular), ForeColor = active ? TextWhite : TextSecondary, Cursor = Cursors.Hand };
-
+        
+        var lblIcon = new Label { Text = icon, Left = 16, Top = 12, AutoSize = true, Font = new Font("Segoe UI Emoji", 11f), ForeColor = active ? accent : TextSecondary, Cursor = Cursors.Hand };
+        var lblText = new Label { Text = text, Left = 46, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 10.5f, active ? FontStyle.Bold : FontStyle.Regular), ForeColor = active ? TextWhite : TextSecondary, Cursor = Cursors.Hand };
+        
         pnl.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
         pnl.MouseLeave += (_, _) => { if (!active) pnl.BackColor = Color.Transparent; };
-        lblIcon.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
-        lblIcon.MouseLeave += (_, _) => { if (!active) pnl.BackColor = Color.Transparent; };
-        lblText.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
-        lblText.MouseLeave += (_, _) => { if (!active) pnl.BackColor = Color.Transparent; };
-
-        EventHandler bubble = (s, e) =>
-        {
-            pnl.GetType()
-               .GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-               ?.Invoke(pnl, new object[] { e });
+        
+        EventHandler bubble = (s, e) => {
+            pnl.GetType().GetMethod("OnClick", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(pnl, new object[] { e });
         };
-        lblIcon.Click += bubble; lblText.Click += bubble;
+        lblText.Click += bubble; lblIcon.Click += bubble;
 
         pnl.Controls.AddRange(new Control[] { accentBar, lblIcon, lblText });
         return pnl;
@@ -295,6 +255,12 @@ public static class UIHelper
         int b = (int)(from.B + (to.B - from.B) * amount);
         return Color.FromArgb(Math.Clamp(r, 0, 255), Math.Clamp(g, 0, 255), Math.Clamp(b, 0, 255));
     }
+
+    /// <summary>Creates a stylized label with an optional icon (via emoji text)</summary>
+    public static Label MakeIconTitle(string text, Color color, Font font, int left, int top, int gap, float iconSize, int iconTop, int textTop)
+    {
+        return new Label { Text = text, ForeColor = color, Font = font, Left = left, Top = top, AutoSize = true };
+    }
 }
 
 /// <summary>Custom-painted card with gradient background, accent glow, and hover effects.</summary>
@@ -309,8 +275,7 @@ public class GlowCard : Panel
 
     public GlowCard()
     {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
-               | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         BackColor = UIHelper.BgCard;
     }
 
@@ -358,18 +323,6 @@ public class GlowCard : Panel
         gp.CloseFigure();
         return gp;
     }
-
-    protected override void OnControlAdded(ControlEventArgs e)
-    {
-        base.OnControlAdded(e);
-        if (e.Control == null) return;
-        e.Control.MouseEnter += (_, _) => { _hovered = true; Invalidate(); };
-        e.Control.MouseLeave += (_, _) =>
-        {
-            var pos = PointToClient(Cursor.Position);
-            if (!ClientRectangle.Contains(pos)) { _hovered = false; Invalidate(); }
-        };
-    }
 }
 
 /// <summary>Section panel with gradient header</summary>
@@ -377,18 +330,15 @@ public class SectionPanel : Panel
 {
     private string _title = "";
     private Color _accent = UIHelper.StokWarning;
-    private string _icon = "⚠";
 
     public string Title { get => _title; set { _title = value; Invalidate(); } }
     public Color AccentColor { get => _accent; set { _accent = value; Invalidate(); } }
-    public string Icon { get => _icon; set { _icon = value; Invalidate(); } }
 
     public int HeaderHeight { get; set; } = 42;
 
     public SectionPanel()
     {
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint
-               | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         BackColor = UIHelper.BgDark;
         Padding = new Padding(0, 42, 0, 0);
     }
@@ -402,20 +352,15 @@ public class SectionPanel : Panel
         g.FillRectangle(bgBrush, ClientRectangle);
 
         var headerRect = new Rectangle(0, 0, Width, HeaderHeight);
-        using var hdrBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
-            headerRect,
-            Color.FromArgb(30, _accent.R, _accent.G, _accent.B),
-            UIHelper.BgDark, 0f);
+        using var hdrBrush = new System.Drawing.Drawing2D.LinearGradientBrush(headerRect, Color.FromArgb(30, _accent.R, _accent.G, _accent.B), UIHelper.BgDark, 0f);
         g.FillRectangle(hdrBrush, headerRect);
 
         using var linePen = new Pen(Color.FromArgb(60, _accent), 2);
         g.DrawLine(linePen, 8, HeaderHeight - 1, Width - 8, HeaderHeight - 1);
 
-        using var fIcon = UIIcons.GetFont(14);
         using var fTitle = new Font("Segoe UI", 12.5f, FontStyle.Bold);
         using var accentBrush = new SolidBrush(_accent);
-        g.DrawString(UIIcons.ResolveIcon(_icon), fIcon, accentBrush, 10, 8);
-        g.DrawString(_title, fTitle, accentBrush, 38, 10);
+        g.DrawString(_title, fTitle, accentBrush, 12, 10);
 
         base.OnPaint(e);
     }

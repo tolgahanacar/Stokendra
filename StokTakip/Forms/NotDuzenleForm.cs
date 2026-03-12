@@ -6,6 +6,7 @@ namespace StokTakip.Forms;
 public class NotDuzenleForm : Form
 {
     private TextBox txtBaslik = new(), txtIcerik = new();
+    private DateTimePicker dtpTarih = new();
     public Not Sonuc { get; private set; } = new();
 
     public NotDuzenleForm(Not? mevcut = null)
@@ -36,15 +37,13 @@ public class NotDuzenleForm : Form
         // ── Body ──
         var pnlBody = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark, Padding = new Padding(24, 16, 24, 8) };
 
-        // Tarih — simple label
-        var tarihText = (mevcut?.Tarih ?? DateTime.Now).ToString("dd MMMM yyyy, HH:mm");
-        var pnlTarih = new Panel { Dock = DockStyle.Top, Height = 24, BackColor = UIHelper.BgDark };
-        var tarihTitle = UIHelper.MakeIconTitle(
-            "📅  " + tarihText,
-            UIHelper.AccentCyan,
-            new Font("Segoe UI Semibold", 9),
-            left: 0, top: 2, gap: 6, iconSize: 12f, iconTop: 0, textTop: 0);
-        pnlTarih.Controls.Add(tarihTitle);
+        // Tarih
+        var pnlTarih = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = UIHelper.BgDark, Padding = new Padding(0,0,0,8) };
+        var lblTarih = new Label { Text = "📅 " + L("date"), AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.AccentCyan, Left = 0, Top = 0 };
+        dtpTarih = new DateTimePicker { Width = 160, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy HH:mm", Left = 0, Top = 20 };
+        UIHelper.StyleDatePicker(dtpTarih);
+        dtpTarih.Value = mevcut?.Tarih ?? DateTime.Now;
+        pnlTarih.Controls.AddRange(new Control[] { lblTarih, dtpTarih });
 
         // Başlık label
         var lblBaslikLabel = new Label
@@ -104,7 +103,7 @@ public class NotDuzenleForm : Form
             }
             Sonuc.Baslik = txtBaslik.Text.Trim();
             Sonuc.Icerik = txtIcerik.Text;
-            if (mevcut == null) Sonuc.Tarih = DateTime.Now;
+            Sonuc.Tarih = dtpTarih.Value;
             DialogResult = DialogResult.OK;
             Close();
         };

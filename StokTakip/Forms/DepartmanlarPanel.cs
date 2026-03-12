@@ -10,17 +10,13 @@ public class DepartmanlarPanel : UserControl
     public DepartmanlarPanel()
     {
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
-        var pnlH = new Panel { Dock = DockStyle.Top, Height = 65, BackColor = UIHelper.BgDark };
-        pnlH.Controls.AddRange(new Control[] {
-            new Label { Text = L("departments"), Font = new Font("Segoe UI", 18, FontStyle.Bold), ForeColor = UIHelper.TextWhite, Left = 28, Top = 14, AutoSize = true },
-            new Label { Text = L("departments_subtitle"), Font = new Font("Segoe UI", 9), ForeColor = UIHelper.TextMuted, Left = 28, Top = 44, AutoSize = true }
-        });
-        var pnlT = new Panel { Dock = DockStyle.Top, Height = 50, BackColor = UIHelper.BgPanel };
+        var pnlH = UIHelper.MakeHeader(L("departments"), L("departments_subtitle"));
+        var pnlT = UIHelper.MakeToolbar(50);
         var lbl = new Label { Text = L("new_dept_label"), ForeColor = UIHelper.TextSecondary, Left = 12, Top = 15, AutoSize = true, Font = new Font("Segoe UI", 9) };
-        txtYeni = new TextBox { Left = 140, Top = 11, Width = 250 }; UIHelper.StyleTextBox(txtYeni); txtYeni.PlaceholderText = L("dept_name_placeholder");
+        txtYeni = UIHelper.MakeSearchBox(L("dept_name_placeholder"), 250); txtYeni.Left = 140; txtYeni.Top = 11;
         txtYeni.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) Ekle(); };
-        var btnE = UIHelper.MakeButton(L("add_dept"), UIHelper.AccentBlue, 402, 10, 90, 30);
-        var btnS = UIHelper.MakeButton(L("delete_selected"), UIHelper.AccentRed, 500, 10, 110, 30);
+        var btnE = UIHelper.MakeFlowButton(L("add_dept"), UIHelper.AccentBlue, 110);
+        var btnS = UIHelper.MakeFlowButton(L("delete_selected"), UIHelper.AccentRed, 140);
         btnE.Click += (_, _) => Ekle(); btnS.Click += (_, _) => Sil();
         pnlT.Controls.AddRange(new Control[] { lbl, txtYeni, btnE, btnS });
 

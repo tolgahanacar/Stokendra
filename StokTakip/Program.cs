@@ -36,6 +36,7 @@ static class Program
         }
 
         DB = new Data.Database(Settings.DbPath);
+        Application.ApplicationExit += (s, e) => DB?.Dispose();
 
         // Login gate
         using var login = new LoginForm();

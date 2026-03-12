@@ -10,7 +10,6 @@ namespace StokTakip.Forms;
 /// <summary>Fully custom-painted stat card — no child controls, clean rendering</summary>
 internal class StatCard : Control
 {
-    public string Icon     { get; set; } = "";
     public string Title    { get; set; } = "";
     public string Value    { get; set; } = "";
     public string Subtitle { get; set; } = "";
@@ -55,17 +54,9 @@ internal class StatCard : Control
         g.DrawPath(borderPen, path);
 
         // FIX 2 ► İkon sağ üstte çiziliyor
-        if (!string.IsNullOrEmpty(Icon))
-        {
-            using var fIcon = UIIcons.GetFont(12f);
-            using var iconBrush = new SolidBrush(System.Drawing.Color.FromArgb(_hovered ? 200 : 130, Accent));
-            var iconText = UIIcons.ResolveIcon(Icon);
-            var iconSize = g.MeasureString(iconText, fIcon);
-            g.DrawString(iconText, fIcon, iconBrush, Width - iconSize.Width - 8, 7);
-        }
 
         // FIX 3 ► Türkçe büyük harf (ı→I, i→İ, ş→Ş vs.) — ToUpperTr extension
-        using var fTitle = new System.Drawing.Font("Segoe UI", 7f, System.Drawing.FontStyle.Bold);
+        using var fTitle = new System.Drawing.Font("Segoe UI Emoji", 9f, System.Drawing.FontStyle.Bold);
         using var titleBrush = new SolidBrush(UIHelper.TextMuted);
         g.DrawString(Title.ToUpperTr(), fTitle, titleBrush, 12, 9);
 
@@ -173,25 +164,14 @@ public class DashboardPanel : UserControl
         var hareketler = Program.DB!.HareketleriGetir();
 
         // ═══ HEADER ═══
-        var pnlH = new Panel { Dock = DockStyle.Top, Height = 68, BackColor = UIHelper.BgDark };
-        var lblTitle = new System.Windows.Forms.Label
-        {
-            Text = L("dashboard"), Font = UIHelper.FontTitle, ForeColor = UIHelper.TextWhite,
-            Left = 28, Top = 8, AutoSize = true
-        };
-        var lblSub = new System.Windows.Forms.Label
-        {
-            Text = L("dashboard_subtitle"),
-            Font = new System.Drawing.Font("Segoe UI Semibold", 10),
-            ForeColor = UIHelper.TextSecondary, Left = 28, Top = 40, AutoSize = true
-        };
+        var pnlH = UIHelper.MakeHeader(L("dashboard"), L("dashboard_subtitle"));
         var lblDate = new System.Windows.Forms.Label
         {
             Text = DateTime.Now.ToString("dd MMMM yyyy, dddd"),
             Font = new System.Drawing.Font("Segoe UI Semibold", 9.5f),
             ForeColor = UIHelper.AccentCyan, AutoSize = true
         };
-        pnlH.Controls.AddRange(new Control[] { lblTitle, lblSub, lblDate });
+        pnlH.Controls.Add(lblDate);
         pnlH.Resize += (_, _) => { lblDate.Left = pnlH.Width - lblDate.Width - 32; lblDate.Top = 16; };
 
         // ═══ STAT CARDS ═══
@@ -205,30 +185,42 @@ public class DashboardPanel : UserControl
             Padding = new Padding(20, 6, 20, 4)
         };
 
-        var cardsData = new (string icon, string title, string value, string sub, System.Drawing.Color accent)[]
+        var cardsData = new (string title, string value, string sub, System.Drawing.Color accent)[]
         {
-            ("🗂", L("total_stock_cards"),  stats.toplamKart.ToString(),              L("total_stock_cards_sub"),  UIHelper.AccentBlue),
-            ("📦", L("total_stock_qty"),    UIHelper.FormatMiktar(stats.toplamStok),  L("total_stock_qty_sub"),    UIHelper.AccentCyan),
-            ("⚡", L("low_stock"),          stats.dusuk.ToString(),                   L("low_stock_sub"),          UIHelper.StokLow),
-            ("🔴", L("depleted_stock"),     stats.tukenmis.ToString(),                L("depleted_stock_sub"),     UIHelper.StokWarning),
-            ("🔄", L("total_movements"),    stats.toplamHareket.ToString(),           L("total_movements_sub"),    UIHelper.AccentPurple),
-            ("📅", L("today_movements"),    stats.bugunHareket.ToString(),            "",                          UIHelper.AccentOrange),
+            ("📇 " + L("total_stock_cards"), stats.toplamKart.ToString(),              L("total_stock_cards_sub"),  UIHelper.AccentBlue),
+            ("📦 " + L("total_stock_qty"),   UIHelper.FormatMiktar(stats.toplamStok),  L("total_stock_qty_sub"),    UIHelper.AccentCyan),
+            ("⚠️ " + L("low_stock"),         stats.dusuk.ToString(),                   L("low_stock_sub"),          UIHelper.StokLow),
+            ("🚫 " + L("depleted_stock"),    stats.tukenmis.ToString(),                L("depleted_stock_sub"),     UIHelper.StokWarning),
+            ("🔄 " + L("total_movements"),   stats.toplamHareket.ToString(),           L("total_movements_sub"),    UIHelper.AccentPurple),
+            ("📅 " + L("today_movements"),   stats.bugunHareket.ToString(),            "",                          UIHelper.AccentOrange),
         };
 
+
+
         foreach (var c in cardsData)
+
         {
+
             pnlCards.Controls.Add(new StatCard
+
             {
-                Icon     = c.icon,
+
                 Title    = c.title,
+
                 Value    = c.value,
+
                 Subtitle = c.sub,
+
                 Accent   = c.accent,
+
                 Margin   = new Padding(4, 2, 4, 2)
+
             });
+
         }
 
-        // ═══ CHARTS ═══
+
+
         var pnlCharts = new TableLayoutPanel
         {
             Dock = DockStyle.Top, Height = 270,
@@ -315,15 +307,15 @@ public class DashboardPanel : UserControl
         pnlCharts.Controls.Add(barBorder, 1, 0);
 
         // ═══ LOW STOCK ALERTS ═══
-        var pnlBody = new SectionPanel
-        {
-            Dock       = DockStyle.Fill,
-            Title      = UIIcons.StripLeadingIcon(L("low_stock_alerts")),
-            AccentColor = UIHelper.StokWarning,
-            Icon       = "🔔",
-            Padding    = new Padding(8, 46, 8, 8)
-        };
-
+        // LOW STOCK ALERTS
+        var pnlBody = new SectionPanel
+        {
+            Dock        = DockStyle.Fill,
+            Title       = L("low_stock_alerts"),
+            AccentColor = UIHelper.StokWarning,
+            Padding     = new Padding(8, 46, 8, 8)
+        };
+
         var dusukKartlar = altKartlar
             .Where(k => k.MevcutStok <= 3)
             .OrderBy(k => k.MevcutStok)

@@ -33,15 +33,14 @@ public class ServislerPanel : Panel
         pnlF.BackColor = UIHelper.BgPanel;
         
         pnlF.Controls.Add(FL(L("date_filter")));
-        dtpBas = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2), Value = DateTime.Now.AddMonths(-1) };
+        dtpBas = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2), Value = new DateTime(2024, 1, 1) };
         pnlF.Controls.Add(dtpBas); 
         pnlF.Controls.Add(FL("-"));
         dtpBit = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2) };
         pnlF.Controls.Add(dtpBit);
 
-        pnlF.Controls.Add(FL("Arama:"));
-        txtArama = UIHelper.MakeSearchBox("Cihaz adı, seri no veya açıklama...", 250);
-        txtArama.Margin = new Padding(4, 3, 8, 2);
+        pnlF.Controls.Add(FL(L("arama_label", "Arama:")));
+        txtArama = UIHelper.MakeSearchBox(L("service_search_placeholder", "Cihaz adı, seri no..."), 250);
         txtArama.TextChanged += (_, _) => Filtrele();
         pnlF.Controls.Add(txtArama);
 
@@ -53,7 +52,7 @@ public class ServislerPanel : Panel
 
         // Action Toolbar
         var toolbar = UIHelper.MakeToolbar();
-        var btnYeni = UIHelper.MakeFlowButton(L("new_service_record", "＋ Yeni Kayıt"), UIHelper.AccentBlue, 140);
+        var btnYeni = UIHelper.MakeFlowButton(L("new_service_record"), UIHelper.AccentBlue, 140);
         var btnDuzenle = UIHelper.MakeFlowButton(L("edit"), UIHelper.AccentOrange, 100);
         var btnSil = UIHelper.MakeFlowButton(L("delete"), UIHelper.AccentRed, 90);
         var btnYaz = UIHelper.MakeFlowButton(L("print"), UIHelper.BtnMid, 90);
@@ -75,9 +74,11 @@ public class ServislerPanel : Panel
             new DataGridViewTextBoxColumn { Name = "CihazAdi", HeaderText = L("device_name", "Cihaz Adı"), FillWeight = 130 },
             new DataGridViewTextBoxColumn { Name = "SeriNumarasi", HeaderText = L("serial_number", "Seri Numarası"), FillWeight = 100 },
             new DataGridViewTextBoxColumn { Name = "Firma", HeaderText = L("company", "Firma"), FillWeight = 120 },
-            new DataGridViewTextBoxColumn { Name = "BakimTarihi", HeaderText = L("maintenance_date", "Bakım Tarihi"), FillWeight = 100 },
-            new DataGridViewTextBoxColumn { Name = "Aciklama", HeaderText = L("description", "Açıklama"), FillWeight = 250 }
+            new DataGridViewTextBoxColumn { Name = "Sorun", HeaderText = L("problem", "Sorun"), FillWeight = 150 },
+            new DataGridViewTextBoxColumn { Name = "Sonuc", HeaderText = L("result", "Sonuç"), FillWeight = 150 },
+            new DataGridViewTextBoxColumn { Name = "BakimTarihi", HeaderText = L("maintenance_date", "Bakım Tarihi"), FillWeight = 100 }
         );
+        dgv.Columns["BakimTarihi"].DefaultCellStyle.Format = "dd.MM.yyyy";
         dgv.CellDoubleClick += (_, _) => btnDuzenle.PerformClick();
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
@@ -103,14 +104,14 @@ public class ServislerPanel : Panel
         dgv.Rows.Clear();
         foreach (var s in _kayitlar)
         {
-            dgv.Rows.Add(s.Id, s.CihazAdi, s.SeriNumarasi, s.Firma, s.BakimTarihi.ToShortDateString(), s.Aciklama);
+            dgv.Rows.Add(s.Id, s.CihazAdi, s.SeriNumarasi, s.Firma, s.Sorun, s.Sonuc, s.BakimTarihi);
         }
         lblInfo.Text = $"{_kayitlar.Count} servis kaydı listelendi.";
     }
 
     private void Temizle()
     {
-        dtpBas.Value = DateTime.Now.AddMonths(-1);
+        dtpBas.Value = new DateTime(2024, 1, 1);
         dtpBit.Value = DateTime.Now;
         txtArama.Clear();
         Filtrele();
@@ -176,7 +177,7 @@ public class ServislerPanel : Panel
             using var wb = new ClosedXML.Excel.XLWorkbook();
             var ws = wb.AddWorksheet("Servis Kayıtları");
 
-            string[] headers = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
+            string[] headers = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("problem", "Sorun"), L("result", "Sonuç"), L("maintenance_date", "Bakım Tarihi") };
             for (int i = 0; i < headers.Length; i++)
             {
                 ws.Cell(1, i + 1).Value = headers[i];
@@ -191,8 +192,9 @@ public class ServislerPanel : Panel
                 ws.Cell(row, 1).Value = s.CihazAdi;
                 ws.Cell(row, 2).Value = s.SeriNumarasi;
                 ws.Cell(row, 3).Value = s.Firma;
-                ws.Cell(row, 4).Value = s.BakimTarihi.ToShortDateString();
-                ws.Cell(row, 5).Value = s.Aciklama;
+                ws.Cell(row, 4).Value = s.Sorun;
+                ws.Cell(row, 5).Value = s.Sonuc;
+                ws.Cell(row, 6).Value = s.BakimTarihi.ToShortDateString();
                 row++;
             }
 
@@ -213,8 +215,14 @@ public class ServislerPanel : Panel
         pd.DefaultPageSettings.Landscape = true; 
         pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827); 
         pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
+
+        using (var psd = new PageSetupDialog { Document = pd })
+        {
+            if (psd.ShowDialog() != DialogResult.OK) return;
+        }
         
         int ps = 0; const int rpp = 28; int tp = Math.Max(1, (int)Math.Ceiling((double)sorted.Count / rpp));
+        pd.BeginPrint += (_, _) => { ps = 0; };
         
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
@@ -231,10 +239,11 @@ public class ServislerPanel : Panel
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 6; 
             }
             
-            float[] w = { 150, 100, 150, 80, 0 }; 
-            float u = 0; foreach (var ww in w) u += ww; w[^1] = pw - u;
+            float[] weights = { 180, 130, 160, 200, 200, 110 };
+            float totalWeight = weights.Sum();
+            float[] w = weights.Select(wt => (wt / totalWeight) * pw).ToArray();
             
-            string[] hdr = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("maintenance_date", "Bakım Tarihi"), L("description", "Açıklama") };
+            string[] hdr = { L("device_name", "Cihaz Adı"), L("serial_number", "Seri Numarası"), L("company", "Firma"), L("problem", "Sorun"), L("result", "Sonuç"), L("maintenance_date", "Bakım Tarihi") };
             using var brHd = new SolidBrush(Color.FromArgb(230, 235, 245)); g.FillRectangle(brHd, lm, y, pw, 18); float x = lm;
             for (int i = 0; i < hdr.Length; i++) { g.DrawString(hdr[i], fH, br, x + 2, y + 2); x += w[i]; } y += 20;
             
@@ -242,7 +251,7 @@ public class ServislerPanel : Panel
             for (int i = ps; i < end; i++) 
             {
                 var h = sorted[i]; if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 18); x = lm;
-                string[] cells = { h.CihazAdi, h.SeriNumarasi, h.Firma, h.BakimTarihi.ToShortDateString(), h.Aciklama };
+                string[] cells = { h.CihazAdi, h.SeriNumarasi, h.Firma, h.Sorun, h.Sonuc, h.BakimTarihi.ToShortDateString() };
                 for (int c = 0; c < cells.Length; c++) 
                 { 
                     g.DrawString(cells[c], fC, br, new RectangleF(x + 2, y + 2, w[c] - 4, 16), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); 
