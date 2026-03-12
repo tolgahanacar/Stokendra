@@ -27,7 +27,8 @@ public class StokKartlariPanel : UserControl
         var btnDet = UIHelper.MakeFlowButton(L("detail"),     UIHelper.AccentGreen, 85);
         var btnTG = UIHelper.MakeFlowButton(L("bulk_entry"),  UIHelper.AccentCyan, 110);
         var btnExcel = UIHelper.MakeFlowButton(L("export_excel"), UIHelper.AccentGreen, 130);
-        var btnImport = UIHelper.MakeFlowButton(L("import_csv"), UIHelper.AccentPurple, 130);
+        var btnImport = UIHelper.MakeFlowButton(L("import_excel"), UIHelper.AccentPurple, 130);
+        var btnOrnek = UIHelper.MakeFlowButton(L("sample_file"), UIHelper.BtnDark, 110);
 
         btnE.Click += (_, _) => { using var f = new StokKartiDuzenleForm(null); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
         btnD.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDuzenleForm(k); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); } };
@@ -35,9 +36,10 @@ public class StokKartlariPanel : UserControl
         btnDet.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
         btnTG.Click += (_, _) => { using var f = new TopluHareketForm(); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
         btnExcel.Click += (_, _) => ExcelExport();
-        btnImport.Click += (_, _) => CsvImport();
+        btnImport.Click += (_, _) => ExcelImport();
+        btnOrnek.Click += (_, _) => OrnekDosya();
         
-        pnlT.Controls.AddRange(new Control[] { txtAra, btnE, btnD, btnS, btnTS, btnDet, btnTG, btnExcel, btnImport });
+        pnlT.Controls.AddRange(new Control[] { txtAra, btnE, btnD, btnS, btnTS, btnDet, btnTG, btnExcel, btnImport, btnOrnek });
 
         // Grid
         grid = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(grid, multiSelect: true);
@@ -127,32 +129,35 @@ public class StokKartlariPanel : UserControl
         catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
     }
 
-    private void CsvImport()
+    private void ExcelImport()
     {
-        using var dlg = new OpenFileDialog { Filter = "CSV|*.csv", Title = L("import_csv") };
+        using var dlg = new OpenFileDialog { Filter = "Excel|*.xlsx;*.xls", Title = L("import_excel") };
         if (dlg.ShowDialog() != DialogResult.OK) return;
 
         try
         {
-            var lines = File.ReadAllLines(dlg.FileName);
-            if (lines.Length <= 1) return;
+            using var wb = new XLWorkbook(dlg.FileName);
+            var ws = wb.Worksheet(1);
+            var rows = ws.RangeUsed().RowsUsed().Skip(1); // Header'ı atla
 
             int eklenen = 0;
-            for (int i = 1; i < lines.Length; i++)
+            foreach (var row in rows)
             {
-                var row = lines[i].Split(';');
-                if (row.Length < 3) continue;
-
                 var k = new StokKarti
                 {
-                    KodNo = row[0].Trim(),
-                    Ad = row[1].Trim(),
+                    KodNo = row.Cell(1).GetString().Trim(),
+                    Ad = row.Cell(2).GetString().Trim(),
+                    Kategori = row.Cell(3).GetString().Trim(),
+                    Birim = row.Cell(4).GetString().Trim() ?? "Adet",
+                    Konum = row.Cell(5).GetString().Trim(),
+                    Tedarikci = row.Cell(6).GetString().Trim(),
+                    Barkod = row.Cell(7).GetString().Trim(),
+                    BirimFiyat = row.Cell(8).GetDouble(),
+                    MinStok = (int)row.Cell(9).GetDouble(),
                     KartTipi = "Alt",
-                    Kategori = row[2].Trim(),
-                    MevcutStok = 0,
-                    MinStok = row.Length > 3 && int.TryParse(row[3].Trim(), out int ms) ? ms : 0,
-                    Aciklama = "" // Ignore Aciklama for CSV import simplicity or format it if provided
+                    Aciklama = row.Cell(10).GetString().Trim()
                 };
+
                 if (!string.IsNullOrEmpty(k.KodNo) && !string.IsNullOrEmpty(k.Ad))
                 {
                     Program.DB!.StokKartiEkle(k);
@@ -162,6 +167,22 @@ public class StokKartlariPanel : UserControl
             YukleGrid();
             MessageBox.Show(L("import_success", eklenen), "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
+        catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
+    }
+
+    private void OrnekDosya()
+    {
+        using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = "StokKarti_Ornek.xlsx" };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Stok");
+        string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "Konum", "Tedarikçi", "Barkod", "BirimFiyat", "MinStok", "Açıklama" };
+        for (int i = 0; i < headers.Length; i++) { ws.Cell(1, i + 1).Value = headers[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; }
+        ws.Cell(2, 1).Value = "100.001"; ws.Cell(2, 2).Value = "Örnek Stok A"; ws.Cell(2, 3).Value = "Kırtasiye"; ws.Cell(2, 4).Value = "Adet"; ws.Cell(2, 5).Value = "Raf A1"; ws.Cell(2, 6).Value = "Tedarikci X"; ws.Cell(2, 7).Value = "123456789"; ws.Cell(2, 8).Value = 25.50; ws.Cell(2, 9).Value = 5;
+
+        ws.Columns().AdjustToContents();
+        try { wb.SaveAs(dlg.FileName); MessageBox.Show(L("sample_file_created", dlg.FileName)); }
         catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
     }
 }

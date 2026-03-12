@@ -214,7 +214,8 @@ public class Database : IDisposable
             var m = c.CreateCommand();
             m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
                 COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
-                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,'')
+                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,''),
+                s.Birim, s.Konum, s.Tedarikci, s.Barkod, s.BirimFiyat
                 FROM StokKartlari s LEFT JOIN StokKartlari ust ON ust.Id=s.UstKartId ORDER BY s.KodNo";
             using var r = m.ExecuteReader();
             while (r.Read())
@@ -222,7 +223,10 @@ public class Database : IDisposable
                     Aciklama = r.IsDBNull(3) ? "" : r.GetString(3), MinStok = r.IsDBNull(4) ? 0 : r.GetInt32(4),
                     MevcutStok = r.IsDBNull(5) ? 0 : r.GetDouble(5), Kategori = r.IsDBNull(6) ? "" : r.GetString(6),
                     KartTipi = r.IsDBNull(7) ? "Alt" : r.GetString(7), UstKartId = r.IsDBNull(8) ? null : r.GetInt32(8),
-                    UstKartAd = r.IsDBNull(9) ? "" : r.GetString(9) });
+                    UstKartAd = r.IsDBNull(9) ? "" : r.GetString(9),
+                    Birim = r.IsDBNull(10) ? "Adet" : r.GetString(10), Konum = r.IsDBNull(11) ? "" : r.GetString(11),
+                    Tedarikci = r.IsDBNull(12) ? "" : r.GetString(12), Barkod = r.IsDBNull(13) ? "" : r.GetString(13),
+                    BirimFiyat = r.IsDBNull(14) ? 0 : r.GetDouble(14) });
         }
         catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
         return liste;
@@ -267,7 +271,8 @@ public class Database : IDisposable
             var c = OpenConnection(); var m = c.CreateCommand();
             m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
                 COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
-                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,'')
+                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,''),
+                s.Birim, s.Konum, s.Tedarikci, s.Barkod, s.BirimFiyat
                 FROM StokKartlari s LEFT JOIN StokKartlari ust ON ust.Id=s.UstKartId WHERE s.Id=$id";
             m.Parameters.AddWithValue("$id", id);
             using var r = m.ExecuteReader();
@@ -275,7 +280,10 @@ public class Database : IDisposable
                 Aciklama = r.IsDBNull(3) ? "" : r.GetString(3), MinStok = r.IsDBNull(4) ? 0 : r.GetInt32(4),
                 MevcutStok = r.IsDBNull(5) ? 0 : r.GetDouble(5), Kategori = r.IsDBNull(6) ? "" : r.GetString(6),
                 KartTipi = r.IsDBNull(7) ? "Alt" : r.GetString(7), UstKartId = r.IsDBNull(8) ? null : r.GetInt32(8),
-                UstKartAd = r.IsDBNull(9) ? "" : r.GetString(9) };
+                UstKartAd = r.IsDBNull(9) ? "" : r.GetString(9),
+                Birim = r.IsDBNull(10) ? "Adet" : r.GetString(10), Konum = r.IsDBNull(11) ? "" : r.GetString(11),
+                Tedarikci = r.IsDBNull(12) ? "" : r.GetString(12), Barkod = r.IsDBNull(13) ? "" : r.GetString(13),
+                BirimFiyat = r.IsDBNull(14) ? 0 : r.GetDouble(14) };
         } catch { } return null;
     }
 
@@ -284,12 +292,15 @@ public class Database : IDisposable
         try
         {
             var c = OpenConnection(); var m = c.CreateCommand();
-            m.CommandText = "INSERT INTO StokKartlari (Ad,KodNo,Aciklama,MinStok,Kategori,KartTipi,UstKartId,OlusturmaTarihi,Birim) VALUES ($a,$k,$ac,$ms,$kat,$kt,$uk,$ot,'Adet')";
+            m.CommandText = "INSERT INTO StokKartlari (Ad,KodNo,Aciklama,MinStok,Kategori,KartTipi,UstKartId,OlusturmaTarihi,Birim,Konum,Tedarikci,Barkod,BirimFiyat) VALUES ($a,$k,$ac,$ms,$kat,$kt,$uk,$ot,$b,$kon,$ted,$bar,$bf)";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
             m.Parameters.AddWithValue("$kat", s.Kategori ?? ""); m.Parameters.AddWithValue("$kt", s.KartTipi ?? "Alt");
             m.Parameters.AddWithValue("$uk", s.UstKartId.HasValue ? (object)s.UstKartId.Value : DBNull.Value);
             m.Parameters.AddWithValue("$ot", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
+            m.Parameters.AddWithValue("$b", s.Birim ?? "Adet"); m.Parameters.AddWithValue("$kon", s.Konum ?? "");
+            m.Parameters.AddWithValue("$ted", s.Tedarikci ?? ""); m.Parameters.AddWithValue("$bar", s.Barkod ?? "");
+            m.Parameters.AddWithValue("$bf", s.BirimFiyat);
             m.ExecuteNonQuery();
             AuditLogYaz("EKLE", "StokKartlari", 0, $"{s.Ad} ({s.KodNo}) [{s.KartTipi}]");
         } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
@@ -300,12 +311,15 @@ public class Database : IDisposable
         try
         {
             var c = OpenConnection(); var m = c.CreateCommand();
-            m.CommandText = "UPDATE StokKartlari SET Ad=$a,KodNo=$k,Aciklama=$ac,MinStok=$ms,Kategori=$kat,KartTipi=$kt,UstKartId=$uk,GuncellenmeTarihi=$gt WHERE Id=$id";
+            m.CommandText = "UPDATE StokKartlari SET Ad=$a,KodNo=$k,Aciklama=$ac,MinStok=$ms,Kategori=$kat,KartTipi=$kt,UstKartId=$uk,GuncellenmeTarihi=$gt,Birim=$b,Konum=$kon,Tedarikci=$ted,Barkod=$bar,BirimFiyat=$bf WHERE Id=$id";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
             m.Parameters.AddWithValue("$kat", s.Kategori ?? ""); m.Parameters.AddWithValue("$kt", s.KartTipi ?? "Alt");
             m.Parameters.AddWithValue("$uk", s.UstKartId.HasValue ? (object)s.UstKartId.Value : DBNull.Value);
             m.Parameters.AddWithValue("$gt", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
+            m.Parameters.AddWithValue("$b", s.Birim ?? "Adet"); m.Parameters.AddWithValue("$kon", s.Konum ?? "");
+            m.Parameters.AddWithValue("$ted", s.Tedarikci ?? ""); m.Parameters.AddWithValue("$bar", s.Barkod ?? "");
+            m.Parameters.AddWithValue("$bf", s.BirimFiyat);
             m.Parameters.AddWithValue("$id", s.Id);
             m.ExecuteNonQuery();
             AuditLogYaz("GUNCELLE", "StokKartlari", s.Id, $"{s.Ad} ({s.KodNo})");

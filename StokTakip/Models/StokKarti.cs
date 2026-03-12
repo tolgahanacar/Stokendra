@@ -9,6 +9,11 @@ public class StokKarti
     public int MinStok { get; set; }
     public double MevcutStok { get; set; }
     public string Kategori { get; set; } = "";
+    public string Birim { get; set; } = "Adet";
+    public string Konum { get; set; } = "";
+    public string Tedarikci { get; set; } = "";
+    public string Barkod { get; set; } = "";
+    public double BirimFiyat { get; set; }
 
     // Üst/Alt Kart
     public string KartTipi { get; set; } = "Alt";

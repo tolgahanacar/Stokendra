@@ -58,7 +58,7 @@ internal class StatCard : Control
         // FIX 3 ► Türkçe büyük harf (ı→I, i→İ, ş→Ş vs.) — ToUpperTr extension
         using var fTitle = new System.Drawing.Font("Segoe UI Emoji", 9f, System.Drawing.FontStyle.Bold);
         using var titleBrush = new SolidBrush(UIHelper.TextMuted);
-        g.DrawString(Title.ToUpperTr(), fTitle, titleBrush, 12, 9);
+        g.DrawString(Title, fTitle, titleBrush, 12, 9);
 
         // Value (large, accent)
         using var fValue = new System.Drawing.Font("Segoe UI", 22, System.Drawing.FontStyle.Bold);
@@ -350,7 +350,7 @@ public class DashboardPanel : UserControl
                     MinInfo    = $"Min: {k.MinStok}",
                     StockValue = UIHelper.FormatMiktar(k.MevcutStok),
                     // FIX 3 ► Türkçe büyük harf extension
-                    Status     = (dep ? L("depleted") : L("low_stock")).ToUpperTr(),
+                    Status     = (dep ? L("depleted") : L("low_stock")),
                     Accent     = dep ? UIHelper.StokWarning : UIHelper.StokLow,
                     Margin     = new Padding(4, 3, 4, 3)
                 });

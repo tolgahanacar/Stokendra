@@ -57,14 +57,18 @@ public class ServislerPanel : Panel
         var btnSil = UIHelper.MakeFlowButton(L("delete"), UIHelper.AccentRed, 90);
         var btnYaz = UIHelper.MakeFlowButton(L("print"), UIHelper.BtnMid, 90);
         var btnExcel = UIHelper.MakeFlowButton(L("export_excel"), UIHelper.AccentCyan, 130);
+        var btnImport = UIHelper.MakeFlowButton(L("import_excel"), UIHelper.AccentPurple, 130);
+        var btnOrnek = UIHelper.MakeFlowButton(L("sample_file"), UIHelper.BtnDark, 110);
 
         btnYeni.Click += BtnYeni_Click;
         btnDuzenle.Click += BtnDuzenle_Click;
         btnSil.Click += BtnSil_Click;
         btnYaz.Click += (_, _) => Yazdir(); 
         btnExcel.Click += (_, _) => ExcelExport();
+        btnImport.Click += (_, _) => ExcelImport();
+        btnOrnek.Click += (_, _) => OrnekDosya();
 
-        toolbar.Controls.AddRange(new Control[] { btnYeni, btnDuzenle, btnSil, new Label { Width = 10 }, btnYaz, btnExcel });
+        toolbar.Controls.AddRange(new Control[] { btnYeni, btnDuzenle, btnSil, btnYaz, btnExcel, btnImport, btnOrnek });
 
         // Data Grid
         dgv.Dock = DockStyle.Fill;
@@ -165,6 +169,57 @@ public class ServislerPanel : Panel
             Program.DB?.ServisKaydiSil(secili.Id);
             Filtrele();
         }
+    }
+
+    // ═══ XLSX IMPORT ═══
+    private void ExcelImport()
+    {
+        using var dlg = new OpenFileDialog { Filter = "Excel|*.xlsx", Title = L("import_excel") };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+
+        try
+        {
+            using var wb = new ClosedXML.Excel.XLWorkbook(dlg.FileName);
+            var ws = wb.Worksheet(1);
+            var rows = ws.RangeUsed().RowsUsed().Skip(1);
+
+            int eklenen = 0;
+            foreach (var row in rows)
+            {
+                var s = new ServisKaydi
+                {
+                    CihazAdi = row.Cell(1).GetString().Trim(),
+                    SeriNumarasi = row.Cell(2).GetString().Trim(),
+                    Firma = row.Cell(3).GetString().Trim(),
+                    Sorun = row.Cell(4).GetString().Trim(),
+                    Sonuc = row.Cell(5).GetString().Trim(),
+                    BakimTarihi = row.Cell(6).GetDateTime()
+                };
+
+                if (!string.IsNullOrEmpty(s.CihazAdi))
+                {
+                    Program.DB?.ServisKaydiEkle(s);
+                    eklenen++;
+                }
+            }
+            Filtrele();
+            MessageBox.Show(L("import_success", eklenen));
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message); }
+    }
+
+    private void OrnekDosya()
+    {
+        using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = "Servis_Ornek.xlsx" };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.AddWorksheet("Servis");
+        string[] h = { "Cihaz Adı", "Seri No", "Firma", "Sorun", "Sonuç", "Tarih" };
+        for (int i = 0; i < h.Length; i++) { ws.Cell(1, i + 1).Value = h[i]; ws.Cell(1, i+1).Style.Font.Bold = true; }
+        ws.Cell(2, 1).Value = "Projeksiyon X"; ws.Cell(2, 2).Value = "SN12345"; ws.Cell(2, 3).Value = "ABC Ltd"; ws.Cell(2, 4).Value = "Lamba"; ws.Cell(2, 5).Value = "Değişti"; ws.Cell(2, 6).Value = DateTime.Now;
+        ws.Columns().AdjustToContents();
+        wb.SaveAs(dlg.FileName);
+        MessageBox.Show(L("sample_file_created", dlg.FileName));
     }
 
     // ═══ XLSX EXPORT (ClosedXML) ═══

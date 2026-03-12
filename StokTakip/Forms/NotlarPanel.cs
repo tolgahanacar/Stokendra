@@ -21,9 +21,15 @@ public class NotlarPanel : UserControl
         var pnlToolbar = UIHelper.MakeToolbar(44);
         var btnEkle = UIHelper.MakeFlowButton(L("new_note"), UIHelper.AccentYellow, 130);
         var btnSil = UIHelper.MakeFlowButton(L("delete"), UIHelper.AccentRed, 90);
+        var btnImport = UIHelper.MakeFlowButton(L("import_excel"), UIHelper.AccentPurple, 130);
+        var btnOrnek = UIHelper.MakeFlowButton(L("sample_file"), UIHelper.BtnDark, 110);
+
         btnEkle.Click += (_, _) => YeniNot();
         btnSil.Click += (_, _) => SilNot();
-        pnlToolbar.Controls.AddRange(new Control[] { btnEkle, btnSil });
+        btnImport.Click += (_, _) => ExcelImport();
+        btnOrnek.Click += (_, _) => OrnekDosya();
+
+        pnlToolbar.Controls.AddRange(new Control[] { btnEkle, btnSil, btnImport, btnOrnek });
 
         // ── Grid ──
         grid = new DataGridView { Dock = DockStyle.Fill };
@@ -139,5 +145,49 @@ public class NotlarPanel : UserControl
             Program.DB!.NotSil(id);
             YukleGrid();
         }
+    }
+
+    private void ExcelImport()
+    {
+        using var dlg = new OpenFileDialog { Filter = "Excel|*.xlsx", Title = L("import_excel") };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        try
+        {
+            using var wb = new ClosedXML.Excel.XLWorkbook(dlg.FileName);
+            var ws = wb.Worksheet(1);
+            var rows = ws.RangeUsed().RowsUsed().Skip(1);
+            int eklenen = 0;
+            foreach (var r in rows)
+            {
+                var n = new Not
+                {
+                    Baslik = r.Cell(1).GetString().Trim(),
+                    Icerik = r.Cell(2).GetString().Trim(),
+                    Tarih = r.Cell(3).GetDateTime()
+                };
+                if (!string.IsNullOrEmpty(n.Baslik))
+                {
+                    Program.DB?.NotEkle(n);
+                    eklenen++;
+                }
+            }
+            YukleGrid();
+            MessageBox.Show(L("import_success", eklenen));
+        }
+        catch (Exception ex) { MessageBox.Show(ex.Message); }
+    }
+
+    private void OrnekDosya()
+    {
+        using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = "Not_Ornek.xlsx" };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.AddWorksheet("Notlar");
+        string[] h = { "Başlık", "İçerik", "Tarih" };
+        for (int i = 0; i < h.Length; i++) { ws.Cell(1, i + 1).Value = h[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; }
+        ws.Cell(2, 1).Value = "Örnek Not"; ws.Cell(2, 2).Value = "Örnek içerik..."; ws.Cell(2, 3).Value = DateTime.Now;
+        ws.Columns().AdjustToContents();
+        wb.SaveAs(dlg.FileName);
+        MessageBox.Show(L("sample_file_created", dlg.FileName));
     }
 }

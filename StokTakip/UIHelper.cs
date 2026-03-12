@@ -159,7 +159,7 @@ public static class UIHelper
     {
         var card = new Panel { Left = left, Top = top, Width = width, Height = height, BackColor = BgCard, Margin = new Padding(4) };
         var accentLine = new Panel { Left = 0, Top = 0, Width = 4, Height = height, BackColor = accent };
-        var lblT = new Label { Text = title.ToUpperTr(), Left = 14, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = TextMuted };
+        var lblT = new Label { Text = title, Left = 14, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = TextMuted };
         var lblV = new Label { Text = value, Left = 14, Top = 30, AutoSize = true, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = accent };
         var lblS = new Label { Text = subtitle, Left = 14, Top = height - 24, AutoSize = true, Font = new Font("Segoe UI Semibold", 8), ForeColor = TextDim };
         card.Controls.AddRange(new Control[] { accentLine, lblT, lblV, lblS });
