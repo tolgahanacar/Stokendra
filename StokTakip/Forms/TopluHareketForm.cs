@@ -21,29 +21,29 @@ public class TopluHareketForm : Form
         var bulkTitle = UIHelper.MakeIconTitle(
             L("bulk_movement"),
             UIHelper.TextWhite,
-            new Font("Segoe UI", 13, FontStyle.Bold),
+            new Font("SF Pro Display", 13, FontStyle.Bold),
             left: 20, top: 10, gap: 6, iconSize: 13f, iconTop: 1, textTop: 0);
         pnlH.Controls.AddRange(new Control[] {
             bulkTitle,
-            new Label { Text = L("bulk_movement_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextMuted, Left = 340, Top = 16, AutoSize = true }
+            new Label { Text = L("bulk_movement_desc"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextMuted, Left = 340, Top = 16, AutoSize = true }
         });
 
         // Settings bar
         var pnlS = new Panel { Dock = DockStyle.Top, Height = 46, BackColor = Color.FromArgb(17, 20, 28) };
         int fx = 12;
-        pnlS.Controls.Add(new Label { Text = L("type_filter"), ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 30;
+        pnlS.Controls.Add(new Label { Text = L("type_filter"), ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("SF Pro Text", 8.5f) }); fx += 30;
         cmbTur = new ComboBox { Left = fx, Top = 10, Width = 90, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(cmbTur);
         cmbTur.Items.AddRange(new object[] { L("entry"), L("exit") }); cmbTur.SelectedIndex = 0; fx += 100;
 
-        pnlS.Controls.Add(new Label { Text = L("dept_filter"), ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 65;
+        pnlS.Controls.Add(new Label { Text = L("dept_filter"), ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("SF Pro Text", 8.5f) }); fx += 65;
         cmbDept = new ComboBox { Left = fx, Top = 10, Width = 130, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(cmbDept);
         foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
         if (cmbDept.Items.Count > 0) cmbDept.SelectedIndex = 0; fx += 140;
 
-        pnlS.Controls.Add(new Label { Text = L("delivered_to_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 115;
+        pnlS.Controls.Add(new Label { Text = L("delivered_to_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("SF Pro Text", 8.5f) }); fx += 115;
         txtTeslim = new TextBox { Left = fx, Top = 10, Width = 100 }; UIHelper.StyleTextBox(txtTeslim); fx += 110;
 
-        pnlS.Controls.Add(new Label { Text = L("date_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 40;
+        pnlS.Controls.Add(new Label { Text = L("date_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("SF Pro Text", 8.5f) }); fx += 40;
         dtpTarih = new DateTimePicker { Left = fx, Top = 10, Width = 130, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy HH:mm", Value = DateTime.Now };
 
         pnlS.Controls.AddRange(new Control[] { cmbTur, cmbDept, txtTeslim, dtpTarih });
@@ -55,8 +55,8 @@ public class TopluHareketForm : Form
         grid.BackgroundColor = UIHelper.BgDark; grid.BorderStyle = BorderStyle.None; grid.RowHeadersVisible = false;
         grid.GridColor = UIHelper.GridLine; grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
-        grid.DefaultCellStyle = new DataGridViewCellStyle { BackColor = UIHelper.BgDark, ForeColor = UIHelper.TextPrimary, SelectionBackColor = UIHelper.SelectionBg, SelectionForeColor = UIHelper.TextWhite, Font = new Font("Segoe UI", 9.5f), Padding = new Padding(6, 3, 6, 3) };
-        grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = UIHelper.BgPanel, ForeColor = UIHelper.TextMuted, Font = new Font("Segoe UI", 8.25f, FontStyle.Bold) };
+        grid.DefaultCellStyle = new DataGridViewCellStyle { BackColor = UIHelper.BgDark, ForeColor = UIHelper.TextPrimary, SelectionBackColor = UIHelper.SelectionBg, SelectionForeColor = UIHelper.TextWhite, Font = new Font("SF Pro Text", 9.5f), Padding = new Padding(6, 3, 6, 3) };
+        grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle { BackColor = UIHelper.BgPanel, ForeColor = UIHelper.TextMuted, Font = new Font("SF Pro Display", 8.25f, FontStyle.Bold) };
         grid.ColumnHeadersHeight = 36; grid.RowTemplate.Height = 36; grid.EnableHeadersVisualStyles = false;
         grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle { BackColor = UIHelper.BgAltRow };
 
@@ -75,7 +75,7 @@ public class TopluHareketForm : Form
             if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "Mevcut" && double.TryParse(e.Value?.ToString(), out double s)) {
                 if (e.CellStyle != null) {
                     e.CellStyle.ForeColor = UIHelper.StokRengi(s);
-                    e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    e.CellStyle.Font = new Font("SF Pro Display", 9, FontStyle.Bold);
                 }
             }
         };
@@ -107,7 +107,9 @@ public class TopluHareketForm : Form
             if (string.IsNullOrEmpty(ms)) continue;
             if (!double.TryParse(ms.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double m) || m <= 0)
             { if (!double.TryParse(ms, out m) || m <= 0) { errors.Add(L("invalid_qty_row", row.Index + 1, ms)); continue; } }
-            Program.DB!.HareketEkle(new StokHareketi { StokKartId = Convert.ToInt32(row.Cells["Id"].Value), Tur = turDb, Miktar = m, TeslimEdilen = txtTeslim.Text.Trim(), Departman = dept, Tarih = dtpTarih.Value });
+            var idCell = row.Cells["Id"];
+            if (idCell?.Value == null) { errors.Add(L("invalid_qty_row", row.Index + 1, ms)); continue; }
+            Program.DB!.HareketEkle(new StokHareketi { StokKartId = Convert.ToInt32(idCell.Value), Tur = turDb, Miktar = m, TeslimEdilen = txtTeslim.Text.Trim(), Departman = dept, Tarih = dtpTarih.Value });
             saved++;
         }
         if (errors.Count > 0) MessageBox.Show(L("bulk_save_result", saved, string.Join("\n", errors)), L("bulk_movement"), MessageBoxButtons.OK, MessageBoxIcon.Warning);

@@ -16,82 +16,78 @@ public class AyarlarPanel : UserControl
     {
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
 
-        var pnlH = UIHelper.MakeHeader(L("settings_title"));
+        var pnlH = UIHelper.MakeHeader(L("settings_title"), L("settings_subtitle"));
 
-        var pnlBody = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgDark, Padding = new Padding(28, 12, 28, 12), AutoScroll = true };
-        int y = 10, lw = 200, fw = 350;
+        var pnlScroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = UIHelper.BgDark, Padding = new Padding(28, 12, 28, 20) };
+        var tbl = new TableLayoutPanel 
+        { 
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 3,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            BackColor = Color.Transparent
+        };
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        tbl.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
 
-        // ═══ DİL ═══
-        pnlBody.Controls.Add(SectionHeader(L("language_label"), UIHelper.AccentCyan, ref y));
-        pnlBody.Controls.Add(MakeLbl(L("language_label"), 0, y));
-        cmbDil = new ComboBox { Left = lw, Top = y, Width = 200, DropDownStyle = ComboBoxStyle.DropDownList };
+        // ═══ GENEL AYARLAR ═══
+        FlowLayoutPanel bodyGenel;
+        var cardGenel = UIHelper.MakeSettingsGroup(L("general_status"), "⚙", UIHelper.AccentCyan, out bodyGenel, 400);
+        cardGenel.Dock = DockStyle.Fill;
+        
+        bodyGenel.Controls.Add(MakeLabelPair(L("language_label"), cmbDil = new ComboBox { Width = 250, DropDownStyle = ComboBoxStyle.DropDownList }));
         UIHelper.StyleComboBox(cmbDil);
         for (int i = 0; i < LocalizationManager.SupportedLanguages.Length; i++) cmbDil.Items.Add(LocalizationManager.LanguageDisplayNames[i]);
         int li = Array.IndexOf(LocalizationManager.SupportedLanguages, Program.Settings.Language);
         cmbDil.SelectedIndex = li >= 0 ? li : 0;
-        pnlBody.Controls.Add(cmbDil); y += 44;
+        bodyGenel.Controls.Add(new Panel { Height = 10, Width = 10 });
+        bodyGenel.Controls.Add(MakeLabelPair(L("company_name_label"), txtFirma = new TextBox { Width = 350 }));
+        txtFirma.Text = Program.Settings.CompanyName; UIHelper.StyleTextBox(txtFirma);
+        bodyGenel.Controls.Add(new Label { Text = L("company_name_hint"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, -2, 0, 0) });
 
-        // ═══ FİRMA ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader(L("company_name_label"), UIHelper.AccentBlue, ref y));
-        pnlBody.Controls.Add(MakeLbl(L("company_name_label"), 0, y));
-        txtFirma = new TextBox { Left = lw, Top = y, Width = fw }; txtFirma.Text = Program.Settings.CompanyName; UIHelper.StyleTextBox(txtFirma);
-        pnlBody.Controls.Add(txtFirma); y += 26;
-        pnlBody.Controls.Add(new Label { Text = L("company_name_hint"), Left = lw, Top = y, Font = new Font("Segoe UI", 7.5f), ForeColor = UIHelper.TextDim, AutoSize = true }); y += 28;
+        tbl.Controls.Add(cardGenel, 0, 0);
 
-        // ═══ VERİTABANI YOLU ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader(L("db_path_label"), UIHelper.AccentPurple, ref y));
-        pnlBody.Controls.Add(MakeLbl(L("db_path_label"), 0, y));
-        txtDbPath = new TextBox { Left = lw, Top = y, Width = fw - 100, ReadOnly = true }; txtDbPath.Text = Program.Settings.DbPath;
+        // ═══ VERİTABANI VE YEDEKLEME ═══
+        FlowLayoutPanel bodyDb;
+        var cardDb = UIHelper.MakeSettingsGroup(L("db_path_label"), "📂", UIHelper.AccentPurple, out bodyDb, 400);
+        cardDb.Dock = DockStyle.Fill;
+        
+        var pnlDbPath = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+        txtDbPath = new TextBox { Width = 250, ReadOnly = true, Text = Program.Settings.DbPath };
         UIHelper.StyleTextBox(txtDbPath); txtDbPath.ForeColor = UIHelper.TextDim;
-        var btnDbDeg = UIHelper.MakeButton(L("change_db"), UIHelper.BtnMid, lw + fw - 90, y - 2, 90, 28);
+        var btnDbDeg = UIHelper.MakeButton(L("change_db"), UIHelper.BtnMid, 0, 0, 90, 28);
         btnDbDeg.Click += (_, _) => { using var d = new SaveFileDialog { Title = L("db_location"), Filter = "SQLite DB|*.db", FileName = "stok.db" }; if (d.ShowDialog() == DialogResult.OK) txtDbPath.Text = d.FileName; };
-        pnlBody.Controls.AddRange(new Control[] { txtDbPath, btnDbDeg }); y += 44;
+        pnlDbPath.Controls.AddRange(new Control[] { txtDbPath, btnDbDeg });
+        bodyDb.Controls.Add(MakeLabelPair(L("db_path_label"), pnlDbPath));
 
-        // ═══ YEDEKLEME ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader(L("backup_section"), UIHelper.AccentYellow, ref y));
+        bodyDb.Controls.Add(new Panel { Height = 10, Width = 10 });
+        var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, 0, 240, 36);
+        btnBackupDb.ForeColor = Color.Black; btnBackupDb.Click += (_, _) => BackupDb();
+        bodyDb.Controls.Add(btnBackupDb);
+        bodyDb.Controls.Add(new Label { Text = L("backup_db_desc"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 10) });
 
-        var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, y, 240, 36);
-        btnBackupDb.ForeColor = Color.Black;
-        pnlBody.Controls.Add(btnBackupDb);
-        pnlBody.Controls.Add(new Label { Text = L("backup_db_desc"), Left = 250, Top = y + 10, Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true });
-        btnBackupDb.Click += (_, _) => BackupDb();
-        y += 48;
-
-        var btnBackupSql = UIHelper.MakeButton(L("backup_sql"), UIHelper.AccentCyan, 0, y, 240, 36);
-        pnlBody.Controls.Add(btnBackupSql);
-        pnlBody.Controls.Add(new Label { Text = L("backup_sql_desc"), Left = 250, Top = y + 10, Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true });
+        var btnBackupSql = UIHelper.MakeButton(L("backup_sql"), UIHelper.AccentCyan, 0, 0, 240, 36);
         btnBackupSql.Click += (_, _) => BackupSql();
-        y += 56;
+        bodyDb.Controls.Add(btnBackupSql);
+        bodyDb.Controls.Add(new Label { Text = L("backup_sql_desc"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 0) });
 
-        // ═══ KAYDET ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        y += 8;
-        var btnKaydet = UIHelper.MakeButton(L("save_settings"), UIHelper.AccentGreen, 0, y, 180, 40);
-        btnKaydet.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-        btnKaydet.Click += KaydetAyarlar;
-        pnlBody.Controls.Add(btnKaydet);
-        y += 60;
+        tbl.Controls.Add(cardDb, 1, 0);
 
-        // ═══ ŞİFRE DEĞİŞTİR ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader(L("change_password"), UIHelper.AccentOrange, ref y));
-
-        pnlBody.Controls.Add(MakeLbl(L("old_password"), 0, y));
-        var txtEski = new TextBox { Left = lw, Top = y, Width = fw, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtEski);
-        pnlBody.Controls.Add(txtEski); y += 34;
-
-        pnlBody.Controls.Add(MakeLbl(L("new_password"), 0, y));
-        var txtYeni = new TextBox { Left = lw, Top = y, Width = fw, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtYeni);
-        pnlBody.Controls.Add(txtYeni); y += 34;
-
-        pnlBody.Controls.Add(MakeLbl(L("confirm_password"), 0, y));
-        var txtTekrar = new TextBox { Left = lw, Top = y, Width = fw, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtTekrar);
-        pnlBody.Controls.Add(txtTekrar); y += 38;
-
-        var btnSifre = UIHelper.MakeButton(L("change_password"), UIHelper.AccentOrange, 0, y, 200, 36);
+        // ═══ GÜVENLİK ═══
+        FlowLayoutPanel bodySec;
+        var cardSec = UIHelper.MakeSettingsGroup(L("change_password"), "🔐", UIHelper.AccentOrange, out bodySec, 400);
+        cardSec.Dock = DockStyle.Fill;
+        
+        var txtEski = new TextBox { Width = 360, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtEski);
+        var txtYeni = new TextBox { Width = 360, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtYeni);
+        var txtTekrar = new TextBox { Width = 360, UseSystemPasswordChar = true }; UIHelper.StyleTextBox(txtTekrar);
+        
+        bodySec.Controls.Add(MakeLabelPair(L("old_password"), txtEski));
+        bodySec.Controls.Add(MakeLabelPair(L("new_password"), txtYeni));
+        bodySec.Controls.Add(MakeLabelPair(L("confirm_password"), txtTekrar));
+        
+        var btnSifre = UIHelper.MakeButton(L("change_password"), UIHelper.AccentOrange, 0, 10, 200, 36);
         btnSifre.ForeColor = Color.Black;
         btnSifre.Click += (_, _) =>
         {
@@ -103,29 +99,44 @@ public class AyarlarPanel : UserControl
             { MessageBox.Show(L("password_changed"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); txtEski.Clear(); txtYeni.Clear(); txtTekrar.Clear(); }
             else MessageBox.Show(L("password_wrong"), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
         };
-        pnlBody.Controls.Add(btnSifre); y += 56;
+        bodySec.Controls.Add(btnSifre);
+
+        tbl.Controls.Add(cardSec, 0, 1);
 
         // ═══ HAKKINDA ═══
-        pnlBody.Controls.Add(MakeDiv(ref y));
-        pnlBody.Controls.Add(SectionHeader("HAKKINDA", UIHelper.AccentCyan, ref y));
-
-        var pnlAbout = new Panel { Left = 0, Top = y, Width = 550, Height = 130, BackColor = UIHelper.BgCard };
-        var accentLine = new Panel { Dock = DockStyle.Left, Width = 4, BackColor = UIHelper.AccentCyan };
-        pnlAbout.Controls.Add(accentLine);
-        pnlAbout.Controls.Add(new Label { Text = "Stokendra", Left = 20, Top = 12, AutoSize = true, Font = new Font("Segoe UI", 16, FontStyle.Bold), ForeColor = UIHelper.AccentCyan });
-        pnlAbout.Controls.Add(new Label { Text = "v1.0 — Envanter Yönetim Sistemi", Left = 130, Top = 20, AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.TextSecondary });
-        pnlAbout.Controls.Add(new Label { Text = "Geliştirici: Tolgahan Acar", Left = 20, Top = 48, AutoSize = true, Font = new Font("Segoe UI Semibold", 9.5f), ForeColor = UIHelper.TextPrimary });
-        pnlAbout.Controls.Add(new Label { Text = "© 2026 Tolgahan Acar. Tüm hakları saklıdır.", Left = 20, Top = 72, AutoSize = true, Font = new Font("Segoe UI", 9), ForeColor = UIHelper.TextSecondary });
-        pnlAbout.Controls.Add(new Label { Text = "Bu yazılım lisanslıdır. İzinsiz kopyalanması, dağıtılması veya\ntersine mühendislik yapılması yasaktır.", Left = 20, Top = 96, AutoSize = true, Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim });
+        FlowLayoutPanel bodyAbout;
+        var cardAbout = UIHelper.MakeSettingsGroup(L("info"), "ℹ", UIHelper.AccentCyan, out bodyAbout, 400);
+        cardAbout.Dock = DockStyle.Fill;
         
-        var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 330, 80, 210, 32);
-        btnUpdate.ForeColor = Color.Black;
-        btnUpdate.Click += async (_, _) => await CheckForUpdates();
-        pnlAbout.Controls.Add(btnUpdate);
+        var lblTitle = new Label { Text = "Stokendra", AutoSize = true, Font = new Font("SF Pro Display", 14, FontStyle.Bold), ForeColor = UIHelper.AccentCyan, Margin = new Padding(0, 0, 0, 4) };
+        var lblVer = new Label { Text = "v3.9.1  •  Geliştirici: Tolgahan Acar", AutoSize = true, Font = new Font("SF Pro Text Semibold", 9), ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 10) };
+        var lblDesc = new Label { Text = "Bu yazılım lisanslıdır. Tüm hakları saklıdır.", AutoSize = true, Font = new Font("SF Pro Text", 8.5f), ForeColor = UIHelper.TextDim, Margin = new Padding(0, 0, 0, 15) };
         
-        pnlBody.Controls.Add(pnlAbout);
+        var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 0, 0, 200, 32);
+        btnUpdate.ForeColor = Color.Black; btnUpdate.Click += async (_, _) => await CheckForUpdates();
+        
+        bodyAbout.Controls.AddRange(new Control[] { lblTitle, lblVer, lblDesc, btnUpdate });
+        tbl.Controls.Add(cardAbout, 1, 1);
 
-        Controls.Add(pnlBody); Controls.Add(pnlH);
+        // SAVE BUTTON AT THE BOTTOM OF TABLE
+        var pnlSave = new Panel { Width = 400, Height = 100, Padding = new Padding(0, 20, 0, 0) };
+        var btnKaydet = UIHelper.MakeButton(L("save_settings"), UIHelper.AccentGreen, 0, 0, 200, 44);
+        btnKaydet.Font = new Font("SF Pro Display", 11, FontStyle.Bold);
+        btnKaydet.Click += KaydetAyarlar;
+        pnlSave.Controls.Add(btnKaydet);
+        tbl.Controls.Add(pnlSave, 0, 2);
+        tbl.SetColumnSpan(pnlSave, 2);
+
+        pnlScroll.Controls.Add(tbl);
+        Controls.Add(pnlScroll); Controls.Add(pnlH);
+    }
+
+    private Control MakeLabelPair(string label, Control input)
+    {
+        var p = new FlowLayoutPanel { Width = 360, AutoSize = true, FlowDirection = FlowDirection.TopDown, Margin = new Padding(0, 0, 0, 10) };
+        p.Controls.Add(new Label { Text = label, AutoSize = true, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 4) });
+        p.Controls.Add(input);
+        return p;
     }
 
     static Label MakeLbl(string t, int x, int y) => new Label { Text = t, Left = x, Top = y + 3, Width = 190, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary };
@@ -133,7 +144,7 @@ public class AyarlarPanel : UserControl
     static Panel SectionHeader(string text, Color c, ref int y)
     {
         var pnl = new Panel { Left = 0, Top = y, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent };
-        var lblText = new Label { Text = text.ToUpperInvariant(), Left = 0, Top = 0, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = c };
+        var lblText = new Label { Text = text, Left = 0, Top = 0, AutoSize = true, Font = new Font("SF Pro Display", 10, FontStyle.Bold), ForeColor = c };
         pnl.Controls.Add(lblText);
         y += 30;
         return pnl;

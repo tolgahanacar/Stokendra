@@ -12,38 +12,33 @@ public class Database : IDisposable
     private const int CurrentSchemaVersion = 9;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
 
-    private SqliteConnection? _sharedConnection;
-
     public Database(string dbPath)
     {
         _connectionString = $"Data Source={dbPath};Foreign Keys=True;";
         Initialize();
     }
 
-    private SqliteConnection OpenConnection()
+    // Create a short-lived connection for each operation to avoid threading issues
+    private SqliteConnection CreateConnection()
     {
-        if (_sharedConnection == null || _sharedConnection.State == System.Data.ConnectionState.Closed)
-        {
-            _sharedConnection = new SqliteConnection(_connectionString);
-            _sharedConnection.Open();
-        }
-        return _sharedConnection;
+        var con = new SqliteConnection(_connectionString);
+        con.Open();
+        return con;
     }
 
     public void Dispose()
     {
-        _sharedConnection?.Dispose();
-        _sharedConnection = null;
+        // no shared resources to dispose
     }
 
     private void Initialize()
     {
-        var con = OpenConnection();
+        using var con = CreateConnection();
         using var pragma = con.CreateCommand();
         pragma.CommandText = "PRAGMA journal_mode=WAL;";
         pragma.ExecuteNonQuery();
 
-        var cmd = con.CreateCommand();
+        using var cmd = con.CreateCommand();
         cmd.CommandText = @"
             CREATE TABLE IF NOT EXISTS StokKartlari (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,7 +108,7 @@ public class Database : IDisposable
 
     private static int GetSchemaVersion(SqliteConnection c) { using var m = c.CreateCommand(); m.CommandText = "PRAGMA user_version"; return Convert.ToInt32(m.ExecuteScalar()); }
     private static void SetSchemaVersion(SqliteConnection c, int v) { using var m = c.CreateCommand(); m.CommandText = $"PRAGMA user_version = {v}"; m.ExecuteNonQuery(); }
-    private static void TryAlter(SqliteConnection c, string sql) { try { using var m = c.CreateCommand(); m.CommandText = sql; m.ExecuteNonQuery(); } catch { } }
+    private static void TryAlter(SqliteConnection c, string sql) { try { using var m = c.CreateCommand(); m.CommandText = sql; m.ExecuteNonQuery(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("TryAlter error: " + ex); } }
 
     private static void MigrateToV1(SqliteConnection c) { TryAlter(c, "ALTER TABLE StokKartlari ADD COLUMN Aciklama TEXT DEFAULT ''"); TryAlter(c, "ALTER TABLE StokHareketleri ADD COLUMN Departman TEXT DEFAULT ''"); }
     private static void MigrateToV2(SqliteConnection c) { TryAlter(c, "ALTER TABLE StokKartlari ADD COLUMN Birim TEXT DEFAULT ''"); TryAlter(c, "ALTER TABLE StokKartlari ADD COLUMN MinStok INTEGER DEFAULT 0"); }
@@ -155,8 +150,21 @@ public class Database : IDisposable
 
     private static void SeedDefaults(SqliteConnection c)
     {
-        try { using var m = c.CreateCommand(); m.CommandText = "SELECT COUNT(*) FROM Birimler"; if ((long)(m.ExecuteScalar() ?? 0) == 0) { m.CommandText = "INSERT INTO Birimler (Ad) VALUES ('Adet')"; m.ExecuteNonQuery(); } } catch { }
-        // Seed default admin user
+        try
+        {
+            using var m = c.CreateCommand(); m.CommandText = "SELECT COUNT(*) FROM Birimler";
+            if ((long)(m.ExecuteScalar() ?? 0) == 0)
+            {
+                m.CommandText = "INSERT INTO Birimler (Ad) VALUES ('Adet')";
+                m.ExecuteNonQuery();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("Seed Birimler error: " + ex);
+        }
+
+        // Seed default admin user (intentionally left to create default 'admin' user)
         try
         {
             using var m = c.CreateCommand(); m.CommandText = "SELECT COUNT(*) FROM Kullanicilar";
@@ -169,39 +177,136 @@ public class Database : IDisposable
                 ins.Parameters.AddWithValue("$h", hash); ins.Parameters.AddWithValue("$s", salt);
                 ins.ExecuteNonQuery();
             }
-        } catch { }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("Seed Kullanicilar error: " + ex);
+        }
     }
 
     // ═══ APP CONFIG ═══
-    public string GetConfig(string key, string def = "") { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Value FROM AppConfig WHERE Key=$k"; m.Parameters.AddWithValue("$k", key); return m.ExecuteScalar()?.ToString() ?? def; } catch { return def; } }
-    public void SetConfig(string key, string val) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR REPLACE INTO AppConfig (Key,Value) VALUES ($k,$v)"; m.Parameters.AddWithValue("$k", key); m.Parameters.AddWithValue("$v", val); m.ExecuteNonQuery(); } catch { } }
+    public string GetConfig(string key, string def = "")
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "SELECT Value FROM AppConfig WHERE Key=$k";
+            m.Parameters.AddWithValue("$k", key);
+            return m.ExecuteScalar()?.ToString() ?? def;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("GetConfig error: " + ex);
+            return def;
+        }
+    }
+
+    public void SetConfig(string key, string val)
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "INSERT OR REPLACE INTO AppConfig (Key,Value) VALUES ($k,$v)";
+            m.Parameters.AddWithValue("$k", key);
+            m.Parameters.AddWithValue("$v", val);
+            m.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("SetConfig error: " + ex);
+        }
+    }
 
     // ═══ AUDIT LOG ═══
-    public void AuditLogYaz(string tip, string tablo, int id, string detay) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO AuditLog (Tarih,IslemTipi,TabloAdi,KayitId,Detay) VALUES ($t,$it,$ta,$ki,$d)"; m.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$it", tip); m.Parameters.AddWithValue("$ta", tablo); m.Parameters.AddWithValue("$ki", id); m.Parameters.AddWithValue("$d", detay); m.ExecuteNonQuery(); } catch { } }
+    public void AuditLogYaz(string tip, string tablo, int id, string detay)
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "INSERT INTO AuditLog (Tarih,IslemTipi,TabloAdi,KayitId,Detay) VALUES ($t,$it,$ta,$ki,$d)";
+            m.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
+            m.Parameters.AddWithValue("$it", tip);
+            m.Parameters.AddWithValue("$ta", tablo);
+            m.Parameters.AddWithValue("$ki", id);
+            m.Parameters.AddWithValue("$d", detay);
+            m.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("AuditLogYaz error: " + ex);
+        }
+    }
 
     // ═══ DEPARTMANLAR ═══
     public List<string> DepartmanlariGetir()
     {
         var liste = new List<string>();
-        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Ad FROM Departmanlar ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "SELECT Ad FROM Departmanlar ORDER BY Ad";
+            using var r = m.ExecuteReader();
+            while (r.Read()) liste.Add(r.GetString(0));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("DepartmanlariGetir error: " + ex);
+        }
         return liste;
     }
-    public void DepartmanEkle(string ad) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT OR IGNORE INTO Departmanlar (Ad) VALUES ($a)"; m.Parameters.AddWithValue("$a", ad.Trim()); m.ExecuteNonQuery(); } catch { } }
-    public void DepartmanSil(string ad) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Departmanlar WHERE Ad=$a"; m.Parameters.AddWithValue("$a", ad); m.ExecuteNonQuery(); } catch { } }
+
+    public void DepartmanEkle(string ad)
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "INSERT OR IGNORE INTO Departmanlar (Ad) VALUES ($a)";
+            m.Parameters.AddWithValue("$a", ad.Trim());
+            m.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("DepartmanEkle error: " + ex);
+        }
+    }
+
+    public void DepartmanSil(string ad)
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "DELETE FROM Departmanlar WHERE Ad=$a";
+            m.Parameters.AddWithValue("$a", ad);
+            m.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("DepartmanSil error: " + ex);
+        }
+    }
 
     // ═══ OTO STOK KODU ═══
     public string SonrakiStokKodu()
     {
         try
         {
-            var c = OpenConnection();
-            var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "SELECT MAX(CAST(KodNo AS INTEGER)) FROM StokKartlari WHERE KodNo GLOB '[0-9]*'";
             var result = m.ExecuteScalar();
             int max = (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
             return (max + 1).ToString("D3");
         }
-        catch { return "001"; }
+        catch
+        {
+            return "001";
+        }
     }
 
     // ═══ STOK KARTLARI ═══
@@ -210,8 +315,8 @@ public class Database : IDisposable
         var liste = new List<StokKarti>();
         try
         {
-            var c = OpenConnection();
-            var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
                 COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
                 s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,''),
@@ -228,7 +333,10 @@ public class Database : IDisposable
                     Tedarikci = r.IsDBNull(12) ? "" : r.GetString(12), Barkod = r.IsDBNull(13) ? "" : r.GetString(13),
                     BirimFiyat = r.IsDBNull(14) ? 0 : r.GetDouble(14) });
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("StokKartlariniGetir error: " + ex);
+        }
         return liste;
     }
 
@@ -240,8 +348,8 @@ public class Database : IDisposable
     {
         try
         {
-            var c = OpenConnection();
-            var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = @"
                 WITH altStok AS (
                     SELECT s.Id, s.MinStok,
@@ -254,13 +362,16 @@ public class Database : IDisposable
                     (SELECT COUNT(*) FROM altStok WHERE Mevcut>0 AND Mevcut<=3),
                     (SELECT COUNT(*) FROM altStok WHERE Mevcut<=0),
                     (SELECT COUNT(*) FROM StokHareketleri),
-                    (SELECT COUNT(*) FROM StokHareketleri WHERE Tarih >= $today)";
-            m.Parameters.AddWithValue("$today", DateTime.Today.ToString(DateFormat, CultureInfo.InvariantCulture));
+                    (SELECT COUNT(*) FROM StokHareketleri WHERE Tarih LIKE $today)";
+            m.Parameters.AddWithValue("$today", DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + "%");
             using var r = m.ExecuteReader();
             if (r.Read())
                 return (r.GetInt32(0), r.GetDouble(1), r.GetInt32(2), r.GetInt32(3), r.GetInt32(4), r.GetInt32(5));
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("DashboardIstatistikleriGetir error: " + ex);
+        }
         return (0, 0, 0, 0, 0, 0);
     }
 
@@ -268,12 +379,9 @@ public class Database : IDisposable
     {
         try
         {
-            var c = OpenConnection(); var m = c.CreateCommand();
-            m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,
-                COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),
-                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,''),
-                s.Birim, s.Konum, s.Tedarikci, s.Barkod, s.BirimFiyat
-                FROM StokKartlari s LEFT JOIN StokKartlari ust ON ust.Id=s.UstKartId WHERE s.Id=$id";
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = @"SELECT s.Id, s.Ad, s.KodNo, s.Aciklama, s.MinStok,\n                COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0),\n                s.Kategori, COALESCE(s.KartTipi,'Alt'), s.UstKartId, COALESCE(ust.Ad,''),\n                s.Birim, s.Konum, s.Tedarikci, s.Barkod, s.BirimFiyat\n                FROM StokKartlari s LEFT JOIN StokKartlari ust ON ust.Id=s.UstKartId WHERE s.Id=$id";
             m.Parameters.AddWithValue("$id", id);
             using var r = m.ExecuteReader();
             if (r.Read()) return new StokKarti { Id = r.GetInt32(0), Ad = r.GetString(1), KodNo = r.GetString(2),
@@ -284,14 +392,20 @@ public class Database : IDisposable
                 Birim = r.IsDBNull(10) ? "Adet" : r.GetString(10), Konum = r.IsDBNull(11) ? "" : r.GetString(11),
                 Tedarikci = r.IsDBNull(12) ? "" : r.GetString(12), Barkod = r.IsDBNull(13) ? "" : r.GetString(13),
                 BirimFiyat = r.IsDBNull(14) ? 0 : r.GetDouble(14) };
-        } catch { } return null;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("StokKartiDetayGetir error: " + ex);
+        }
+        return null;
     }
 
     public void StokKartiEkle(StokKarti s)
     {
         try
         {
-            var c = OpenConnection(); var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "INSERT INTO StokKartlari (Ad,KodNo,Aciklama,MinStok,Kategori,KartTipi,UstKartId,OlusturmaTarihi,Birim,Konum,Tedarikci,Barkod,BirimFiyat) VALUES ($a,$k,$ac,$ms,$kat,$kt,$uk,$ot,$b,$kon,$ted,$bar,$bf)";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
@@ -303,14 +417,20 @@ public class Database : IDisposable
             m.Parameters.AddWithValue("$bf", s.BirimFiyat);
             m.ExecuteNonQuery();
             AuditLogYaz("EKLE", "StokKartlari", 0, $"{s.Ad} ({s.KodNo}) [{s.KartTipi}]");
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("StokKartiEkle error: " + ex);
+            throw;
+        }
     }
 
     public void StokKartiGuncelle(StokKarti s)
     {
         try
         {
-            var c = OpenConnection(); var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "UPDATE StokKartlari SET Ad=$a,KodNo=$k,Aciklama=$ac,MinStok=$ms,Kategori=$kat,KartTipi=$kt,UstKartId=$uk,GuncellenmeTarihi=$gt,Birim=$b,Konum=$kon,Tedarikci=$ted,Barkod=$bar,BirimFiyat=$bf WHERE Id=$id";
             m.Parameters.AddWithValue("$a", s.Ad); m.Parameters.AddWithValue("$k", s.KodNo);
             m.Parameters.AddWithValue("$ac", s.Aciklama ?? ""); m.Parameters.AddWithValue("$ms", s.MinStok);
@@ -323,15 +443,28 @@ public class Database : IDisposable
             m.Parameters.AddWithValue("$id", s.Id);
             m.ExecuteNonQuery();
             AuditLogYaz("GUNCELLE", "StokKartlari", s.Id, $"{s.Ad} ({s.KodNo})");
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("StokKartiGuncelle error: " + ex);
+            throw;
+        }
     }
 
     public void StokKartiSil(int id)
     {
-        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE StokKartId=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery();
-            var m2 = c.CreateCommand(); m2.CommandText = "DELETE FROM StokKartlari WHERE Id=$id"; m2.Parameters.AddWithValue("$id", id); m2.ExecuteNonQuery();
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE StokKartId=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery();
+            using var m2 = c.CreateCommand(); m2.CommandText = "DELETE FROM StokKartlari WHERE Id=$id"; m2.Parameters.AddWithValue("$id", id); m2.ExecuteNonQuery();
             AuditLogYaz("SIL", "StokKartlari", id, "Silindi");
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("StokKartiSil error: " + ex);
+            throw;
+        }
     }
 
     // ═══ STOK HAREKETLERİ ═══
@@ -340,7 +473,8 @@ public class Database : IDisposable
         var liste = new List<StokHareketi>();
         try
         {
-            var c = OpenConnection(); var m = c.CreateCommand();
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             var w = new List<string>();
             if (stokKartId.HasValue) { w.Add("h.StokKartId=$kid"); m.Parameters.AddWithValue("$kid", stokKartId.Value); }
             if (baslangic.HasValue) { w.Add("h.Tarih>=$ts"); m.Parameters.AddWithValue("$ts", baslangic.Value.ToString(DateFormat, CultureInfo.InvariantCulture)); }
@@ -354,50 +488,91 @@ public class Database : IDisposable
                 liste.Add(new StokHareketi { Id = r.GetInt32(0), StokKartId = r.GetInt32(1), StokKartAd = r.GetString(2), StokKartKodNo = r.GetString(3),
                     Tur = r.GetString(4), Miktar = r.GetDouble(5), TeslimEdilen = r.IsDBNull(6) ? "" : r.GetString(6),
                     Departman = r.IsDBNull(7) ? "" : r.GetString(7), Tarih = ParseDateSafe(r.GetString(8)), Aciklama = r.IsDBNull(9) ? "" : r.GetString(9) });
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("HareketleriGetir error: " + ex);
+        }
         return liste;
     }
 
     public List<string> GetTeslimEdilenler()
     {
         var liste = new List<string>();
-        try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi != '' ORDER BY KimeVerildi"; using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0)); } catch { }
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi != '' ORDER BY KimeVerildi";
+            using var r = m.ExecuteReader(); while (r.Read()) liste.Add(r.GetString(0));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("GetTeslimEdilenler error: " + ex);
+        }
         return liste;
     }
 
     public void HareketEkle(StokHareketi h)
     {
-        try { var c = OpenConnection(); var m = c.CreateCommand();
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "INSERT INTO StokHareketleri (StokKartId,Tur,Miktar,KimeVerildi,Departman,Tarih,Aciklama) VALUES ($sk,$t,$m,$kv,$d,$ta,$ac)";
             m.Parameters.AddWithValue("$sk", h.StokKartId); m.Parameters.AddWithValue("$t", h.Tur); m.Parameters.AddWithValue("$m", h.Miktar);
             m.Parameters.AddWithValue("$kv", h.TeslimEdilen ?? ""); m.Parameters.AddWithValue("$d", h.Departman ?? "");
             m.Parameters.AddWithValue("$ta", h.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$ac", h.Aciklama ?? "");
             m.ExecuteNonQuery();
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("HareketEkle error: " + ex);
+            throw;
+        }
     }
 
     public void HareketGuncelle(StokHareketi h)
     {
-        try { var c = OpenConnection(); var m = c.CreateCommand();
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
             m.CommandText = "UPDATE StokHareketleri SET StokKartId=$sk,Tur=$t,Miktar=$m,KimeVerildi=$kv,Departman=$d,Tarih=$ta,Aciklama=$ac WHERE Id=$id";
             m.Parameters.AddWithValue("$sk", h.StokKartId); m.Parameters.AddWithValue("$t", h.Tur); m.Parameters.AddWithValue("$m", h.Miktar);
             m.Parameters.AddWithValue("$kv", h.TeslimEdilen ?? ""); m.Parameters.AddWithValue("$d", h.Departman ?? "");
             m.Parameters.AddWithValue("$ta", h.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$ac", h.Aciklama ?? "");
             m.Parameters.AddWithValue("$id", h.Id); m.ExecuteNonQuery();
-        } catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("HareketGuncelle error: " + ex);
+            throw;
+        }
     }
 
     public void HareketSil(int id)
-    { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
+    {
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand(); m.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("HareketSil error: " + ex);
+            throw;
+        }
+    }
 
     // ═══ BIRIMLER (eski uyumluluk) ═══
-    public List<Birim> BirimleriGetir() { var l = new List<Birim>(); try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Ad FROM Birimler ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Birim { Id = r.GetInt32(0), Ad = r.GetString(1) }); } catch { } return l; }
+    public List<Birim> BirimleriGetir() { var l = new List<Birim>(); try { using var c = CreateConnection(); using var m = c.CreateCommand(); m.CommandText = "SELECT Id,Ad FROM Birimler ORDER BY Ad"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Birim { Id = r.GetInt32(0), Ad = r.GetString(1) }); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("BirimleriGetir error: " + ex); } return l; }
 
     // ═══ NOTLAR ═══
-    public List<Not> NotlariGetir() { var l = new List<Not>(); try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "SELECT Id,Tarih,Baslik,Icerik FROM Notlar ORDER BY Tarih DESC"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Not { Id = r.GetInt32(0), Tarih = ParseDateSafe(r.GetString(1)), Baslik = r.GetString(2), Icerik = r.IsDBNull(3) ? "" : r.GetString(3) }); } catch { } return l; }
-    public void NotEkle(Not n) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "INSERT INTO Notlar (Tarih,Baslik,Icerik) VALUES ($t,$b,$i)"; m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.ExecuteNonQuery(); } catch { } }
-    public void NotGuncelle(Not n) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "UPDATE Notlar SET Baslik=$b,Icerik=$i,Tarih=$t WHERE Id=$id"; m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$id", n.Id); m.ExecuteNonQuery(); } catch { } }
-    public void NotSil(int id) { try { var c = OpenConnection(); var m = c.CreateCommand(); m.CommandText = "DELETE FROM Notlar WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch { } }
+    public List<Not> NotlariGetir() { var l = new List<Not>(); try { using var c = CreateConnection(); using var m = c.CreateCommand(); m.CommandText = "SELECT Id,Tarih,Baslik,Icerik FROM Notlar ORDER BY Tarih DESC"; using var r = m.ExecuteReader(); while (r.Read()) l.Add(new Not { Id = r.GetInt32(0), Tarih = ParseDateSafe(r.GetString(1)), Baslik = r.GetString(2), Icerik = r.IsDBNull(3) ? "" : r.GetString(3) }); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("NotlariGetir error: " + ex); } return l; }
+    public void NotEkle(Not n) { try { using var c = CreateConnection(); using var m = c.CreateCommand(); m.CommandText = "INSERT INTO Notlar (Tarih,Baslik,Icerik) VALUES ($t,$b,$i)"; m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.ExecuteNonQuery(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("NotEkle error: " + ex); throw; } }
+    public void NotGuncelle(Not n) { try { using var c = CreateConnection(); using var m = c.CreateCommand(); m.CommandText = "UPDATE Notlar SET Baslik=$b,Icerik=$i,Tarih=$t WHERE Id=$id"; m.Parameters.AddWithValue("$b", n.Baslik); m.Parameters.AddWithValue("$i", n.Icerik ?? ""); m.Parameters.AddWithValue("$t", n.Tarih.ToString(DateFormat, CultureInfo.InvariantCulture)); m.Parameters.AddWithValue("$id", n.Id); m.ExecuteNonQuery(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("NotGuncelle error: " + ex); throw; } }
+    public void NotSil(int id) { try { using var c = CreateConnection(); using var m = c.CreateCommand(); m.CommandText = "DELETE FROM Notlar WHERE Id=$id"; m.Parameters.AddWithValue("$id", id); m.ExecuteNonQuery(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine("NotSil error: " + ex); throw; } }
 
     private static DateTime ParseDateSafe(string s) { if (string.IsNullOrWhiteSpace(s)) return DateTime.MinValue; string[] f = { "yyyy-MM-dd HH:mm:ss","yyyy-MM-dd","dd.MM.yyyy HH:mm:ss","dd.MM.yyyy HH:mm","dd.MM.yyyy","MM/dd/yyyy HH:mm:ss","MM/dd/yyyy" }; if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d; if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) return d; return DateTime.MinValue; }
 
@@ -407,9 +582,9 @@ public class Database : IDisposable
         var liste = new List<ServisKaydi>();
         try
         {
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
-            
+
             var conditions = new List<string>();
             if (baslangic.HasValue)
             {
@@ -428,7 +603,7 @@ public class Database : IDisposable
             }
 
             string whereClause = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
-            
+
             m.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc FROM ServisKayitlari {whereClause} ORDER BY BakimTarihi DESC, Id DESC";
             using var r = m.ExecuteReader();
             while (r.Read())
@@ -445,7 +620,10 @@ public class Database : IDisposable
                 });
             }
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("ServisKayitlariniGetir error: " + ex);
+        }
         return liste;
     }
 
@@ -453,7 +631,7 @@ public class Database : IDisposable
     {
         try
         {
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
             m.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc) VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
@@ -465,14 +643,18 @@ public class Database : IDisposable
             m.ExecuteNonQuery();
             AuditLogYaz("EKLE", "ServisKayitlari", 0, s.CihazAdi);
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("ServisKaydiEkle error: " + ex);
+            throw;
+        }
     }
 
     public void ServisKaydiGuncelle(ServisKaydi s)
     {
         try
         {
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
             m.CommandText = "UPDATE ServisKayitlari SET CihazAdi=$ca, SeriNumarasi=$sn, Firma=$f, BakimTarihi=$bt, Sorun=$sr, Sonuc=$sc WHERE Id=$id";
             m.Parameters.AddWithValue("$ca", s.CihazAdi);
@@ -485,21 +667,29 @@ public class Database : IDisposable
             m.ExecuteNonQuery();
             AuditLogYaz("GUNCELLE", "ServisKayitlari", s.Id, s.CihazAdi);
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("ServisKaydiGuncelle error: " + ex);
+            throw;
+        }
     }
 
     public void ServisKaydiSil(int id)
     {
         try
         {
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
             m.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
             m.Parameters.AddWithValue("$id", id);
             m.ExecuteNonQuery();
             AuditLogYaz("SIL", "ServisKayitlari", id, "Silindi");
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("ServisKaydiSil error: " + ex);
+            throw;
+        }
     }
 
     // ═══ AUTH ═══
@@ -513,7 +703,7 @@ public class Database : IDisposable
 
     private static string HashPassword(string password, string salt)
     {
-        // Upgrade to PBKDF2 with HMAC-SHA512
+        // PBKDF2 with HMAC-SHA512
         using var pbkdf2 = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes(salt), 20000, HashAlgorithmName.SHA512);
         byte[] hash = pbkdf2.GetBytes(32);
         return "v2:" + Convert.ToBase64String(hash);
@@ -523,14 +713,14 @@ public class Database : IDisposable
     {
         try
         {
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
             m.CommandText = "SELECT SifreHash, Tuz FROM Kullanicilar WHERE KullaniciAdi=$u";
             m.Parameters.AddWithValue("$u", kullaniciAdi);
             using var r = m.ExecuteReader();
             if (!r.Read()) return false;
             string storedHash = r.GetString(0), storedSalt = r.GetString(1);
-            
+
             if (storedHash.StartsWith("v2:"))
             {
                 using var pbkdf2 = new Rfc2898DeriveBytes(sifre, Encoding.UTF8.GetBytes(storedSalt), 20000, HashAlgorithmName.SHA512);
@@ -544,7 +734,11 @@ public class Database : IDisposable
                 return Convert.ToBase64String(bytes) == storedHash;
             }
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("KullaniciDogrula error: " + ex);
+            return false;
+        }
     }
 
     public bool SifreDegistir(string kullaniciAdi, string eskiSifre, string yeniSifre)
@@ -554,7 +748,7 @@ public class Database : IDisposable
         {
             string newSalt = GenerateSalt();
             string newHash = HashPassword(yeniSifre, newSalt);
-            var c = OpenConnection();
+            using var c = CreateConnection();
             using var m = c.CreateCommand();
             m.CommandText = "UPDATE Kullanicilar SET SifreHash=$h, Tuz=$s WHERE KullaniciAdi=$u";
             m.Parameters.AddWithValue("$h", newHash); m.Parameters.AddWithValue("$s", newSalt); m.Parameters.AddWithValue("$u", kullaniciAdi);
@@ -562,6 +756,10 @@ public class Database : IDisposable
             AuditLogYaz("SIFRE_DEGISTIR", "Kullanicilar", 0, kullaniciAdi);
             return true;
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("SifreDegistir error: " + ex);
+            return false;
+        }
     }
 }

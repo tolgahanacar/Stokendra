@@ -62,13 +62,13 @@ public class NotlarPanel : UserControl
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
             if (grid.Columns[e.ColumnIndex].Name == "Baslik" && e.CellStyle != null)
             {
-                e.CellStyle.Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold);
+                e.CellStyle.Font = new Font("SF Pro Display", 10f, FontStyle.Bold);
                 e.CellStyle.ForeColor = UIHelper.TextWhite;
             }
             if (grid.Columns[e.ColumnIndex].Name == "Tarih" && e.CellStyle != null)
             {
                 e.CellStyle.ForeColor = UIHelper.AccentCyan;
-                e.CellStyle.Font = new Font("Segoe UI", 8.5f);
+                e.CellStyle.Font = new Font("SF Pro Text", 8.5f);
             }
             if (grid.Columns[e.ColumnIndex].Name == "Icerik" && e.CellStyle != null)
             {
@@ -83,7 +83,7 @@ public class NotlarPanel : UserControl
         var lblInfo = new Label
         {
             Left = 20, Top = 8, AutoSize = true,
-            Font = new Font("Segoe UI Semibold", 9f),
+            Font = new Font("SF Pro Text Semibold", 9f),
             ForeColor = UIHelper.TextMuted, Tag = "info"
         };
         pnlSt.Controls.Add(lblInfo);
@@ -124,7 +124,9 @@ public class NotlarPanel : UserControl
     private void DuzenleNot()
     {
         if (grid.SelectedRows.Count == 0) return;
-        int id = Convert.ToInt32(grid.SelectedRows[0].Cells["Id"].Value);
+        var cell = grid.SelectedRows[0].Cells["Id"];
+        if (cell?.Value == null) return;
+        int id = Convert.ToInt32(cell.Value);
         var not = _notlar.FirstOrDefault(n => n.Id == id);
         if (not == null) return;
 
@@ -139,7 +141,9 @@ public class NotlarPanel : UserControl
     private void SilNot()
     {
         if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_note_first")); return; }
-        int id = Convert.ToInt32(grid.SelectedRows[0].Cells["Id"].Value);
+        var cell = grid.SelectedRows[0].Cells["Id"];
+        if (cell?.Value == null) { MessageBox.Show(L("select_note_first")); return; }
+        int id = Convert.ToInt32(cell.Value);
         if (MessageBox.Show(L("confirm_note_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
         {
             Program.DB!.NotSil(id);
@@ -155,7 +159,9 @@ public class NotlarPanel : UserControl
         {
             using var wb = new ClosedXML.Excel.XLWorkbook(dlg.FileName);
             var ws = wb.Worksheet(1);
-            var rows = ws.RangeUsed().RowsUsed().Skip(1);
+            var range = ws.RangeUsed();
+            if (range == null) { MessageBox.Show(L("import_no_data")); return; }
+            var rows = range.RowsUsed().Skip(1);
             int eklenen = 0;
             foreach (var r in rows)
             {

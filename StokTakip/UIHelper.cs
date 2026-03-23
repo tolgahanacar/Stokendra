@@ -44,13 +44,13 @@ public static class UIHelper
     public static readonly Color SidebarDivider = Color.FromArgb(35, 48, 68);
 
     // ═══ FONT ═══
-    public static readonly Font FontGrid       = new("Segoe UI Semibold", 9.5f);
-    public static readonly Font FontGridHeader = new("Segoe UI", 9f, FontStyle.Bold);
-    public static readonly Font FontInput      = new("Segoe UI Semibold", 10f);
-    public static readonly Font FontButton     = new("Segoe UI Semibold", 9f);
-    public static readonly Font FontLabel      = new("Segoe UI Semibold", 9.5f);
-    public static readonly Font FontTitle      = new("Segoe UI", 20f, FontStyle.Bold);
-    public static readonly Font FontSubtitle   = new("Segoe UI", 10f);
+    public static readonly Font FontGrid       = new("SF Pro Text Semibold", 9.5f);
+    public static readonly Font FontGridHeader = new("SF Pro Display", 9f, FontStyle.Bold);
+    public static readonly Font FontInput      = new("SF Pro Text Semibold", 10f);
+    public static readonly Font FontButton     = new("SF Pro Text Semibold", 9f);
+    public static readonly Font FontLabel      = new("SF Pro Text Semibold", 9.5f);
+    public static readonly Font FontTitle      = new("SF Pro Display", 20f, FontStyle.Bold);
+    public static readonly Font FontSubtitle   = new("SF Pro Text", 10f);
 
     // ═══ Türkçe büyük harf dönüşümü ═══
     private static readonly System.Globalization.CultureInfo TrCulture = new System.Globalization.CultureInfo("tr-TR");
@@ -102,13 +102,13 @@ public static class UIHelper
     public static void StyleComboBox(ComboBox c)
     {
         c.BackColor = BgInput; c.ForeColor = TextPrimary;
-        c.Font = FontInput; c.FlatStyle = FlatStyle.Flat;
+        c.Font = FontInput; c.FlatStyle = FlatStyle.Popup;
     }
 
     public static void StyleDatePicker(DateTimePicker d)
     {
         d.CalendarMonthBackground = BgInput; d.CalendarForeColor = TextPrimary;
-        d.Font = new Font("Segoe UI Semibold", 9);
+        d.Font = new Font("SF Pro Text Semibold", 9);
     }
 
     // ═══ PREMIUM BUTON (İkon Destekli) ═══
@@ -135,9 +135,63 @@ public static class UIHelper
     }
 
     /// <summary>FlowLayoutPanel uyumlu buton (pozisyonsuz)</summary>
-    public static Button MakeFlowButton(string text, Color bg, int width = 120, int height = 32)
+    public static Button MakeFlowButton(string text, Color bg, int width = 120, int height = 30)
     {
         return MakeButton(text, bg, 0, 0, width, height);
+    }
+
+    // ═══ MODERN CARD PANEL ═══
+    public static Panel MakeCardPanel(int width = 500, int height = 150)
+    {
+        var pnl = new Panel
+        {
+            Width = width, Height = height,
+            BackColor = BgCard, Padding = new Padding(20)
+        };
+        
+        pnl.Paint += (s, e) => {
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var p = new Pen(Color.FromArgb(45, Color.White), 1);
+            // Draw a subtle border
+            g.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1);
+        };
+        
+        return pnl;
+    }
+
+    public static Panel MakeSettingsGroup(string title, string icon, Color accent, out FlowLayoutPanel body, int width = 550)
+    {
+        var card = MakeCardPanel(width, 60); 
+        card.AutoSize = true;
+        card.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+        card.Padding = new Padding(16, 12, 16, 16);
+        card.Margin = new Padding(0, 0, 12, 12);
+
+        var lblTitle = new Label 
+        { 
+            Text = $"{icon}  {title}", 
+            Font = new Font("SF Pro Display", 10.5f, FontStyle.Bold), 
+            ForeColor = accent, 
+            AutoSize = true, 
+            Location = new Point(16, 12)
+        };
+        
+        body = new FlowLayoutPanel
+        {
+            Location = new Point(16, 40),
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Width = width - 32,
+            Padding = new Padding(0, 0, 0, 5)
+        };
+
+        card.Controls.Add(body);
+        card.Controls.Add(lblTitle);
+        
+        return card;
     }
 
     // ═══ STOK RENK ═══
@@ -159,9 +213,9 @@ public static class UIHelper
     {
         var card = new Panel { Left = left, Top = top, Width = width, Height = height, BackColor = BgCard, Margin = new Padding(4) };
         var accentLine = new Panel { Left = 0, Top = 0, Width = 4, Height = height, BackColor = accent };
-        var lblT = new Label { Text = title, Left = 14, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 8f, FontStyle.Bold), ForeColor = TextMuted };
-        var lblV = new Label { Text = value, Left = 14, Top = 30, AutoSize = true, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = accent };
-        var lblS = new Label { Text = subtitle, Left = 14, Top = height - 24, AutoSize = true, Font = new Font("Segoe UI Semibold", 8), ForeColor = TextDim };
+        var lblT = new Label { Text = title, Left = 14, Top = 10, AutoSize = true, Font = new Font("SF Pro Display", 8f, FontStyle.Bold), ForeColor = TextMuted };
+        var lblV = new Label { Text = value, Left = 14, Top = 30, AutoSize = true, Font = new Font("SF Pro Display", 22, FontStyle.Bold), ForeColor = accent };
+        var lblS = new Label { Text = subtitle, Left = 14, Top = height - 24, AutoSize = true, Font = new Font("SF Pro Text Semibold", 8), ForeColor = TextDim };
         card.Controls.AddRange(new Control[] { accentLine, lblT, lblV, lblS });
 
         card.MouseEnter += (_, _) => card.BackColor = BgHover;
@@ -202,10 +256,9 @@ public static class UIHelper
         });
     }
 
-    // ═══ SEARCH BOX ═══
     public static TextBox MakeSearchBox(string placeholder, int width = 220)
     {
-        var t = new TextBox { Width = width, Height = 28, Margin = new Padding(4, 2, 8, 2) };
+        var t = new TextBox { Width = width, Height = 30, AutoSize = false, Margin = new Padding(4, 3, 8, 3) };
         StyleTextBox(t); t.PlaceholderText = placeholder;
         return t;
     }
@@ -216,8 +269,8 @@ public static class UIHelper
         var pnl = new Panel { Left = 0, Top = top, Width = 230, Height = 46, BackColor = active ? SidebarActive : Color.Transparent, Cursor = Cursors.Hand, Tag = text };
         var accentBar = new Panel { Left = 0, Top = 0, Width = 4, Height = 46, BackColor = active ? accent : Color.Transparent };
         
-        var lblIcon = new Label { Text = icon, Left = 16, Top = 12, AutoSize = true, Font = new Font("Segoe UI Emoji", 11f), ForeColor = active ? accent : TextSecondary, Cursor = Cursors.Hand };
-        var lblText = new Label { Text = text, Left = 46, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 10.5f, active ? FontStyle.Bold : FontStyle.Regular), ForeColor = active ? TextWhite : TextSecondary, Cursor = Cursors.Hand };
+        var lblIcon = new Label { Text = icon, Left = 16, Top = 12, AutoSize = true, Font = new Font("SF Pro Display", 11f), ForeColor = active ? accent : TextSecondary, Cursor = Cursors.Hand };
+        var lblText = new Label { Text = text, Left = 46, Top = 12, AutoSize = true, Font = new Font("SF Pro Text Semibold", 10.5f, active ? FontStyle.Bold : FontStyle.Regular), ForeColor = active ? TextWhite : TextSecondary, Cursor = Cursors.Hand };
         
         pnl.MouseEnter += (_, _) => { if (!active) pnl.BackColor = SidebarHover; };
         pnl.MouseLeave += (_, _) => { if (!active) pnl.BackColor = Color.Transparent; };
@@ -237,7 +290,7 @@ public static class UIHelper
         var pnl = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = BgDark, Padding = new Padding(28, 0, 28, 0) };
         pnl.Controls.Add(new Label { Text = title, Font = FontTitle, ForeColor = TextWhite, Left = 28, Top = 6, AutoSize = true });
         if (!string.IsNullOrEmpty(subtitle))
-            pnl.Controls.Add(new Label { Text = subtitle, Font = new Font("Segoe UI Semibold", 10), ForeColor = TextSecondary, Left = 28, Top = 38, AutoSize = true });
+            pnl.Controls.Add(new Label { Text = subtitle, Font = new Font("SF Pro Text Semibold", 10), ForeColor = TextSecondary, Left = 28, Top = 38, AutoSize = true });
         return pnl;
     }
 
@@ -358,7 +411,7 @@ public class SectionPanel : Panel
         using var linePen = new Pen(Color.FromArgb(60, _accent), 2);
         g.DrawLine(linePen, 8, HeaderHeight - 1, Width - 8, HeaderHeight - 1);
 
-        using var fTitle = new Font("Segoe UI", 12.5f, FontStyle.Bold);
+        using var fTitle = new Font("SF Pro Display", 12.5f, FontStyle.Bold);
         using var accentBrush = new SolidBrush(_accent);
         g.DrawString(_title, fTitle, accentBrush, 12, 10);
 

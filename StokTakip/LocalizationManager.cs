@@ -43,8 +43,9 @@ public static class LocalizationManager
                 _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
                     ?? new Dictionary<string, string>();
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine("Localization load error for " + filePath + ": " + ex);
                 _strings = new Dictionary<string, string>();
             }
         }

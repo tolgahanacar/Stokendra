@@ -33,7 +33,7 @@ public class TopluHareketDuzenleForm : Form
             Dock = DockStyle.Top,
             Height = 60,
             TextAlign = ContentAlignment.MiddleCenter,
-            Font = new Font("Segoe UI Semibold", 11f),
+            Font = new Font("SF Pro Text Semibold", 11f),
             ForeColor = UIHelper.AccentCyan,
             BackColor = UIHelper.BgPanel
         };
@@ -96,7 +96,7 @@ public class TopluHareketDuzenleForm : Form
         {
             Text = text,
             Left = 25, Top = top, Width = 380,
-            Font = new Font("Segoe UI Semibold", 9f),
+            Font = new Font("SF Pro Text Semibold", 9f),
             ForeColor = UIHelper.TextPrimary,
             Cursor = Cursors.Hand
         };

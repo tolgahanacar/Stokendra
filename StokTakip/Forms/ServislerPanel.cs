@@ -86,7 +86,7 @@ public class ServislerPanel : Panel
         dgv.CellDoubleClick += (_, _) => btnDuzenle.PerformClick();
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
         pnlSt.Controls.Add(lblInfo);
 
         Controls.Add(dgv);
@@ -96,7 +96,7 @@ public class ServislerPanel : Panel
         Controls.Add(pnlSt);
     }
 
-    static Label FL(string t) => new Label { Text = t, AutoSize = true, Font = new Font("Segoe UI Semibold", 8.5f), ForeColor = UIHelper.TextSecondary, Margin = new Padding(4, 9, 2, 0) };
+    static Label FL(string t) => new Label { Text = t, AutoSize = true, Font = new Font("SF Pro Text Semibold", 8.5f), ForeColor = UIHelper.TextSecondary, Margin = new Padding(4, 9, 2, 0) };
 
     private void Filtrele()
     {
@@ -124,7 +124,9 @@ public class ServislerPanel : Panel
     private ServisKaydi? GetSeciliKayit()
     {
         if (dgv.SelectedRows.Count == 0) return null;
-        int id = Convert.ToInt32(dgv.SelectedRows[0].Cells["Id"].Value);
+        var cell = dgv.SelectedRows[0].Cells["Id"];
+        if (cell?.Value == null) return null;
+        int id = Convert.ToInt32(cell.Value);
         return _kayitlar.FirstOrDefault(x => x.Id == id);
     }
 
@@ -181,8 +183,10 @@ public class ServislerPanel : Panel
         {
             using var wb = new ClosedXML.Excel.XLWorkbook(dlg.FileName);
             var ws = wb.Worksheet(1);
-            var rows = ws.RangeUsed().RowsUsed().Skip(1);
-
+            var range = ws.RangeUsed();
+            if (range == null) { MessageBox.Show(L("import_no_data")); return; }
+            var rows = range.RowsUsed().Skip(1);
+            
             int eklenen = 0;
             foreach (var row in rows)
             {
@@ -281,14 +285,14 @@ public class ServislerPanel : Panel
         
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
-            using var fT = new Font("Segoe UI", 13, FontStyle.Bold); using var fS = new Font("Segoe UI", 8); 
-            using var fH = new Font("Segoe UI", 8f, FontStyle.Bold); using var fC = new Font("Segoe UI", 8f);
+            using var fT = new Font("SF Pro Display", 13, FontStyle.Bold); using var fS = new Font("SF Pro Text", 8); 
+            using var fH = new Font("SF Pro Display", 8f, FontStyle.Bold); using var fC = new Font("SF Pro Text", 8f);
             using var br = new SolidBrush(Color.Black); using var brG = new SolidBrush(Color.Gray); 
             using var pen = new Pen(Color.FromArgb(180, 185, 200));
             
             if (ps == 0) 
             { 
-                if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("Segoe UI", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } 
+                if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("SF Pro Display", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } 
                 g.DrawString("SERVİS / BAKIM KAYITLARI RAPORU", fT, br, lm, y); y += 24; 
                 g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; 
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 6; 

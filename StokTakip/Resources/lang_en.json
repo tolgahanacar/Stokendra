@@ -1,7 +1,7 @@
 {
-    "app_title": "Stokendra v1.0 — Inventory Management System",
+    "app_title": "Stokendra - Stock Tracking Program",
     "app_name": "Stokendra",
-    "app_version": "v1.0",
+    "app_version": "v3.9.1",
     "menu": "MENU",
     "dashboard": "Dashboard",
     "stock_cards": "Stock Cards",

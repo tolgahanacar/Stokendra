@@ -59,9 +59,9 @@ public class StokKartlariPanel : UserControl
             if (e.CellStyle != null)
             {
                 if (cn == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
-                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold); }
+                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("SF Pro Display", 10f, FontStyle.Bold); }
                 else if (cn == "KartTipi")
-                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI Semibold", 9f); }
+                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("SF Pro Text Semibold", 9f); }
             }
         };
         grid.DoubleClick += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
@@ -69,8 +69,8 @@ public class StokKartlariPanel : UserControl
 
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
-        lblStatus = new Label { Left = 250, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.AccentBlue };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblStatus = new Label { Left = 250, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.AccentBlue };
         pnlSt.Controls.Add(lblInfo); pnlSt.Controls.Add(lblStatus);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);
@@ -89,14 +89,25 @@ public class StokKartlariPanel : UserControl
         }
         Info();
     }
-    StokKarti? Sec() { if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_row_first")); return null; } return _tumListe.Find(k => k.Id == Convert.ToInt32(grid.SelectedRows[0].Cells["Id"].Value)); }
+    StokKarti? Sec()
+    {
+        if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_row_first")); return null; }
+        var cell = grid.SelectedRows[0].Cells["Id"];
+        if (cell?.Value == null) { MessageBox.Show(L("select_row_first")); return null; }
+        return _tumListe.Find(k => k.Id == Convert.ToInt32(cell.Value));
+    }
     void SilKart() { var k = Sec(); if (k == null) return; if (MessageBox.Show(L("confirm_delete", k.Ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { Program.DB!.StokKartiSil(k.Id); YukleGrid(); } }
     void TopluSil()
     {
         if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("bulk_delete_min")); return; }
         int c = grid.SelectedRows.Count;
         if (MessageBox.Show(L("confirm_bulk_delete", c), L("confirm_bulk_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-        foreach (DataGridViewRow r in grid.SelectedRows) Program.DB!.StokKartiSil(Convert.ToInt32(r.Cells["Id"].Value));
+        foreach (DataGridViewRow r in grid.SelectedRows)
+        {
+            var cell = r.Cells["Id"];
+            if (cell?.Value == null) continue;
+            Program.DB!.StokKartiSil(Convert.ToInt32(cell.Value));
+        }
         YukleGrid(); MessageBox.Show(L("bulk_delete_success", c));
     }
 
@@ -138,7 +149,9 @@ public class StokKartlariPanel : UserControl
         {
             using var wb = new XLWorkbook(dlg.FileName);
             var ws = wb.Worksheet(1);
-            var rows = ws.RangeUsed().RowsUsed().Skip(1); // Header'ı atla
+            var range = ws.RangeUsed();
+            if (range == null) { MessageBox.Show(L("import_no_data")); return; }
+            var rows = range.RowsUsed().Skip(1); // Header'ı atla
 
             int eklenen = 0;
             foreach (var row in rows)

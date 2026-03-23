@@ -21,36 +21,112 @@ public class StokHareketPanel : UserControl
 
         var pnlH = UIHelper.MakeHeader(L("stock_movements"));
 
-        // Filter bar
-        var pnlF = UIHelper.MakeToolbar(46); 
-        pnlF.BackColor = UIHelper.BgPanel;
-        pnlF.AutoSize = true;
-        pnlF.WrapContents = true;
-        pnlF.Controls.Add(FL(L("date_filter")));
-        dtpBas = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2), Value = DateTime.Now.AddMonths(-1) };
-        pnlF.Controls.Add(dtpBas); pnlF.Controls.Add(FL("-"));
-        dtpBit = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2) };
-        pnlF.Controls.Add(dtpBit);
-        pnlF.Controls.Add(FL(L("stock_filter")));
-        cmbStok = new ComboBox { Width = 130, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(2) }; UIHelper.StyleComboBox(cmbStok);
-        cmbStok.Items.Add(L("all")); foreach (var k in Program.DB!.AltKartlariGetir()) cmbStok.Items.Add(k); cmbStok.SelectedIndex = 0;
-        pnlF.Controls.Add(cmbStok);
-        pnlF.Controls.Add(FL(L("dept_filter")));
-        cmbDept = new ComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(2) }; UIHelper.StyleComboBox(cmbDept);
-        cmbDept.Items.Add(L("all")); foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d); cmbDept.SelectedIndex = 0;
-        pnlF.Controls.Add(cmbDept);
-        pnlF.Controls.Add(FL(L("type_filter")));
-        cmbTur = new ComboBox { Width = 80, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(2) }; UIHelper.StyleComboBox(cmbTur);
-        cmbTur.Items.AddRange(new object[] { L("all"), L("entry"), L("exit"), L("type_empty") }); cmbTur.SelectedIndex = 0;
-        pnlF.Controls.Add(cmbTur);
-        var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 28);
-        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 28);
-        btnFil.Click += (_, _) => Filtrele(); btnClr.Click += (_, _) => Temizle();
-        
-        txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 160);
-        txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
-        
-        pnlF.Controls.AddRange(new Control[] { btnFil, btnClr, txtSearch });
+        // ═══ FILTER BAR (Compact 1-Row Grid) ═══
+        // ═══ FILTER BAR (FlowLayout — düzgün hizalı) ═══
+var pnlF = new Panel
+{
+    Dock = DockStyle.Top,
+    Height = 58,
+    BackColor = UIHelper.BgPanel,
+    Padding = new Padding(12, 0, 12, 0)
+};
+
+Control MakeFilterCell(string label, Control ctrl, int ctrlWidth)
+{
+    ctrl.Width = ctrlWidth;
+    var lbl = new Label
+    {
+        Text = label,
+        AutoSize = true,
+        Font = new Font("SF Pro Text Semibold", 7.5f),
+        ForeColor = UIHelper.TextMuted
+    };
+    var p = new Panel { Width = ctrlWidth, Height = 54, Margin = new Padding(0, 0, 10, 0) };
+    lbl.Location = new Point(0, 6);
+    ctrl.Location = new Point(0, 22);
+    p.Controls.Add(lbl);
+    p.Controls.Add(ctrl);
+    return p;
+}
+
+// Tarih: iki picker yan yana
+dtpBas = new DateTimePicker { Width = 105, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Now.AddMonths(-1) };
+dtpBit = new DateTimePicker { Width = 105, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Now };
+UIHelper.StyleDatePicker(dtpBas);
+UIHelper.StyleDatePicker(dtpBit);
+
+var lblDateLabel = new Label { Text = L("date_filter"), AutoSize = true, Font = new Font("SF Pro Text Semibold", 7.5f), ForeColor = UIHelper.TextMuted };
+var lblDash = new Label { Text = "–", Width = 14, TextAlign = ContentAlignment.MiddleCenter, ForeColor = UIHelper.TextMuted };
+lblDash.Location = new Point(dtpBas.Width + 2, 22);
+dtpBit.Location = new Point(dtpBas.Width + 18, 22);
+lblDateLabel.Location = new Point(0, 6);
+dtpBas.Location = new Point(0, 22);
+var pnlDate = new Panel { Width = dtpBas.Width + 18 + dtpBit.Width, Height = 54, Margin = new Padding(0, 0, 10, 0) };
+pnlDate.Controls.AddRange(new Control[] { lblDateLabel, dtpBas, lblDash, dtpBit });
+
+// Stok
+cmbStok = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+UIHelper.StyleComboBox(cmbStok);
+cmbStok.Items.Add(L("all"));
+foreach (var k in Program.DB!.AltKartlariGetir()) cmbStok.Items.Add(k);
+cmbStok.SelectedIndex = 0;
+
+// Departman
+cmbDept = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+UIHelper.StyleComboBox(cmbDept);
+cmbDept.Items.Add(L("all"));
+foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+cmbDept.SelectedIndex = 0;
+
+// Tür
+cmbTur = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
+UIHelper.StyleComboBox(cmbTur);
+cmbTur.Items.AddRange(new object[] { L("all"), L("entry"), L("exit"), L("type_empty") });
+cmbTur.SelectedIndex = 0;
+
+// Arama
+txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 200);
+txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
+
+// Butonlar
+var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 30);
+var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 30);
+btnFil.Click += (_, _) => Filtrele();
+btnClr.Click += (_, _) => Temizle();
+
+// FlowLayout — tüm cell'leri yan yana diz
+var flow = new FlowLayoutPanel
+{
+    Dock = DockStyle.Fill,
+    FlowDirection = FlowDirection.LeftToRight,
+    WrapContents = false,
+    AutoSize = false,
+    Padding = new Padding(0)
+};
+
+var cellStok   = MakeFilterCell(L("stock_filter"), cmbStok, 120);
+var cellDept   = MakeFilterCell(L("dept_filter"),  cmbDept, 110);
+var cellTur    = MakeFilterCell(L("type_filter"),  cmbTur,  90);
+var cellArama  = MakeFilterCell(L("arama_label"),  txtSearch, 200);
+
+// Buton cell'i (label yok, sadece butonlar altta)
+var pnlBtn = new Panel { Width = 175, Height = 54, Margin = new Padding(4, 0, 0, 0) };
+btnFil.Location = new Point(0, 22);
+btnClr.Location = new Point(85, 22);
+pnlBtn.Controls.AddRange(new Control[] { btnFil, btnClr });
+
+flow.Controls.AddRange(new Control[] { pnlDate, cellStok, cellDept, cellTur, cellArama, pnlBtn });
+
+// Arama kutusunu kalan boşluğa genişlet
+flow.Resize += (_, _) =>
+{
+    int used = pnlDate.Width + cellStok.Width + cellDept.Width + cellTur.Width + pnlBtn.Width
+               + 10 * 5 + flow.Padding.Horizontal + 24;
+    int remaining = flow.Width - used;
+    if (remaining > 80) { txtSearch.Width = remaining; cellArama.Width = remaining; }
+};
+
+pnlF.Controls.Add(flow);
 
         // Toolbar
         var pnlT = UIHelper.MakeToolbar(46);
@@ -102,7 +178,7 @@ public class StokHareketPanel : UserControl
                     if (v.Contains("[Ç]")) e.CellStyle.ForeColor = UIHelper.StokWarning;
                     else if (v.Contains("[B]")) e.CellStyle.ForeColor = UIHelper.TextSecondary;
                     else e.CellStyle.ForeColor = UIHelper.AccentGreen;
-                    e.CellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                    e.CellStyle.Font = new Font("SF Pro Display", 9.5f, FontStyle.Bold);
                 }
             }
         };
@@ -110,14 +186,13 @@ public class StokHareketPanel : UserControl
 
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
         pnlSt.Controls.Add(lblInfo);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlF); Controls.Add(pnlH); Controls.Add(pnlSt);
         Filtrele();
     }
 
-    static Label FL(string t) => new Label { Text = t, AutoSize = true, Font = new Font("Segoe UI Semibold", 8.5f), ForeColor = UIHelper.TextSecondary, Margin = new Padding(4, 9, 2, 0) };
 
     void Filtrele()
     {
@@ -156,8 +231,29 @@ public class StokHareketPanel : UserControl
     }
 
     void Temizle() { dtpBas.Value = DateTime.Now.AddMonths(-1); dtpBit.Value = DateTime.Now; cmbStok.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbTur.SelectedIndex = 0; txtSearch.Clear(); Filtrele(); }
-    void Sil() { if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_rows_to_delete")); return; } if (MessageBox.Show(L("confirm_movement_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo) == DialogResult.Yes) { Program.DB!.HareketSil(Convert.ToInt32(grid.SelectedRows[0].Cells["Id"].Value)); Filtrele(); } }
-    void TopluSil() { if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("select_rows_to_delete")); return; } int c = grid.SelectedRows.Count; if (MessageBox.Show(L("confirm_bulk_movement_delete", c), L("confirm_delete_title"), MessageBoxButtons.YesNo) != DialogResult.Yes) return; foreach (DataGridViewRow r in grid.SelectedRows) Program.DB!.HareketSil(Convert.ToInt32(r.Cells["Id"].Value)); Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c)); }
+    void Sil()
+    {
+        if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_rows_to_delete")); return; }
+        var cell = grid.SelectedRows[0].Cells["Id"];
+        if (cell?.Value == null) { MessageBox.Show(L("select_rows_to_delete")); return; }
+        if (MessageBox.Show(L("confirm_movement_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo) == DialogResult.Yes)
+        {
+            Program.DB!.HareketSil(Convert.ToInt32(cell.Value)); Filtrele();
+        }
+    }
+    void TopluSil()
+    {
+        if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("select_rows_to_delete")); return; }
+        int c = grid.SelectedRows.Count;
+        if (MessageBox.Show(L("confirm_bulk_movement_delete", c), L("confirm_delete_title"), MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+        foreach (DataGridViewRow r in grid.SelectedRows)
+        {
+            var cell = r.Cells["Id"];
+            if (cell?.Value == null) continue;
+            Program.DB!.HareketSil(Convert.ToInt32(cell.Value));
+        }
+        Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c));
+    }
 
     // ═══ DÜZENLE ═══
     void DuzenleHareket()
@@ -370,9 +466,9 @@ public class StokHareketPanel : UserControl
         pd.BeginPrint += (_, _) => { ps = 0; };
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
-            using var fT = new Font("Segoe UI", 13, FontStyle.Bold); using var fS = new Font("Segoe UI", 8); using var fH = new Font("Segoe UI", 7.5f, FontStyle.Bold); using var fC = new Font("Segoe UI", 7.5f);
+            using var fT = new Font("SF Pro Display", 13, FontStyle.Bold); using var fS = new Font("SF Pro Text", 8); using var fH = new Font("SF Pro Display", 7.5f, FontStyle.Bold); using var fC = new Font("SF Pro Text", 7.5f);
             using var br = new SolidBrush(Color.Black); using var brG = new SolidBrush(Color.Gray); using var pen = new Pen(Color.FromArgb(180, 185, 200));
-            if (ps == 0) { if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("Segoe UI", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } g.DrawString(L("movements_report"), fT, br, lm, y); y += 24; g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; g.DrawLine(pen, lm, y, lm + pw, y); y += 6; }
+            if (ps == 0) { if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("SF Pro Display", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } g.DrawString(L("movements_report"), fT, br, lm, y); y += 24; g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; g.DrawLine(pen, lm, y, lm + pw, y); y += 6; }
             float[] weights = { 70, 170, 150, 70, 120, 100, 150 };
             float totalWeight = weights.Sum();
             float[] w = weights.Select(wt => (wt / totalWeight) * pw).ToArray();

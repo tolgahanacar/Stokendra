@@ -30,14 +30,24 @@ public class AppSettings
                 var json = File.ReadAllText(SettingsFile);
                 return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("AppSettings.Yukle error: " + ex);
+            }
         }
         return new AppSettings();
     }
 
     public void Kaydet()
     {
-        var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(SettingsFile, json);
+        try
+        {
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(SettingsFile, json);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("AppSettings.Kaydet error: " + ex);
+        }
     }
 }

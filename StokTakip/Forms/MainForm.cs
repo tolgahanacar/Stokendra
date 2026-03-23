@@ -40,23 +40,23 @@ public class MainForm : Form
 
         // Logo — lighter background for visibility, text-based logo
         var pnlLogo = new Panel { Dock = DockStyle.Top, Height = 68, BackColor = Color.FromArgb(22, 28, 42) };
-        var lblBrand = new Label
-        {
-            Text = "S",
-            Font = new Font("Segoe UI", 22, FontStyle.Bold),
-            ForeColor = UIHelper.AccentCyan,
-            BackColor = Color.FromArgb(35, 50, 80),
-            Width = 40, Height = 40, Left = 16, Top = 14,
-            TextAlign = ContentAlignment.MiddleCenter
+        // Logoyu bulanıklaştırmadan yüksek kalitede çizmek için Custom Paint
+        var picLogo = new PictureBox { Width = 40, Height = 40, Left = 16, Top = 14, BackColor = Color.FromArgb(35, 50, 80) };
+        picLogo.Paint += (s, e) => {
+            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            if (picLogo.Image != null) e.Graphics.DrawImage(picLogo.Image, new Rectangle(0, 0, picLogo.Width, picLogo.Height));
         };
-        var lblTitle = new Label { Text = L("app_name"), Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = UIHelper.TextWhite, Left = 62, Top = 14, AutoSize = true };
-        var lblVer = new Label { Text = L("app_version"), Font = new Font("Segoe UI Semibold", 8), ForeColor = UIHelper.AccentCyan, Left = 62, Top = 38, AutoSize = true };
-        pnlLogo.Controls.AddRange(new Control[] { lblBrand, lblTitle, lblVer });
+        try { picLogo.Image = Icon.ExtractAssociatedIcon(AppDomain.CurrentDomain.FriendlyName)?.ToBitmap() ?? Image.FromFile("StokTakip.ico"); } catch { try { picLogo.Image = Image.FromFile("StokTakip.ico"); } catch { } }
+        var lblTitle = new Label { Text = "Stokendra", Font = new Font("SF Pro Display", 15), ForeColor = UIHelper.TextWhite, Left = 62, Top = 14, AutoSize = true };
+        var lblVer = new Label { Text = "v3.9.1", Font = new Font("SF Pro Display", 10), ForeColor = UIHelper.AccentCyan, Left = 62, Top = 38, AutoSize = true };
+        pnlLogo.Controls.AddRange(new Control[] { picLogo, lblTitle, lblVer });
 
         var divTop = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = UIHelper.SidebarDivider };
 
         var navPanel = new Panel { Dock = DockStyle.Fill, BackColor = UIHelper.BgSidebar, AutoScroll = true };
-        navPanel.Controls.Add(new Label { Text = L("menu"), Left = 20, Top = 10, AutoSize = true, Font = new Font("Segoe UI", 7.5f, FontStyle.Bold), ForeColor = UIHelper.TextDim });
+        navPanel.Controls.Add(new Label { Text = L("menu"), Left = 20, Top = 10, AutoSize = true, Font = new Font("SF Pro Display", 7.5f, FontStyle.Bold), ForeColor = UIHelper.TextDim });
 
         int y = 36;
         foreach (var (key, accent) in NavItems)
@@ -69,8 +69,8 @@ public class MainForm : Form
         // Copyright at bottom
         var pnlFooter = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = UIHelper.BgSidebar };
         pnlFooter.Controls.AddRange(new Control[] {
-            new Label { Text = "© 2026 Tolgahan Acar", Font = new Font("Segoe UI", 7.5f), ForeColor = UIHelper.TextDim, Left = 20, Top = 8, AutoSize = true },
-            new Label { Text = "Tüm hakları saklıdır.", Font = new Font("Segoe UI", 7), ForeColor = Color.FromArgb(60, 70, 90), Left = 20, Top = 26, AutoSize = true }
+            new Label { Text = "© 2026 Tolgahan Acar", Font = new Font("SF Pro Display", 10), ForeColor = UIHelper.TextDim, Left = 20, Top = 8, AutoSize = true },
+            new Label { Text = "Tüm hakları saklıdır.", Font = new Font("SF Pro Display", 8), ForeColor = Color.FromArgb(60, 70, 90), Left = 20, Top = 26, AutoSize = true }
         });
 
         pnlSidebar.Controls.AddRange(new Control[] { navPanel, divTop, pnlLogo, pnlFooter });
@@ -120,7 +120,7 @@ public class MainForm : Form
             if (pnl.Controls[2] is Label lt)
             {
                 lt.ForeColor = a ? UIHelper.TextWhite : UIHelper.TextSecondary;
-                lt.Font = new Font("Segoe UI Semibold", 10.5f, a ? FontStyle.Bold : FontStyle.Regular);
+                lt.Font = new Font("SF Pro Text Semibold", 10.5f, a ? FontStyle.Bold : FontStyle.Regular);
             }
         }
     }

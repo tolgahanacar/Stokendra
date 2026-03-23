@@ -30,7 +30,7 @@ public class RaporlarPanel : UserControl
     private double[] chartValues = Array.Empty<double>();
     private readonly ToolTip chartTip = new();
     private int chartHoverIndex = -1;
-    private static readonly Font QtyFont = new("Segoe UI Semibold", 9.5f, FontStyle.Bold);
+    private static readonly Font QtyFont = new("SF Pro Display", 9.5f, FontStyle.Bold);
 
     public RaporlarPanel()
     {
@@ -40,126 +40,69 @@ public class RaporlarPanel : UserControl
         var pnlH = UIHelper.MakeHeader(L("reports"), L("reports_subtitle"));
 
         // ═══ FILTER BAR ═══
+        // ═══ FILTER BAR (Grid Layout) ═══
         var pnlFWrap = new TableLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 92,
-            BackColor = UIHelper.BgPanel,
-            ColumnCount = 2,
-            RowCount = 1,
-            Padding = new Padding(16, 8, 16, 8)
-        };
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        pnlFWrap.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-
-        var pnlFFilters = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            AutoScroll = true,
-            WrapContents = true,
-            BackColor = UIHelper.BgPanel,
-            FlowDirection = FlowDirection.LeftToRight,
-            Margin = new Padding(0),
-            Padding = new Padding(0)
-        };
-
-        var pnlFActions = new FlowLayoutPanel
-        {
             AutoSize = true,
-            AutoSizeMode = AutoSizeMode.GrowAndShrink,
-            WrapContents = false,
-            FlowDirection = FlowDirection.LeftToRight,
             BackColor = UIHelper.BgPanel,
-            Margin = new Padding(8, 0, 0, 0),
-            Padding = new Padding(0),
-            Anchor = AnchorStyles.Right
+            ColumnCount = 4,
+            RowCount = 2,
+            Padding = new Padding(20, 15, 20, 15),
+            CellBorderStyle = TableLayoutPanelCellBorderStyle.None
         };
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160f)); // Start Date
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160f)); // End Date
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));   // Middle spacing/filters
+        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220f)); // Action Buttons Column
 
-        pnlFWrap.Controls.Add(pnlFFilters, 0, 0);
-        pnlFWrap.Controls.Add(pnlFActions, 1, 0);
-
-        void AddFilterGroup(string label, Control ctrl, int labelTop = 12)
+        void AddGridFilter(Control ctrl, string label, int col, int row, int colSpan = 1)
         {
-            pnlFFilters.Controls.Add(new System.Windows.Forms.Label
-            {
-                Text = label, AutoSize = true,
-                Font = new Font("Segoe UI Semibold", 8f),
-                ForeColor = UIHelper.TextMuted,
-                Margin = new Padding(6, labelTop, 4, 0)
-            });
-            ctrl.Margin = new Padding(0, 6, 8, 6);
-            pnlFFilters.Controls.Add(ctrl);
+            var p = new FlowLayoutPanel { Width = ctrl.Width + 10, Height = 55, FlowDirection = FlowDirection.TopDown, Margin = new Padding(0, 0, 10, 0) };
+            var lbl = new System.Windows.Forms.Label { Text = label, AutoSize = true, Font = new Font("SF Pro Text Semibold", 8f), ForeColor = UIHelper.TextMuted, Margin = new Padding(0, 0, 0, 4) };
+            p.Controls.Add(lbl);
+            p.Controls.Add(ctrl);
+            pnlFWrap.Controls.Add(p, col, row);
+            if (colSpan > 1) pnlFWrap.SetColumnSpan(p, colSpan);
         }
 
-        dtpStart = new DateTimePicker
-        {
-            Width = 108, Format = DateTimePickerFormat.Custom,
-            CustomFormat = "dd.MM.yyyy",
-            Value = DateTime.Today.AddDays(-30)
-        };
+        dtpStart = new DateTimePicker { Width = 140, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Today.AddDays(-30) };
         UIHelper.StyleDatePicker(dtpStart);
-
-        dtpEnd = new DateTimePicker
-        {
-            Width = 108, Format = DateTimePickerFormat.Custom,
-            CustomFormat = "dd.MM.yyyy",
-            Value = DateTime.Today
-        };
+        dtpEnd = new DateTimePicker { Width = 140, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Today };
         UIHelper.StyleDatePicker(dtpEnd);
-        dtpStart.ValueChanged += (_, _) =>
-        {
-            if (dtpStart.Value.Date > dtpEnd.Value.Date)
-                dtpEnd.Value = dtpStart.Value.Date;
-        };
-        dtpEnd.ValueChanged += (_, _) =>
-        {
-            if (dtpEnd.Value.Date < dtpStart.Value.Date)
-                dtpStart.Value = dtpEnd.Value.Date;
-        };
+        dtpStart.ValueChanged += (_, _) => { if (dtpStart.Value.Date > dtpEnd.Value.Date) dtpEnd.Value = dtpStart.Value.Date; };
+        dtpEnd.ValueChanged += (_, _) => { if (dtpEnd.Value.Date < dtpStart.Value.Date) dtpStart.Value = dtpEnd.Value.Date; };
 
-        cmbUser = MakeCombo(140);
-        cmbUser.Items.Add(L("all"));
+        cmbUser = MakeCombo(180); cmbUser.Items.Add(L("all"));
         foreach (var u in Program.DB!.GetTeslimEdilenler()) cmbUser.Items.Add(u);
         cmbUser.SelectedIndex = 0;
 
-        cmbDept = MakeCombo(120);
-        cmbDept.Items.Add(L("all"));
+        cmbDept = MakeCombo(160); cmbDept.Items.Add(L("all"));
         foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
         cmbDept.SelectedIndex = 0;
 
-        cmbCategory = MakeCombo(120);
-        cmbCategory.Items.Add(L("all"));
-        foreach (var c in Program.DB!.AltKartlariGetir()
-                     .Where(k => !string.IsNullOrEmpty(k.Kategori))
-                     .Select(k => k.Kategori).Distinct().OrderBy(k => k))
-            cmbCategory.Items.Add(c);
+        cmbCategory = MakeCombo(160); cmbCategory.Items.Add(L("all"));
+        foreach (var c in Program.DB!.AltKartlariGetir().Where(k => !string.IsNullOrEmpty(k.Kategori)).Select(k => k.Kategori).Distinct().OrderBy(k => k)) cmbCategory.Items.Add(c);
         cmbCategory.SelectedIndex = 0;
 
-        AddFilterGroup(L("start_date"),    dtpStart);
-        AddFilterGroup(L("end_date"),      dtpEnd);
-        AddFilterGroup(L("select_user"),   cmbUser);
-        AddFilterGroup(L("dept_filter"),   cmbDept);
-        AddFilterGroup(L("select_category"), cmbCategory, 16);
+        // Row 0
+        AddGridFilter(dtpStart, L("start_date"), 0, 0);
+        AddGridFilter(dtpEnd, L("end_date"), 1, 0);
+        AddGridFilter(cmbUser, L("select_user"), 2, 0);
 
-        var btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 130, 28);
-        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"),    UIHelper.BtnDark,   100,  28);
-        btnGen.Margin = new Padding(0, 8, 4, 8);
-        btnClr.Margin = new Padding(0, 8, 0, 8);
+        // Row 1
+        AddGridFilter(cmbDept, L("dept_filter"), 0, 1);
+        AddGridFilter(cmbCategory, L("select_category"), 1, 1, 2);
+
+        // Actions (Vertical stack in the 4th column)
+        var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0), Padding = new Padding(10, 5, 0, 0) };
+        btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 110, 42);
+        btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 90, 42);
         btnGen.Click += (_, _) => GenerateReport();
-        btnClr.Click += (_, _) =>
-        {
-            dtpStart.Value = DateTime.Today.AddDays(-30);
-            dtpEnd.Value = DateTime.Today;
-            cmbUser.SelectedIndex = 0;
-            cmbDept.SelectedIndex = 0;
-            cmbCategory.SelectedIndex = 0;
-            GenerateReport();
-        };
-        this.btnGen = btnGen;
-        this.btnClr = btnClr;
-        pnlFActions.Controls.AddRange(new Control[] { btnGen, btnClr });
-        pnlFWrap.Height = Math.Max(92, cmbUser.Height + 40);
+        btnClr.Click += (_, _) => { dtpStart.Value = DateTime.Today.AddDays(-30); dtpEnd.Value = DateTime.Today; cmbUser.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbCategory.SelectedIndex = 0; GenerateReport(); };
+        pnlActions.Controls.AddRange(new Control[] { btnGen, btnClr });
+        pnlFWrap.Controls.Add(pnlActions, 3, 0);
+        pnlFWrap.SetRowSpan(pnlActions, 2);
 
         // ═══ ACTION TOOLBAR ═══
         var pnlT = new FlowLayoutPanel
@@ -246,7 +189,7 @@ public class RaporlarPanel : UserControl
         var lblG = UIHelper.MakeIconTitle(
             L("movement_history"),
             UIHelper.TextPrimary,
-            new Font("Segoe UI Semibold", 10.5f, FontStyle.Bold),
+            new Font("SF Pro Display", 10.5f, FontStyle.Bold),
             left: 0, top: 8, gap: 6, iconSize: 12f, iconTop: 1, textTop: 0);
         pnlGridHeader.Controls.Add(lblG);
 
@@ -282,7 +225,7 @@ public class RaporlarPanel : UserControl
         lblInfo = new System.Windows.Forms.Label
         {
             Left = 12, Top = 7, AutoSize = true,
-            Font = new Font("Segoe UI Semibold", 8.5f),
+            Font = new Font("SF Pro Text Semibold", 8.5f),
             ForeColor = UIHelper.TextSecondary
         };
         pnlSt.Controls.Add(lblInfo);
@@ -329,7 +272,7 @@ public class RaporlarPanel : UserControl
             Name = "ttl",
             Text = title.ToUpperTr(),
             Left = 14, Top = 12, AutoSize = true,
-            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+            Font = new Font("SF Pro Display", 8f, FontStyle.Bold),
             ForeColor = UIHelper.TextMuted
         });
 
@@ -340,7 +283,7 @@ public class RaporlarPanel : UserControl
             Text = "0",
             Left = 12, Top = 34,
             Width = 200, Height = 60,
-            Font = new Font("Segoe UI", 34, FontStyle.Bold),
+            Font = new Font("SF Pro Display", 34, FontStyle.Bold),
             ForeColor = accent,
             TextAlign = ContentAlignment.MiddleLeft
         };
@@ -641,11 +584,11 @@ public class RaporlarPanel : UserControl
             var g  = e.Graphics!;
             float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
 
-            using var fT     = new Font("Segoe UI", 13, FontStyle.Bold);
-            using var fS     = new Font("Segoe UI", 8);
-            using var fH     = new Font("Segoe UI", 7.5f, FontStyle.Bold);
-            using var fC     = new Font("Segoe UI", 7.5f);
-            using var fTotal = new Font("Segoe UI", 11, FontStyle.Bold);
+            using var fT     = new Font("SF Pro Display", 13, FontStyle.Bold);
+            using var fS     = new Font("SF Pro Text", 8);
+            using var fH     = new Font("SF Pro Display", 7.5f, FontStyle.Bold);
+            using var fC     = new Font("SF Pro Text", 7.5f);
+            using var fTotal = new Font("SF Pro Display", 11, FontStyle.Bold);
             using var br     = new SolidBrush(Color.Black);
             using var brG    = new SolidBrush(Color.Gray);
             using var pen    = new Pen(Color.FromArgb(180, 185, 200));
@@ -654,7 +597,7 @@ public class RaporlarPanel : UserControl
             {
                 if (!string.IsNullOrWhiteSpace(firma))
                 {
-                    using var ff = new Font("Segoe UI", 9, FontStyle.Bold);
+                    using var ff = new Font("SF Pro Display", 9, FontStyle.Bold);
                     g.DrawString(firma, ff, br, lm, y); y += 18;
                 }
                 g.DrawString(titleStr, fT, br, lm, y); y += 24;
