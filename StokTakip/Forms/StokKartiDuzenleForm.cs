@@ -38,7 +38,7 @@ public class StokKartiDuzenleForm : Form
         // Header strip
         var strip = new Panel { Height = 44, BackColor = Color.FromArgb(30, 37, 52), Dock = DockStyle.Top };
         strip.Controls.Add(new Label { Text = kart == null ? L("new_stock_card") : L("edit_stock_card"),
-            Font = new Font("SF Pro Display", 11, FontStyle.Bold), ForeColor = UIHelper.AccentBlue, Left = 16, Top = 10, AutoSize = true });
+            Font = new Font("Segoe UI", 11, FontStyle.Bold), ForeColor = UIHelper.AccentBlue, Left = 16, Top = 10, AutoSize = true });
 
         // Kart Tipi
         tbl.Controls.Add(MakeLabel(L("card_type_label")), 0, row);
@@ -82,7 +82,7 @@ public class StokKartiDuzenleForm : Form
         tbl.Controls.Add(MakeLabel(L("description_label")), 0, row);
         txtAciklama = new TextBox { Dock = DockStyle.Fill, Multiline = true, Height = 55, MaxLength = 500,
             BackColor = UIHelper.BgInput, ForeColor = UIHelper.TextPrimary, BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("SF Pro Text", 9.5f) };
+            Font = new Font("Segoe UI", 9.5f) };
         tbl.Controls.Add(txtAciklama, 1, row); row++;
 
         // Butonlar
@@ -113,7 +113,7 @@ public class StokKartiDuzenleForm : Form
         MinimumSize = new Size(480, 100);
     }
 
-    static Label MakeLabel(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("SF Pro Text", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 4, 8, 4) };
+    static Label MakeLabel(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 4, 8, 4) };
     static TextBox MakeTextBox() { var t = new TextBox { Dock = DockStyle.Fill }; UIHelper.StyleTextBox(t); return t; }
     static ComboBox MakeCombo(string[] items, int sel) { var c = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(c); c.Items.AddRange(items); if (sel >= 0 && sel < items.Length) c.SelectedIndex = sel; return c; }
 

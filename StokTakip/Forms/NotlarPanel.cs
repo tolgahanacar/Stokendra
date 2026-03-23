@@ -62,13 +62,13 @@ public class NotlarPanel : UserControl
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
             if (grid.Columns[e.ColumnIndex].Name == "Baslik" && e.CellStyle != null)
             {
-                e.CellStyle.Font = new Font("SF Pro Display", 10f, FontStyle.Bold);
+                e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
                 e.CellStyle.ForeColor = UIHelper.TextWhite;
             }
             if (grid.Columns[e.ColumnIndex].Name == "Tarih" && e.CellStyle != null)
             {
                 e.CellStyle.ForeColor = UIHelper.AccentCyan;
-                e.CellStyle.Font = new Font("SF Pro Text", 8.5f);
+                e.CellStyle.Font = new Font("Segoe UI", 8.5f);
             }
             if (grid.Columns[e.ColumnIndex].Name == "Icerik" && e.CellStyle != null)
             {
@@ -83,7 +83,7 @@ public class NotlarPanel : UserControl
         var lblInfo = new Label
         {
             Left = 20, Top = 8, AutoSize = true,
-            Font = new Font("SF Pro Text Semibold", 9f),
+            Font = new Font("Segoe UI Semibold", 9f),
             ForeColor = UIHelper.TextMuted, Tag = "info"
         };
         pnlSt.Controls.Add(lblInfo);

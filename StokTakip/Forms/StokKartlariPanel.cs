@@ -59,9 +59,9 @@ public class StokKartlariPanel : UserControl
             if (e.CellStyle != null)
             {
                 if (cn == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
-                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("SF Pro Display", 10f, FontStyle.Bold); }
+                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold); }
                 else if (cn == "KartTipi")
-                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("SF Pro Text Semibold", 9f); }
+                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI Semibold", 9f); }
             }
         };
         grid.DoubleClick += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
@@ -69,8 +69,8 @@ public class StokKartlariPanel : UserControl
 
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
-        lblStatus = new Label { Left = 250, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.AccentBlue };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblStatus = new Label { Left = 250, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.AccentBlue };
         pnlSt.Controls.Add(lblInfo); pnlSt.Controls.Add(lblStatus);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);

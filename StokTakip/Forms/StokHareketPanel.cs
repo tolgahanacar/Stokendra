@@ -38,7 +38,7 @@ Control MakeFilterCell(string label, Control ctrl, int ctrlWidth)
     {
         Text = label,
         AutoSize = true,
-        Font = new Font("SF Pro Text Semibold", 7.5f),
+        Font = new Font("Segoe UI Semibold", 7.5f),
         ForeColor = UIHelper.TextMuted
     };
     var p = new Panel { Width = ctrlWidth, Height = 54, Margin = new Padding(0, 0, 10, 0) };
@@ -55,7 +55,7 @@ dtpBit = new DateTimePicker { Width = 105, Format = DateTimePickerFormat.Custom,
 UIHelper.StyleDatePicker(dtpBas);
 UIHelper.StyleDatePicker(dtpBit);
 
-var lblDateLabel = new Label { Text = L("date_filter"), AutoSize = true, Font = new Font("SF Pro Text Semibold", 7.5f), ForeColor = UIHelper.TextMuted };
+var lblDateLabel = new Label { Text = L("date_filter"), AutoSize = true, Font = new Font("Segoe UI Semibold", 7.5f), ForeColor = UIHelper.TextMuted };
 var lblDash = new Label { Text = "–", Width = 14, TextAlign = ContentAlignment.MiddleCenter, ForeColor = UIHelper.TextMuted };
 lblDash.Location = new Point(dtpBas.Width + 2, 22);
 dtpBit.Location = new Point(dtpBas.Width + 18, 22);
@@ -178,7 +178,7 @@ pnlF.Controls.Add(flow);
                     if (v.Contains("[Ç]")) e.CellStyle.ForeColor = UIHelper.StokWarning;
                     else if (v.Contains("[B]")) e.CellStyle.ForeColor = UIHelper.TextSecondary;
                     else e.CellStyle.ForeColor = UIHelper.AccentGreen;
-                    e.CellStyle.Font = new Font("SF Pro Display", 9.5f, FontStyle.Bold);
+                    e.CellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
                 }
             }
         };
@@ -186,7 +186,7 @@ pnlF.Controls.Add(flow);
 
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
         pnlSt.Controls.Add(lblInfo);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlF); Controls.Add(pnlH); Controls.Add(pnlSt);
@@ -466,9 +466,9 @@ pnlF.Controls.Add(flow);
         pd.BeginPrint += (_, _) => { ps = 0; };
         pd.PrintPage += (_, e) => {
             var g = e.Graphics!; float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
-            using var fT = new Font("SF Pro Display", 13, FontStyle.Bold); using var fS = new Font("SF Pro Text", 8); using var fH = new Font("SF Pro Display", 7.5f, FontStyle.Bold); using var fC = new Font("SF Pro Text", 7.5f);
+            using var fT = new Font("Segoe UI", 13, FontStyle.Bold); using var fS = new Font("Segoe UI", 8); using var fH = new Font("Segoe UI", 7.5f, FontStyle.Bold); using var fC = new Font("Segoe UI", 7.5f);
             using var br = new SolidBrush(Color.Black); using var brG = new SolidBrush(Color.Gray); using var pen = new Pen(Color.FromArgb(180, 185, 200));
-            if (ps == 0) { if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("SF Pro Display", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } g.DrawString(L("movements_report"), fT, br, lm, y); y += 24; g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; g.DrawLine(pen, lm, y, lm + pw, y); y += 6; }
+            if (ps == 0) { if (!string.IsNullOrWhiteSpace(firma)) { using var ff = new Font("Segoe UI", 9, FontStyle.Bold); g.DrawString(firma, ff, br, lm, y); y += 18; } g.DrawString(L("movements_report"), fT, br, lm, y); y += 24; g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fS, brG, lm, y); y += 16; g.DrawLine(pen, lm, y, lm + pw, y); y += 6; }
             float[] weights = { 70, 170, 150, 70, 120, 100, 150 };
             float totalWeight = weights.Sum();
             float[] w = weights.Select(wt => (wt / totalWeight) * pw).ToArray();

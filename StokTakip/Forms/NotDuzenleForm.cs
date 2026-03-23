@@ -28,7 +28,7 @@ public class NotDuzenleForm : Form
         var lblFormTitle = new Label
         {
             Text = Text,
-            Font = new Font("SF Pro Display", 13, FontStyle.Bold),
+            Font = new Font("Segoe UI", 13, FontStyle.Bold),
             ForeColor = UIHelper.TextWhite,
             Left = 20, Top = 16, AutoSize = true
         };
@@ -39,7 +39,7 @@ public class NotDuzenleForm : Form
 
         // Tarih
         var pnlTarih = new Panel { Dock = DockStyle.Top, Height = 42, BackColor = UIHelper.BgDark, Padding = new Padding(0,0,0,8) };
-        var lblTarih = new Label { Text = "📅 " + L("date"), AutoSize = true, Font = new Font("SF Pro Text Semibold", 9), ForeColor = UIHelper.AccentCyan, Left = 0, Top = 0 };
+        var lblTarih = new Label { Text = "📅 " + L("date"), AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.AccentCyan, Left = 0, Top = 0 };
         dtpTarih = new DateTimePicker { Width = 160, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy HH:mm", Left = 0, Top = 20 };
         UIHelper.StyleDatePicker(dtpTarih);
         dtpTarih.Value = mevcut?.Tarih ?? DateTime.Now;
@@ -50,7 +50,7 @@ public class NotDuzenleForm : Form
         {
             Dock = DockStyle.Top, Height = 24,
             Text = L("note_title_placeholder"),
-            Font = new Font("SF Pro Text Semibold", 9),
+            Font = new Font("Segoe UI Semibold", 9),
             ForeColor = UIHelper.TextSecondary,
             Padding = new Padding(0, 6, 0, 0)
         };
@@ -61,7 +61,7 @@ public class NotDuzenleForm : Form
             Dock = DockStyle.Top, Height = 36,
             BackColor = UIHelper.BgInput, ForeColor = UIHelper.TextWhite,
             BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("SF Pro Text Semibold", 12),
+            Font = new Font("Segoe UI Semibold", 12),
             Text = mevcut?.Baslik ?? ""
         };
 
@@ -72,7 +72,7 @@ public class NotDuzenleForm : Form
         {
             Dock = DockStyle.Top, Height = 24,
             Text = L("note_content_placeholder"),
-            Font = new Font("SF Pro Text Semibold", 9),
+            Font = new Font("Segoe UI Semibold", 9),
             ForeColor = UIHelper.TextSecondary,
             Padding = new Padding(0, 4, 0, 0)
         };
@@ -83,7 +83,7 @@ public class NotDuzenleForm : Form
             Dock = DockStyle.Fill,
             BackColor = UIHelper.BgInput, ForeColor = Color.FromArgb(200, 210, 225),
             BorderStyle = BorderStyle.FixedSingle,
-            Font = new Font("SF Pro Text", 10),
+            Font = new Font("Segoe UI", 10),
             Multiline = true, ScrollBars = ScrollBars.Vertical,
             Text = mevcut?.Icerik ?? ""
         };

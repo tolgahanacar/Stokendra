@@ -44,7 +44,7 @@ public class AyarlarPanel : UserControl
         bodyGenel.Controls.Add(new Panel { Height = 10, Width = 10 });
         bodyGenel.Controls.Add(MakeLabelPair(L("company_name_label"), txtFirma = new TextBox { Width = 350 }));
         txtFirma.Text = Program.Settings.CompanyName; UIHelper.StyleTextBox(txtFirma);
-        bodyGenel.Controls.Add(new Label { Text = L("company_name_hint"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, -2, 0, 0) });
+        bodyGenel.Controls.Add(new Label { Text = L("company_name_hint"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, -2, 0, 0) });
 
         tbl.Controls.Add(cardGenel, 0, 0);
 
@@ -65,12 +65,12 @@ public class AyarlarPanel : UserControl
         var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, 0, 240, 36);
         btnBackupDb.ForeColor = Color.Black; btnBackupDb.Click += (_, _) => BackupDb();
         bodyDb.Controls.Add(btnBackupDb);
-        bodyDb.Controls.Add(new Label { Text = L("backup_db_desc"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 10) });
+        bodyDb.Controls.Add(new Label { Text = L("backup_db_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 10) });
 
         var btnBackupSql = UIHelper.MakeButton(L("backup_sql"), UIHelper.AccentCyan, 0, 0, 240, 36);
         btnBackupSql.Click += (_, _) => BackupSql();
         bodyDb.Controls.Add(btnBackupSql);
-        bodyDb.Controls.Add(new Label { Text = L("backup_sql_desc"), Font = new Font("SF Pro Text", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 0) });
+        bodyDb.Controls.Add(new Label { Text = L("backup_sql_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 0) });
 
         tbl.Controls.Add(cardDb, 1, 0);
 
@@ -108,9 +108,9 @@ public class AyarlarPanel : UserControl
         var cardAbout = UIHelper.MakeSettingsGroup(L("info"), "ℹ", UIHelper.AccentCyan, out bodyAbout, 400);
         cardAbout.Dock = DockStyle.Fill;
         
-        var lblTitle = new Label { Text = "Stokendra", AutoSize = true, Font = new Font("SF Pro Display", 14, FontStyle.Bold), ForeColor = UIHelper.AccentCyan, Margin = new Padding(0, 0, 0, 4) };
-        var lblVer = new Label { Text = "v3.9.1  •  Geliştirici: Tolgahan Acar", AutoSize = true, Font = new Font("SF Pro Text Semibold", 9), ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 10) };
-        var lblDesc = new Label { Text = "Bu yazılım lisanslıdır. Tüm hakları saklıdır.", AutoSize = true, Font = new Font("SF Pro Text", 8.5f), ForeColor = UIHelper.TextDim, Margin = new Padding(0, 0, 0, 15) };
+        var lblTitle = new Label { Text = "Stokendra", AutoSize = true, Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = UIHelper.AccentCyan, Margin = new Padding(0, 0, 0, 4) };
+        var lblVer = new Label { Text = "v3.9.4  •  Geliştirici: Tolgahan Acar", AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 10) };
+        var lblDesc = new Label { Text = "Bu yazılım lisanslıdır. Tüm hakları saklıdır.", AutoSize = true, Font = new Font("Segoe UI", 8.5f), ForeColor = UIHelper.TextDim, Margin = new Padding(0, 0, 0, 15) };
         
         var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 0, 0, 200, 32);
         btnUpdate.ForeColor = Color.Black; btnUpdate.Click += async (_, _) => await CheckForUpdates();
@@ -121,7 +121,7 @@ public class AyarlarPanel : UserControl
         // SAVE BUTTON AT THE BOTTOM OF TABLE
         var pnlSave = new Panel { Width = 400, Height = 100, Padding = new Padding(0, 20, 0, 0) };
         var btnKaydet = UIHelper.MakeButton(L("save_settings"), UIHelper.AccentGreen, 0, 0, 200, 44);
-        btnKaydet.Font = new Font("SF Pro Display", 11, FontStyle.Bold);
+        btnKaydet.Font = new Font("Segoe UI", 11, FontStyle.Bold);
         btnKaydet.Click += KaydetAyarlar;
         pnlSave.Controls.Add(btnKaydet);
         tbl.Controls.Add(pnlSave, 0, 2);
@@ -144,7 +144,7 @@ public class AyarlarPanel : UserControl
     static Panel SectionHeader(string text, Color c, ref int y)
     {
         var pnl = new Panel { Left = 0, Top = y, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent };
-        var lblText = new Label { Text = text, Left = 0, Top = 0, AutoSize = true, Font = new Font("SF Pro Display", 10, FontStyle.Bold), ForeColor = c };
+        var lblText = new Label { Text = text, Left = 0, Top = 0, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = c };
         pnl.Controls.Add(lblText);
         y += 30;
         return pnl;

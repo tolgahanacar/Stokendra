@@ -26,8 +26,8 @@ public class HareketEkleForm : Form
 
         var strip = new Panel { Dock = DockStyle.Top, Height = 44, BackColor = Color.FromArgb(30, 37, 52) };
         strip.Controls.AddRange(new Control[] {
-            new Label { Text = edit ? L("edit_movement") : L("new_movement"), Font = new Font("SF Pro Display", 11, FontStyle.Bold), ForeColor = edit ? UIHelper.AccentOrange : UIHelper.AccentGreen, Left = 16, Top = 6, AutoSize = true },
-            new Label { Text = L("only_child_cards_can_move"), Font = new Font("SF Pro Text", 7.5f), ForeColor = UIHelper.AccentYellow, Left = 16, Top = 28, AutoSize = true }
+            new Label { Text = edit ? L("edit_movement") : L("new_movement"), Font = new Font("Segoe UI", 11, FontStyle.Bold), ForeColor = edit ? UIHelper.AccentOrange : UIHelper.AccentGreen, Left = 16, Top = 6, AutoSize = true },
+            new Label { Text = L("only_child_cards_can_move"), Font = new Font("Segoe UI", 7.5f), ForeColor = UIHelper.AccentYellow, Left = 16, Top = 28, AutoSize = true }
         });
 
         var tbl = new TableLayoutPanel
@@ -52,7 +52,7 @@ public class HareketEkleForm : Form
 
         // Mevcut
         tbl.Controls.Add(new Label(), 0, row);
-        lblMevcut = new Label { Dock = DockStyle.Fill, Font = new Font("SF Pro Text", 8), Height = 18 };
+        lblMevcut = new Label { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 8), Height = 18 };
         tbl.Controls.Add(lblMevcut, 1, row); row++;
 
         // Tür
@@ -122,7 +122,7 @@ public class HareketEkleForm : Form
         AutoSize = true; AutoSizeMode = AutoSizeMode.GrowAndShrink; MinimumSize = new Size(470, 100);
     }
 
-    static Label ML(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("SF Pro Text Semibold", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 2, 6, 2) };
+    static Label ML(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 2, 6, 2) };
     static TextBox MakeTB() { var t = new TextBox { Dock = DockStyle.Fill }; UIHelper.StyleTextBox(t); return t; }
 
     private void KodFiltrele()

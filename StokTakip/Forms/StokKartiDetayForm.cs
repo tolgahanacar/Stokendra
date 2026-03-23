@@ -48,7 +48,7 @@ public class StokKartiDetayForm : Form
         var mhTitle = UIHelper.MakeIconTitle(
             L("movement_history"),
             UIHelper.TextPrimary,
-            new Font("SF Pro Display", 10, FontStyle.Bold),
+            new Font("Segoe UI", 10, FontStyle.Bold),
             left: 20, top: 6, gap: 6, iconSize: 12f, iconTop: 1, textTop: 0);
         pnlMH.Controls.Add(mhTitle);
 

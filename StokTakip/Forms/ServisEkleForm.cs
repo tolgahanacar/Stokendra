@@ -23,7 +23,7 @@ public class ServisEkleForm : Form
         MaximizeBox = false; MinimizeBox = false; BackColor = UIHelper.BgPanel;
 
         var strip = new Panel { Height = 44, BackColor = Color.FromArgb(30, 37, 52), Dock = DockStyle.Top };
-        strip.Controls.Add(new Label { Text = Text, Font = new Font("SF Pro Display", 11, FontStyle.Bold), ForeColor = UIHelper.AccentBlue, Left = 16, Top = 10, AutoSize = true });
+        strip.Controls.Add(new Label { Text = Text, Font = new Font("Segoe UI", 11, FontStyle.Bold), ForeColor = UIHelper.AccentBlue, Left = 16, Top = 10, AutoSize = true });
 
         var tbl = new TableLayoutPanel
         {
@@ -78,7 +78,7 @@ public class ServisEkleForm : Form
         LoadData();
     }
 
-    static Label MakeLabel(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("SF Pro Text", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 4, 8, 4) };
+    static Label MakeLabel(string t) => new Label { Text = t, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 9), ForeColor = UIHelper.TextSecondary, TextAlign = ContentAlignment.MiddleLeft, Padding = new Padding(0, 4, 8, 4) };
     static TextBox MakeTextBox() { var t = new TextBox { Dock = DockStyle.Fill }; UIHelper.StyleTextBox(t); return t; }
 
     private void LoadData()

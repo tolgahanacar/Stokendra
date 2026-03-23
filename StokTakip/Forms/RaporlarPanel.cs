@@ -30,7 +30,7 @@ public class RaporlarPanel : UserControl
     private double[] chartValues = Array.Empty<double>();
     private readonly ToolTip chartTip = new();
     private int chartHoverIndex = -1;
-    private static readonly Font QtyFont = new("SF Pro Display", 9.5f, FontStyle.Bold);
+    private static readonly Font QtyFont = new("Segoe UI", 9.5f, FontStyle.Bold);
 
     public RaporlarPanel()
     {
@@ -59,7 +59,7 @@ public class RaporlarPanel : UserControl
         void AddGridFilter(Control ctrl, string label, int col, int row, int colSpan = 1)
         {
             var p = new FlowLayoutPanel { Width = ctrl.Width + 10, Height = 55, FlowDirection = FlowDirection.TopDown, Margin = new Padding(0, 0, 10, 0) };
-            var lbl = new System.Windows.Forms.Label { Text = label, AutoSize = true, Font = new Font("SF Pro Text Semibold", 8f), ForeColor = UIHelper.TextMuted, Margin = new Padding(0, 0, 0, 4) };
+            var lbl = new System.Windows.Forms.Label { Text = label, AutoSize = true, Font = new Font("Segoe UI Semibold", 8f), ForeColor = UIHelper.TextMuted, Margin = new Padding(0, 0, 0, 4) };
             p.Controls.Add(lbl);
             p.Controls.Add(ctrl);
             pnlFWrap.Controls.Add(p, col, row);
@@ -189,7 +189,7 @@ public class RaporlarPanel : UserControl
         var lblG = UIHelper.MakeIconTitle(
             L("movement_history"),
             UIHelper.TextPrimary,
-            new Font("SF Pro Display", 10.5f, FontStyle.Bold),
+            new Font("Segoe UI", 10.5f, FontStyle.Bold),
             left: 0, top: 8, gap: 6, iconSize: 12f, iconTop: 1, textTop: 0);
         pnlGridHeader.Controls.Add(lblG);
 
@@ -225,7 +225,7 @@ public class RaporlarPanel : UserControl
         lblInfo = new System.Windows.Forms.Label
         {
             Left = 12, Top = 7, AutoSize = true,
-            Font = new Font("SF Pro Text Semibold", 8.5f),
+            Font = new Font("Segoe UI Semibold", 8.5f),
             ForeColor = UIHelper.TextSecondary
         };
         pnlSt.Controls.Add(lblInfo);
@@ -272,7 +272,7 @@ public class RaporlarPanel : UserControl
             Name = "ttl",
             Text = title.ToUpperTr(),
             Left = 14, Top = 12, AutoSize = true,
-            Font = new Font("SF Pro Display", 8f, FontStyle.Bold),
+            Font = new Font("Segoe UI", 8f, FontStyle.Bold),
             ForeColor = UIHelper.TextMuted
         });
 
@@ -283,7 +283,7 @@ public class RaporlarPanel : UserControl
             Text = "0",
             Left = 12, Top = 34,
             Width = 200, Height = 60,
-            Font = new Font("SF Pro Display", 34, FontStyle.Bold),
+            Font = new Font("Segoe UI", 34, FontStyle.Bold),
             ForeColor = accent,
             TextAlign = ContentAlignment.MiddleLeft
         };
@@ -584,11 +584,11 @@ public class RaporlarPanel : UserControl
             var g  = e.Graphics!;
             float y = e.MarginBounds.Top, lm = e.MarginBounds.Left, pw = e.MarginBounds.Width;
 
-            using var fT     = new Font("SF Pro Display", 13, FontStyle.Bold);
-            using var fS     = new Font("SF Pro Text", 8);
-            using var fH     = new Font("SF Pro Display", 7.5f, FontStyle.Bold);
-            using var fC     = new Font("SF Pro Text", 7.5f);
-            using var fTotal = new Font("SF Pro Display", 11, FontStyle.Bold);
+            using var fT     = new Font("Segoe UI", 13, FontStyle.Bold);
+            using var fS     = new Font("Segoe UI", 8);
+            using var fH     = new Font("Segoe UI", 7.5f, FontStyle.Bold);
+            using var fC     = new Font("Segoe UI", 7.5f);
+            using var fTotal = new Font("Segoe UI", 11, FontStyle.Bold);
             using var br     = new SolidBrush(Color.Black);
             using var brG    = new SolidBrush(Color.Gray);
             using var pen    = new Pen(Color.FromArgb(180, 185, 200));
@@ -597,7 +597,7 @@ public class RaporlarPanel : UserControl
             {
                 if (!string.IsNullOrWhiteSpace(firma))
                 {
-                    using var ff = new Font("SF Pro Display", 9, FontStyle.Bold);
+                    using var ff = new Font("Segoe UI", 9, FontStyle.Bold);
                     g.DrawString(firma, ff, br, lm, y); y += 18;
                 }
                 g.DrawString(titleStr, fT, br, lm, y); y += 24;

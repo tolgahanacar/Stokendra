@@ -12,11 +12,11 @@ public class DepartmanlarPanel : UserControl
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
         var pnlH = UIHelper.MakeHeader(L("departments"), L("departments_subtitle"));
         var pnlT = UIHelper.MakeToolbar(50);
-        var lbl = new Label { Text = L("new_dept_label"), ForeColor = UIHelper.TextSecondary, Left = 12, Top = 15, AutoSize = true, Font = new Font("SF Pro Text", 9) };
+        var lbl = new Label { Text = L("new_dept_label"), ForeColor = UIHelper.TextSecondary, Left = 12, Top = 15, AutoSize = true, Font = new Font("Segoe UI", 9) };
         txtYeni = UIHelper.MakeSearchBox(L("dept_name_placeholder"), 250); txtYeni.Left = 140; txtYeni.Top = 11;
         txtYeni.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) Ekle(); };
-        var btnE = UIHelper.MakeFlowButton(L("add_dept"), UIHelper.AccentBlue, 110);
-        var btnS = UIHelper.MakeFlowButton(L("delete_selected"), UIHelper.AccentRed, 140);
+        var btnE = UIHelper.MakeFlowButton(L("add_dept"), UIHelper.AccentBlue, 110); btnE.Left = 405; btnE.Top = 11;
+        var btnS = UIHelper.MakeFlowButton(L("delete_selected"), UIHelper.AccentRed, 140); btnS.Left = 525; btnS.Top = 11;
         btnE.Click += (_, _) => Ekle(); btnS.Click += (_, _) => Sil();
         pnlT.Controls.AddRange(new Control[] { lbl, txtYeni, btnE, btnS });
 

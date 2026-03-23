@@ -43,7 +43,7 @@ public class StoklarPanel : UserControl
                 if (e.CellStyle != null)
                 {
                     e.CellStyle.ForeColor = UIHelper.StokRengi(s);
-                    e.CellStyle.Font = new Font("SF Pro Display", 10.5f, FontStyle.Bold);
+                    e.CellStyle.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
                 }
                 
                 if (s <= 3)
@@ -62,7 +62,7 @@ public class StoklarPanel : UserControl
 
         // Status
         var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("SF Pro Text Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
         pnlSt.Controls.Add(lblInfo);
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);
@@ -129,12 +129,12 @@ public class StoklarPanel : UserControl
             float bottomLimit = e.MarginBounds.Bottom - 30; // Reserve space for footer
             pageNum++;
             
-            using var fTitle = new Font("SF Pro Display", 16, FontStyle.Bold); 
-            using var fSub = new Font("SF Pro Text", 9); 
-            using var fHeader = new Font("SF Pro Display", 9.5f, FontStyle.Bold); 
-            using var fRow = new Font("SF Pro Text", 9f); 
-            using var fTotal = new Font("SF Pro Display", 11, FontStyle.Bold); 
-            using var fTotalLbl = new Font("SF Pro Display", 10, FontStyle.Bold); 
+            using var fTitle = new Font("Segoe UI", 16, FontStyle.Bold); 
+            using var fSub = new Font("Segoe UI", 9); 
+            using var fHeader = new Font("Segoe UI", 9.5f, FontStyle.Bold); 
+            using var fRow = new Font("Segoe UI", 9f); 
+            using var fTotal = new Font("Segoe UI", 11, FontStyle.Bold); 
+            using var fTotalLbl = new Font("Segoe UI", 10, FontStyle.Bold); 
 
             using var br = new SolidBrush(Color.Black); 
             using var brMuted = new SolidBrush(Color.FromArgb(100, 100, 100)); 
@@ -154,7 +154,7 @@ public class StoklarPanel : UserControl
             // Draw Report Header (first page only)
             if (ps == 0) { 
                 if (!string.IsNullOrWhiteSpace(firma)) { 
-                    using var ff = new Font("SF Pro Display", 11, FontStyle.Bold); 
+                    using var ff = new Font("Segoe UI", 11, FontStyle.Bold); 
                     g.DrawString(firma, ff, br, lm, y); 
                     y += 24; 
                 } 

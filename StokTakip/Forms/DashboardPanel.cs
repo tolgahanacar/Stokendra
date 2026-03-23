@@ -65,19 +65,19 @@ internal class StatCard : Control
         }
 
         // FIX 3 ► Türkçe büyük harf (ı→I, i→İ, ş→Ş vs.) — ToUpperTr extension
-        using var fTitle = new System.Drawing.Font("SF Pro Display", 9f, System.Drawing.FontStyle.Bold);
+        using var fTitle = new System.Drawing.Font("Segoe UI", 9f, System.Drawing.FontStyle.Bold);
         using var titleBrush = new SolidBrush(UIHelper.TextMuted);
         g.DrawString(Title, fTitle, titleBrush, 12, 9);
 
         // Value (large, accent)
-        using var fValue = new System.Drawing.Font("SF Pro Display", 22, System.Drawing.FontStyle.Bold);
+        using var fValue = new System.Drawing.Font("Segoe UI", 22, System.Drawing.FontStyle.Bold);
         using var valueBrush = new SolidBrush(Accent);
         g.DrawString(Value, fValue, valueBrush, 9, 26);
 
         // Subtitle
         if (!string.IsNullOrEmpty(Subtitle))
         {
-            using var fSub = new System.Drawing.Font("SF Pro Text", 7.5f);
+            using var fSub = new System.Drawing.Font("Segoe UI", 7.5f);
             using var subBrush = new SolidBrush(UIHelper.TextDim);
             g.DrawString(Subtitle, fSub, subBrush, 12, Height - 20);
         }
@@ -132,30 +132,30 @@ internal class AlertCard : Control
         g.DrawPath(borderPen, path);
 
         // Stock name (left, bold)
-        using var fName = new System.Drawing.Font("SF Pro Text Semibold", 9.5f);
+        using var fName = new System.Drawing.Font("Segoe UI Semibold", 9.5f);
         using var nameBrush = new SolidBrush(UIHelper.TextWhite);
         var nameRect = new RectangleF(12, 8, Width - 90, 20);
         using var sf = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
         g.DrawString(StockName, fName, nameBrush, nameRect, sf);
 
         // Code + category info
-        using var fCode = new System.Drawing.Font("SF Pro Text", 7.5f);
+        using var fCode = new System.Drawing.Font("Segoe UI", 7.5f);
         using var codeBrush = new SolidBrush(UIHelper.TextDim);
         g.DrawString(CodeInfo, fCode, codeBrush, 12, 32);
 
         // Min stock info
-        using var fMin = new System.Drawing.Font("SF Pro Text", 7.5f);
+        using var fMin = new System.Drawing.Font("Segoe UI", 7.5f);
         using var minBrush = new SolidBrush(UIHelper.TextMuted);
         g.DrawString(MinInfo, fMin, minBrush, 12, 52);
 
         // Stock value (right, large)
-        using var fVal = new System.Drawing.Font("SF Pro Display", 20, System.Drawing.FontStyle.Bold);
+        using var fVal = new System.Drawing.Font("Segoe UI", 20, System.Drawing.FontStyle.Bold);
         using var valBrush = new SolidBrush(Accent);
         var valSize = g.MeasureString(StockValue, fVal);
         g.DrawString(StockValue, fVal, valBrush, Width - valSize.Width - 12, 6);
 
         // Status text (right, small)
-        using var fStatus = new System.Drawing.Font("SF Pro Display", 7, System.Drawing.FontStyle.Bold);
+        using var fStatus = new System.Drawing.Font("Segoe UI", 7, System.Drawing.FontStyle.Bold);
         using var statusBrush = new SolidBrush(Accent);
         var statusSize = g.MeasureString(Status, fStatus);
         g.DrawString(Status, fStatus, statusBrush, Width - statusSize.Width - 12, 54);
@@ -178,7 +178,7 @@ public class DashboardPanel : UserControl
         var lblDate = new System.Windows.Forms.Label
         {
             Text = DateTime.Now.ToString("dd MMMM yyyy, dddd"),
-            Font = new System.Drawing.Font("SF Pro Text Semibold", 9.5f),
+            Font = new System.Drawing.Font("Segoe UI Semibold", 9.5f),
             ForeColor = UIHelper.AccentCyan, AutoSize = true
         };
         pnlH.Controls.Add(lblDate);
@@ -306,15 +306,24 @@ public class DashboardPanel : UserControl
         pnlCharts.Controls.Add(barBorder, 1, 0);
 
         // ═══ LOW STOCK ALERTS ═══
-        // LOW STOCK ALERTS
-        var pnlBody = new SectionPanel
-        {
-            Dock        = DockStyle.Fill,
-            Title       = L("low_stock_alerts"),
-            AccentColor = UIHelper.StokWarning,
-            Padding     = new Padding(8, 46, 8, 8)
-        };
-
+        // LOW STOCK ALERTS
+
+        var pnlBody = new SectionPanel
+
+        {
+
+            Dock        = DockStyle.Fill,
+
+            Title       = L("low_stock_alerts"),
+
+            AccentColor = UIHelper.StokWarning,
+
+            Padding     = new Padding(8, 46, 8, 8)
+
+        };
+
+
+
         var dusukKartlar = altKartlar
             .Where(k => k.MevcutStok <= 3)
             .OrderBy(k => k.MevcutStok)
@@ -325,7 +334,7 @@ public class DashboardPanel : UserControl
             pnlBody.Controls.Add(new System.Windows.Forms.Label
             {
                 Text      = L("no_low_stock"),
-                Font      = new System.Drawing.Font("SF Pro Text Semibold", 11),
+                Font      = new System.Drawing.Font("Segoe UI Semibold", 11),
                 ForeColor = UIHelper.AccentGreen,
                 Dock      = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
