@@ -171,7 +171,7 @@ public class DashboardPanel : UserControl
 
         var stats     = Program.DB!.DashboardIstatistikleriGetir();
         var altKartlar = Program.DB!.AltKartlariGetir();
-        var hareketler = Program.DB!.HareketleriGetir();
+        var last7Data  = Program.DB!.Son7GunHareketOzetleri();
 
         // ═══ HEADER ═══
         var pnlH = UIHelper.MakeHeader(L("dashboard"), L("dashboard_subtitle"));
@@ -272,20 +272,10 @@ public class DashboardPanel : UserControl
             plotPie.Refresh();
         }
 
-        // Bar chart
-        var last7  = DateTime.Today.AddDays(-6);
-        var recent = hareketler.Where(h => h.Tarih.Date >= last7).ToList();
-        var dates  = Enumerable.Range(0, 7).Select(i => DateTime.Today.AddDays(-6 + i)).ToList();
-        double[] ent = new double[7], ext = new double[7];
-        var grp = recent.GroupBy(h => h.Tarih.Date).ToDictionary(g => g.Key, g => g);
-        for (int i = 0; i < 7; i++)
-        {
-            if (grp.TryGetValue(dates[i], out var day))
-            {
-                ent[i] = day.Where(h => h.Tur == "Giris").Sum(h => h.Miktar);
-                ext[i] = day.Where(h => h.Tur == "Cikis").Sum(h => h.Miktar);
-            }
-        }
+        // Bar chart — optimized: uses pre-aggregated query data
+        var dates  = last7Data.Select(d => d.Tarih).ToList();
+        double[] ent = last7Data.Select(d => d.Giris).ToArray();
+        double[] ext = last7Data.Select(d => d.Cikis).ToArray();
         var pos = Enumerable.Range(0, 7).Select(x => (double)x).ToArray();
         var be  = plotBar.Plot.Add.Bars(pos, ent); be.Color = ScottPlot.Color.FromColor(System.Drawing.Color.FromArgb(46, 204, 113)); be.LegendText = L("entry");
         var bx  = plotBar.Plot.Add.Bars(pos, ext); bx.Color = ScottPlot.Color.FromColor(System.Drawing.Color.FromArgb(231, 76, 60));  bx.LegendText = L("exit");

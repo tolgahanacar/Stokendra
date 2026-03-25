@@ -21,112 +21,62 @@ public class StokHareketPanel : UserControl
 
         var pnlH = UIHelper.MakeHeader(L("stock_movements"));
 
-        // ═══ FILTER BAR (Compact 1-Row Grid) ═══
-        // ═══ FILTER BAR (FlowLayout — düzgün hizalı) ═══
-var pnlF = new Panel
-{
-    Dock = DockStyle.Top,
-    Height = 58,
-    BackColor = UIHelper.BgPanel,
-    Padding = new Padding(12, 0, 12, 0)
-};
+        // ═══ FILTER BAR (Standart) ═══
+        dtpBas = new DateTimePicker { Value = DateTime.Now.AddMonths(-1) };
+        dtpBit = new DateTimePicker { Value = DateTime.Now };
 
-Control MakeFilterCell(string label, Control ctrl, int ctrlWidth)
-{
-    ctrl.Width = ctrlWidth;
-    var lbl = new Label
-    {
-        Text = label,
-        AutoSize = true,
-        Font = new Font("Segoe UI Semibold", 7.5f),
-        ForeColor = UIHelper.TextMuted
-    };
-    var p = new Panel { Width = ctrlWidth, Height = 54, Margin = new Padding(0, 0, 10, 0) };
-    lbl.Location = new Point(0, 6);
-    ctrl.Location = new Point(0, 22);
-    p.Controls.Add(lbl);
-    p.Controls.Add(ctrl);
-    return p;
-}
+        // Stok
+        cmbStok = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
+        UIHelper.StyleComboBox(cmbStok);
+        cmbStok.Items.Add(L("all"));
+        foreach (var k in Program.DB!.AltKartlariGetir()) cmbStok.Items.Add(k);
+        cmbStok.SelectedIndex = 0;
 
-// Tarih: iki picker yan yana
-dtpBas = new DateTimePicker { Width = 105, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Now.AddMonths(-1) };
-dtpBit = new DateTimePicker { Width = 105, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Now };
-UIHelper.StyleDatePicker(dtpBas);
-UIHelper.StyleDatePicker(dtpBit);
+        // Departman
+        cmbDept = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110 };
+        UIHelper.StyleComboBox(cmbDept);
+        cmbDept.Items.Add(L("all"));
+        foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+        cmbDept.SelectedIndex = 0;
 
-var lblDateLabel = new Label { Text = L("date_filter"), AutoSize = true, Font = new Font("Segoe UI Semibold", 7.5f), ForeColor = UIHelper.TextMuted };
-var lblDash = new Label { Text = "–", Width = 14, TextAlign = ContentAlignment.MiddleCenter, ForeColor = UIHelper.TextMuted };
-lblDash.Location = new Point(dtpBas.Width + 2, 22);
-dtpBit.Location = new Point(dtpBas.Width + 18, 22);
-lblDateLabel.Location = new Point(0, 6);
-dtpBas.Location = new Point(0, 22);
-var pnlDate = new Panel { Width = dtpBas.Width + 18 + dtpBit.Width, Height = 54, Margin = new Padding(0, 0, 10, 0) };
-pnlDate.Controls.AddRange(new Control[] { lblDateLabel, dtpBas, lblDash, dtpBit });
+        // Tür
+        cmbTur = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 90 };
+        UIHelper.StyleComboBox(cmbTur);
+        cmbTur.Items.AddRange(new object[] { L("all"), L("entry"), L("exit"), L("type_empty") });
+        cmbTur.SelectedIndex = 0;
 
-// Stok
-cmbStok = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-UIHelper.StyleComboBox(cmbStok);
-cmbStok.Items.Add(L("all"));
-foreach (var k in Program.DB!.AltKartlariGetir()) cmbStok.Items.Add(k);
-cmbStok.SelectedIndex = 0;
+        // Arama
+        txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 200);
+        txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
 
-// Departman
-cmbDept = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-UIHelper.StyleComboBox(cmbDept);
-cmbDept.Items.Add(L("all"));
-foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
-cmbDept.SelectedIndex = 0;
+        // Butonlar
+        var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 30);
+        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 30);
+        btnFil.Click += (_, _) => Filtrele();
+        btnClr.Click += (_, _) => Temizle();
 
-// Tür
-cmbTur = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
-UIHelper.StyleComboBox(cmbTur);
-cmbTur.Items.AddRange(new object[] { L("all"), L("entry"), L("exit"), L("type_empty") });
-cmbTur.SelectedIndex = 0;
+        // Standart filtre barı
+        var pnlF = UIHelper.MakeFilterBar();
+        var flow = UIHelper.GetFilterFlow(pnlF);
 
-// Arama
-txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 200);
-txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
+        var cellDate   = UIHelper.MakeDateRangeCell(L("date_filter"), dtpBas, dtpBit);
+        var cellStok   = UIHelper.MakeFilterCell(L("stock_filter"), cmbStok, 120);
+        var cellDept   = UIHelper.MakeFilterCell(L("dept_filter"),  cmbDept, 110);
+        var cellTur    = UIHelper.MakeFilterCell(L("type_filter"),  cmbTur,  90);
+        var cellArama  = UIHelper.MakeFilterCell(L("arama_label"),  txtSearch, 200);
+        var cellBtns   = UIHelper.MakeFilterButtons(btnFil, btnClr);
 
-// Butonlar
-var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 30);
-var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 30);
-btnFil.Click += (_, _) => Filtrele();
-btnClr.Click += (_, _) => Temizle();
+        flow.Controls.AddRange(new Control[] { cellDate, cellStok, cellDept, cellTur, cellArama, cellBtns });
 
-// FlowLayout — tüm cell'leri yan yana diz
-var flow = new FlowLayoutPanel
-{
-    Dock = DockStyle.Fill,
-    FlowDirection = FlowDirection.LeftToRight,
-    WrapContents = false,
-    AutoSize = false,
-    Padding = new Padding(0)
-};
+        // Arama kutusunu kalan boşluğa genişlet
+        flow.Resize += (_, _) =>
+        {
+            int used = cellDate.Width + cellStok.Width + cellDept.Width + cellTur.Width + cellBtns.Width
+                       + 10 * 6 + flow.Padding.Horizontal + 24;
+            int remaining = flow.Width - used;
+            if (remaining > 80) { txtSearch.Width = remaining; cellArama.Width = remaining; }
+        };
 
-var cellStok   = MakeFilterCell(L("stock_filter"), cmbStok, 120);
-var cellDept   = MakeFilterCell(L("dept_filter"),  cmbDept, 110);
-var cellTur    = MakeFilterCell(L("type_filter"),  cmbTur,  90);
-var cellArama  = MakeFilterCell(L("arama_label"),  txtSearch, 200);
-
-// Buton cell'i (label yok, sadece butonlar altta)
-var pnlBtn = new Panel { Width = 175, Height = 54, Margin = new Padding(4, 0, 0, 0) };
-btnFil.Location = new Point(0, 22);
-btnClr.Location = new Point(85, 22);
-pnlBtn.Controls.AddRange(new Control[] { btnFil, btnClr });
-
-flow.Controls.AddRange(new Control[] { pnlDate, cellStok, cellDept, cellTur, cellArama, pnlBtn });
-
-// Arama kutusunu kalan boşluğa genişlet
-flow.Resize += (_, _) =>
-{
-    int used = pnlDate.Width + cellStok.Width + cellDept.Width + cellTur.Width + pnlBtn.Width
-               + 10 * 5 + flow.Padding.Horizontal + 24;
-    int remaining = flow.Width - used;
-    if (remaining > 80) { txtSearch.Width = remaining; cellArama.Width = remaining; }
-};
-
-pnlF.Controls.Add(flow);
 
         // Toolbar
         var pnlT = UIHelper.MakeToolbar(46);

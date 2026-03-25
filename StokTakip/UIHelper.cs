@@ -108,7 +108,9 @@ public static class UIHelper
     public static void StyleDatePicker(DateTimePicker d)
     {
         d.CalendarMonthBackground = BgInput; d.CalendarForeColor = TextPrimary;
-        d.Font = new Font("Segoe UI Semibold", 9);
+        d.BackColor = BgInput; d.ForeColor = TextPrimary;
+        d.Font = new Font("Segoe UI Semibold", 9.5f);
+        if (d.Width < 130) d.Width = 130;
     }
 
     // ═══ PREMIUM BUTON (İkon Destekli) ═══
@@ -261,6 +263,103 @@ public static class UIHelper
         var t = new TextBox { Width = width, Height = 30, AutoSize = false, Margin = new Padding(4, 3, 8, 3) };
         StyleTextBox(t); t.PlaceholderText = placeholder;
         return t;
+    }
+
+    // ═══ STANDART FİLTRE BARI ═══
+
+    /// <summary>Standart filtre barı — tüm panellerde aynı yükseklik/renk/padding</summary>
+    public static Panel MakeFilterBar()
+    {
+        var pnl = new Panel
+        {
+            Dock = DockStyle.Top,
+            Height = 58,
+            BackColor = BgPanel,
+            Padding = new Padding(12, 0, 12, 0)
+        };
+        var flow = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
+            AutoSize = false,
+            Padding = new Padding(0)
+        };
+        flow.Tag = "filterflow";
+        pnl.Controls.Add(flow);
+        return pnl;
+    }
+
+    /// <summary>FlowLayoutPanel'i filtre barının içindeki flow'dan alır</summary>
+    public static FlowLayoutPanel GetFilterFlow(Panel filterBar)
+    {
+        foreach (Control c in filterBar.Controls)
+            if (c is FlowLayoutPanel f && f.Tag?.ToString() == "filterflow") return f;
+        // fallback
+        var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+        filterBar.Controls.Add(flow);
+        return flow;
+    }
+
+    /// <summary>Etiket + kontrol çifti oluşturucu (filtre barı içinde kullanılır)</summary>
+    public static Panel MakeFilterCell(string label, Control ctrl, int cellWidth = 0)
+    {
+        if (cellWidth <= 0) cellWidth = ctrl.Width;
+        var lbl = new Label
+        {
+            Text = label, AutoSize = true,
+            Font = new Font("Segoe UI Semibold", 7.5f),
+            ForeColor = TextMuted
+        };
+        var p = new Panel { Width = cellWidth, Height = 54, Margin = new Padding(0, 0, 10, 0) };
+        lbl.Location = new Point(0, 6);
+        ctrl.Location = new Point(0, 22);
+        ctrl.Width = cellWidth;
+        p.Controls.Add(lbl);
+        p.Controls.Add(ctrl);
+        return p;
+    }
+
+    /// <summary>İki DatePicker (başlangıç–bitiş) yan yana — standart tarih filtresi</summary>
+    public static Panel MakeDateRangeCell(string label, DateTimePicker dtpStart, DateTimePicker dtpEnd, int pickerWidth = 130)
+    {
+        dtpStart.Width = pickerWidth;
+        dtpStart.Format = DateTimePickerFormat.Custom;
+        dtpStart.CustomFormat = "dd.MM.yyyy";
+        StyleDatePicker(dtpStart);
+
+        dtpEnd.Width = pickerWidth;
+        dtpEnd.Format = DateTimePickerFormat.Custom;
+        dtpEnd.CustomFormat = "dd.MM.yyyy";
+        StyleDatePicker(dtpEnd);
+
+        var lblLabel = new Label { Text = label, AutoSize = true, Font = new Font("Segoe UI Semibold", 7.5f), ForeColor = TextMuted };
+        var lblDash = new Label { Text = "–", Width = 14, TextAlign = ContentAlignment.MiddleCenter, ForeColor = TextMuted };
+
+        int totalWidth = pickerWidth + 18 + pickerWidth;
+        lblLabel.Location = new Point(0, 6);
+        dtpStart.Location = new Point(0, 22);
+        lblDash.Location = new Point(pickerWidth + 2, 22);
+        dtpEnd.Location = new Point(pickerWidth + 18, 22);
+
+        var pnl = new Panel { Width = totalWidth, Height = 54, Margin = new Padding(0, 0, 10, 0) };
+        pnl.Controls.AddRange(new Control[] { lblLabel, dtpStart, lblDash, dtpEnd });
+        return pnl;
+    }
+
+    /// <summary>Filtre barının sonuna buton paneli ekler</summary>
+    public static Panel MakeFilterButtons(params Button[] buttons)
+    {
+        int totalW = buttons.Sum(b => b.Width) + (buttons.Length - 1) * 5 + 8;
+        var pnl = new Panel { Width = totalW, Height = 54, Margin = new Padding(4, 0, 0, 0) };
+        int x = 0;
+        foreach (var btn in buttons)
+        {
+            btn.Location = new Point(x, 22);
+            pnl.Controls.Add(btn);
+            x += btn.Width + 5;
+        }
+        return pnl;
     }
 
     // ═══ SIDEBAR ITEM ═══

@@ -39,70 +39,39 @@ public class RaporlarPanel : UserControl
         // ═══ HEADER ═══
         var pnlH = UIHelper.MakeHeader(L("reports"), L("reports_subtitle"));
 
-        // ═══ FILTER BAR ═══
-        // ═══ FILTER BAR (Grid Layout) ═══
-        var pnlFWrap = new TableLayoutPanel
-        {
-            Dock = DockStyle.Top,
-            AutoSize = true,
-            BackColor = UIHelper.BgPanel,
-            ColumnCount = 4,
-            RowCount = 2,
-            Padding = new Padding(20, 15, 20, 15),
-            CellBorderStyle = TableLayoutPanelCellBorderStyle.None
-        };
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160f)); // Start Date
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160f)); // End Date
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));   // Middle spacing/filters
-        pnlFWrap.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220f)); // Action Buttons Column
-
-        void AddGridFilter(Control ctrl, string label, int col, int row, int colSpan = 1)
-        {
-            var p = new FlowLayoutPanel { Width = ctrl.Width + 10, Height = 55, FlowDirection = FlowDirection.TopDown, Margin = new Padding(0, 0, 10, 0) };
-            var lbl = new System.Windows.Forms.Label { Text = label, AutoSize = true, Font = new Font("Segoe UI Semibold", 8f), ForeColor = UIHelper.TextMuted, Margin = new Padding(0, 0, 0, 4) };
-            p.Controls.Add(lbl);
-            p.Controls.Add(ctrl);
-            pnlFWrap.Controls.Add(p, col, row);
-            if (colSpan > 1) pnlFWrap.SetColumnSpan(p, colSpan);
-        }
-
-        dtpStart = new DateTimePicker { Width = 140, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Today.AddDays(-30) };
-        UIHelper.StyleDatePicker(dtpStart);
-        dtpEnd = new DateTimePicker { Width = 140, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Value = DateTime.Today };
-        UIHelper.StyleDatePicker(dtpEnd);
+        // ═══ FILTER BAR (Standart) ═══
+        dtpStart = new DateTimePicker { Value = DateTime.Today.AddDays(-30) };
+        dtpEnd = new DateTimePicker { Value = DateTime.Today };
         dtpStart.ValueChanged += (_, _) => { if (dtpStart.Value.Date > dtpEnd.Value.Date) dtpEnd.Value = dtpStart.Value.Date; };
         dtpEnd.ValueChanged += (_, _) => { if (dtpEnd.Value.Date < dtpStart.Value.Date) dtpStart.Value = dtpEnd.Value.Date; };
 
-        cmbUser = MakeCombo(180); cmbUser.Items.Add(L("all"));
+        cmbUser = MakeCombo(160); cmbUser.Items.Add(L("all"));
         foreach (var u in Program.DB!.GetTeslimEdilenler()) cmbUser.Items.Add(u);
         cmbUser.SelectedIndex = 0;
 
-        cmbDept = MakeCombo(160); cmbDept.Items.Add(L("all"));
+        cmbDept = MakeCombo(130); cmbDept.Items.Add(L("all"));
         foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
         cmbDept.SelectedIndex = 0;
 
-        cmbCategory = MakeCombo(160); cmbCategory.Items.Add(L("all"));
+        cmbCategory = MakeCombo(130); cmbCategory.Items.Add(L("all"));
         foreach (var c in Program.DB!.AltKartlariGetir().Where(k => !string.IsNullOrEmpty(k.Kategori)).Select(k => k.Kategori).Distinct().OrderBy(k => k)) cmbCategory.Items.Add(c);
         cmbCategory.SelectedIndex = 0;
 
-        // Row 0
-        AddGridFilter(dtpStart, L("start_date"), 0, 0);
-        AddGridFilter(dtpEnd, L("end_date"), 1, 0);
-        AddGridFilter(cmbUser, L("select_user"), 2, 0);
-
-        // Row 1
-        AddGridFilter(cmbDept, L("dept_filter"), 0, 1);
-        AddGridFilter(cmbCategory, L("select_category"), 1, 1, 2);
-
-        // Actions (Vertical stack in the 4th column)
-        var pnlActions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, Margin = new Padding(0), Padding = new Padding(10, 5, 0, 0) };
-        btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 110, 42);
-        btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 90, 42);
+        btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 100, 30);
+        btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 90, 30);
         btnGen.Click += (_, _) => GenerateReport();
         btnClr.Click += (_, _) => { dtpStart.Value = DateTime.Today.AddDays(-30); dtpEnd.Value = DateTime.Today; cmbUser.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbCategory.SelectedIndex = 0; GenerateReport(); };
-        pnlActions.Controls.AddRange(new Control[] { btnGen, btnClr });
-        pnlFWrap.Controls.Add(pnlActions, 3, 0);
-        pnlFWrap.SetRowSpan(pnlActions, 2);
+
+        var pnlFWrap = UIHelper.MakeFilterBar();
+        var flow = UIHelper.GetFilterFlow(pnlFWrap);
+
+        var cellDate = UIHelper.MakeDateRangeCell(L("date_filter"), dtpStart, dtpEnd);
+        var cellUser = UIHelper.MakeFilterCell(L("select_user"), cmbUser, 160);
+        var cellDept = UIHelper.MakeFilterCell(L("dept_filter"), cmbDept, 130);
+        var cellCat  = UIHelper.MakeFilterCell(L("select_category"), cmbCategory, 130);
+        var cellBtns = UIHelper.MakeFilterButtons(btnGen, btnClr);
+
+        flow.Controls.AddRange(new Control[] { cellDate, cellUser, cellDept, cellCat, cellBtns });
 
         // ═══ ACTION TOOLBAR ═══
         var pnlT = new FlowLayoutPanel

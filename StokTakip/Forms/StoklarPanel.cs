@@ -17,14 +17,16 @@ public class StoklarPanel : UserControl
 
         var pnlH = UIHelper.MakeHeader(L("stocks"));
 
-        var pnlT = UIHelper.MakeToolbar(40);
+        var pnlT = UIHelper.MakeToolbar();
         txtAra = UIHelper.MakeSearchBox(L("stock_code_search"), 300); txtAra.TextChanged += (_, _) => FilterGrid();
         
         var btnRapor = UIHelper.MakeFlowButton(L("report_al"), UIHelper.AccentBlue, 110);
-        btnRapor.Margin = new Padding(0, 3, 0, 3);
         btnRapor.Click += (_, _) => RaporAl();
         
-        pnlT.Controls.AddRange(new Control[] { txtAra, btnRapor });
+        var btnExcel = UIHelper.MakeFlowButton(L("export_excel"), UIHelper.AccentGreen, 130);
+        btnExcel.Click += (_, _) => ExcelExport();
+        
+        pnlT.Controls.AddRange(new Control[] { txtAra, btnRapor, btnExcel });
 
         grid = new DataGridView { Dock = DockStyle.Fill }; UIHelper.StyleGrid(grid);
         grid.Columns.Add("Id", "Id"); grid.Columns["Id"]!.Visible = false;
@@ -83,41 +85,47 @@ public class StoklarPanel : UserControl
         lblInfo.Text = L("stocks_subtitle") + $"  •  {_altKartlar.Count} {L("child_card").ToLower()}  •  ⚠ {dusuk} {L("low_stock").ToLower()}";
     }
 
+    private void ExcelExport()
+    {
+        if (_altKartlar.Count == 0) return;
+        using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = $"Stoklar_{DateTime.Now:yyyyMMdd}.xlsx" };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.AddWorksheet(L("stocks"));
+        string[] headers = { L("code_no"), L("stock_name"), L("parent_card_col"), L("category"), L("current_stock"), L("min_stock") };
+        for (int i = 0; i < headers.Length; i++) { ws.Cell(1, i + 1).Value = headers[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 60, 110); ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White; }
+        for (int i = 0; i < _altKartlar.Count; i++)
+        {
+            var k = _altKartlar[i];
+            ws.Cell(i + 2, 1).Value = k.KodNo; ws.Cell(i + 2, 2).Value = k.Ad;
+            ws.Cell(i + 2, 3).Value = string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd;
+            ws.Cell(i + 2, 4).Value = k.Kategori; ws.Cell(i + 2, 5).Value = k.MevcutStok; ws.Cell(i + 2, 6).Value = k.MinStok;
+        }
+        ws.Columns().AdjustToContents();
+        try { wb.SaveAs(dlg.FileName); MessageBox.Show(L("export_success", dlg.FileName)); }
+        catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
+    }
+
     private void RaporAl()
     {
-        if (_altKartlar.Count == 0) { MessageBox.Show("Görüntülenecek stok kartı yok.", L("info")); return; }
+        if (_altKartlar.Count == 0) { MessageBox.Show(L("report_no_data"), L("info")); return; }
         
         string firma = Program.Settings.CompanyName;
         var pd = new PrintDocument();
         pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169); // Portrait
         pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
 
-        // Precalculate Data
-        double grandGiris = 0, grandCikis = 0, grandMevcut = 0;
-        var raporVerisi = new List<(string KodNo, string Ad, double G, double C, double M)>();
-        foreach(var kart in _altKartlar) 
-        {
-            var hareketler = Program.DB!.HareketleriGetir(kart.Id, System.DateTime.MinValue, System.DateTime.MaxValue, null, null);
-            double kartGiris = hareketler.Where(h => h.Tur == "Giris").Sum(h => h.Miktar);
-            double kartCikis = hareketler.Where(h => h.Tur == "Cikis").Sum(h => h.Miktar);
-            
-            grandGiris += kartGiris;
-            grandCikis += kartCikis;
-            grandMevcut += kart.MevcutStok;
-            
-            raporVerisi.Add((kart.KodNo, kart.Ad, kartGiris, kartCikis, kart.MevcutStok));
-        }
+        // Optimized: Single query instead of N+1
+        var raporVerisi = Program.DB!.StokRaporVerisi();
 
         // Use filtered data if search is active
         var filter = txtAra.Text.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(filter))
-        {
             raporVerisi = raporVerisi.Where(x => x.KodNo.ToLowerInvariant().Contains(filter) || x.Ad.ToLowerInvariant().Contains(filter)).ToList();
-            // Re-calculate totals for filtered data
-            grandGiris = raporVerisi.Sum(x => x.G);
-            grandCikis = raporVerisi.Sum(x => x.C);
-            grandMevcut = raporVerisi.Sum(x => x.M);
-        }
+
+        double grandGiris = raporVerisi.Sum(x => x.ToplamGiris);
+        double grandCikis = raporVerisi.Sum(x => x.ToplamCikis);
+        double grandMevcut = raporVerisi.Sum(x => x.Mevcut);
 
         int ps = 0;
         int pageNum = 0;
@@ -149,7 +157,7 @@ public class StoklarPanel : UserControl
             // Table column widths
             float[] w = { 90, 270, 110, 110, 110 }; 
             float u = 0; foreach (var ww in w) u += ww; w[w.Length - 1] = pw - (u - w[w.Length - 1]);
-            string[] hdr = { "Stok Kodu", "Stok Adı", "Top. Giriş", "Top. Çıkış", "Mevcut" };
+            string[] hdr = { L("code_no"), L("stock_name"), L("entry"), L("exit"), L("current_stock") };
 
             // Draw Report Header (first page only)
             if (ps == 0) { 
@@ -158,7 +166,7 @@ public class StoklarPanel : UserControl
                     g.DrawString(firma, ff, br, lm, y); 
                     y += 24; 
                 } 
-                g.DrawString("STOK DURUM RAPORU", fTitle, br, lm, y); y += 30; 
+                g.DrawString(L("stocks").ToUpperInvariant(), fTitle, br, lm, y); y += 30; 
                 g.DrawString(L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")), fSub, brMuted, lm, y); y += 20; 
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 15; 
             }
@@ -196,9 +204,9 @@ public class StoklarPanel : UserControl
                 g.DrawString(item.Ad, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); x += w[1];
                 
                 var sfRight = new StringFormat{ Alignment = StringAlignment.Far };
-                g.DrawString(UIHelper.FormatMiktar(item.G), fRow, brGreen, new RectangleF(x, y + 2, w[2]-5, 20), sfRight); x += w[2];
-                g.DrawString(UIHelper.FormatMiktar(item.C), fRow, brRed, new RectangleF(x, y + 2, w[3]-5, 20), sfRight); x += w[3];
-                g.DrawString(UIHelper.FormatMiktar(item.M), fRow, br, new RectangleF(x, y + 2, w[4]-5, 20), sfRight);
+                g.DrawString(UIHelper.FormatMiktar(item.ToplamGiris), fRow, brGreen, new RectangleF(x, y + 2, w[2]-5, 20), sfRight); x += w[2];
+                g.DrawString(UIHelper.FormatMiktar(item.ToplamCikis), fRow, brRed, new RectangleF(x, y + 2, w[3]-5, 20), sfRight); x += w[3];
+                g.DrawString(UIHelper.FormatMiktar(item.Mevcut), fRow, br, new RectangleF(x, y + 2, w[4]-5, 20), sfRight);
                 
                 g.DrawLine(pen, lm, y + 20, lm + pw, y + 20); 
                 y += 20;
@@ -225,20 +233,20 @@ public class StoklarPanel : UserControl
                 g.DrawRectangle(penTot, lm, y, pw, 60);
                 
                 y += 8;
-                g.DrawString("GENEL TOPLAMLAR", fTotalLbl, brMuted, lm + 10, y + 10);
+                g.DrawString(L("total_consumption").ToUpperInvariant(), fTotalLbl, brMuted, lm + 10, y + 10);
                 
                 float totalX = lm + w[0] + w[1];
                 var sfR = new StringFormat{ Alignment = StringAlignment.Far };
                 
-                g.DrawString("Toplam Giriş:", fSub, brMuted, new RectangleF(totalX, y - 2, w[2]-5, 20), sfR);
+                g.DrawString(L("entry") + ":", fSub, brMuted, new RectangleF(totalX, y - 2, w[2]-5, 20), sfR);
                 g.DrawString(UIHelper.FormatMiktar(grandGiris), fTotal, brGreen, new RectangleF(totalX, y + 15, w[2]-5, 30), sfR);
                 totalX += w[2];
 
-                g.DrawString("Toplam Çıkış:", fSub, brMuted, new RectangleF(totalX, y - 2, w[3]-5, 20), sfR);
+                g.DrawString(L("exit") + ":", fSub, brMuted, new RectangleF(totalX, y - 2, w[3]-5, 20), sfR);
                 g.DrawString(UIHelper.FormatMiktar(grandCikis), fTotal, brRed, new RectangleF(totalX, y + 15, w[3]-5, 30), sfR);
                 totalX += w[3];
                 
-                g.DrawString("Mevcut:", fSub, brMuted, new RectangleF(totalX, y - 2, w[4]-5, 20), sfR);
+                g.DrawString(L("current_stock") + ":", fSub, brMuted, new RectangleF(totalX, y - 2, w[4]-5, 20), sfR);
                 g.DrawString(UIHelper.FormatMiktar(grandMevcut), fTotal, brBlue, new RectangleF(totalX, y + 15, w[4]-5, 30), sfR);
             }
 

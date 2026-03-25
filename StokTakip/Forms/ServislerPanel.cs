@@ -5,7 +5,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class ServislerPanel : Panel
+public class ServislerPanel : UserControl
 {
     private DataGridView dgv = new DataGridView();
     private List<ServisKaydi> _kayitlar = new();
@@ -28,27 +28,33 @@ public class ServislerPanel : Panel
     {
         var pnlH = UIHelper.MakeHeader(L("services", "Servis / Bakım İşlemleri"));
 
-        // Filter Bar
-        var pnlF = UIHelper.MakeToolbar(40); 
-        pnlF.BackColor = UIHelper.BgPanel;
-        
-        pnlF.Controls.Add(FL(L("date_filter")));
-        dtpBas = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2), Value = new DateTime(2024, 1, 1) };
-        pnlF.Controls.Add(dtpBas); 
-        pnlF.Controls.Add(FL("-"));
-        dtpBit = new DateTimePicker { Width = 120, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy", Margin = new Padding(2) };
-        pnlF.Controls.Add(dtpBit);
-
-        pnlF.Controls.Add(FL(L("arama_label", "Arama:")));
-        txtArama = UIHelper.MakeSearchBox(L("service_search_placeholder", "Cihaz adı, seri no..."), 250);
+        // ═══ FILTER BAR (Standart) ═══
+        dtpBas = new DateTimePicker { Value = new DateTime(2024, 1, 1) };
+        dtpBit = new DateTimePicker();
+        txtArama = UIHelper.MakeSearchBox(L("service_search_placeholder", "Cihaz adı, seri no..."), 200);
         txtArama.TextChanged += (_, _) => Filtrele();
-        pnlF.Controls.Add(txtArama);
 
-        var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 28);
-        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 28);
+        var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 30);
+        var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 30);
         btnFil.Click += (_, _) => Filtrele(); 
         btnClr.Click += (_, _) => Temizle();
-        pnlF.Controls.AddRange(new Control[] { btnFil, btnClr });
+
+        var pnlF = UIHelper.MakeFilterBar();
+        var flow = UIHelper.GetFilterFlow(pnlF);
+
+        var cellDate  = UIHelper.MakeDateRangeCell(L("date_filter"), dtpBas, dtpBit);
+        var cellArama = UIHelper.MakeFilterCell(L("arama_label", "Arama:"), txtArama, 200);
+        var cellBtns  = UIHelper.MakeFilterButtons(btnFil, btnClr);
+
+        flow.Controls.AddRange(new Control[] { cellDate, cellArama, cellBtns });
+
+        // Arama kutusunu kalan boşluğa genişlet
+        flow.Resize += (_, _) =>
+        {
+            int used = cellDate.Width + cellBtns.Width + 10 * 3 + flow.Padding.Horizontal + 24;
+            int remaining = flow.Width - used;
+            if (remaining > 80) { txtArama.Width = remaining; cellArama.Width = remaining; }
+        };
 
         // Action Toolbar
         var toolbar = UIHelper.MakeToolbar();
@@ -96,7 +102,6 @@ public class ServislerPanel : Panel
         Controls.Add(pnlSt);
     }
 
-    static Label FL(string t) => new Label { Text = t, AutoSize = true, Font = new Font("Segoe UI Semibold", 8.5f), ForeColor = UIHelper.TextSecondary, Margin = new Padding(4, 9, 2, 0) };
 
     private void Filtrele()
     {

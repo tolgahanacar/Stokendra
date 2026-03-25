@@ -576,6 +576,72 @@ public class Database : IDisposable
 
     private static DateTime ParseDateSafe(string s) { if (string.IsNullOrWhiteSpace(s)) return DateTime.MinValue; string[] f = { "yyyy-MM-dd HH:mm:ss","yyyy-MM-dd","dd.MM.yyyy HH:mm:ss","dd.MM.yyyy HH:mm","dd.MM.yyyy","MM/dd/yyyy HH:mm:ss","MM/dd/yyyy" }; if (DateTime.TryParseExact(s, f, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)) return d; if (DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out d)) return d; return DateTime.MinValue; }
 
+    // ═══ PERFORMANS SORGULARI ═══
+
+    /// <summary>Son 7 günün giriş/çıkış toplamları — Dashboard bar chart için optimize sorgu</summary>
+    public List<(DateTime Tarih, double Giris, double Cikis)> Son7GunHareketOzetleri()
+    {
+        var result = new List<(DateTime Tarih, double Giris, double Cikis)>();
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            var last7 = DateTime.Today.AddDays(-6);
+            m.CommandText = @"
+                SELECT DATE(Tarih) as Gün,
+                    COALESCE(SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE 0 END),0) as TopGiris,
+                    COALESCE(SUM(CASE WHEN Tur='Cikis' THEN Miktar ELSE 0 END),0) as TopCikis
+                FROM StokHareketleri
+                WHERE Tarih >= $bas
+                GROUP BY DATE(Tarih)
+                ORDER BY DATE(Tarih)";
+            m.Parameters.AddWithValue("$bas", last7.ToString(DateFormat, CultureInfo.InvariantCulture));
+            using var r = m.ExecuteReader();
+            var dataMap = new Dictionary<DateTime, (double g, double c)>();
+            while (r.Read())
+            {
+                var dt = ParseDateSafe(r.GetString(0));
+                dataMap[dt.Date] = (r.GetDouble(1), r.GetDouble(2));
+            }
+            // Ensure all 7 days are present
+            for (int i = 0; i < 7; i++)
+            {
+                var day = DateTime.Today.AddDays(-6 + i);
+                if (dataMap.TryGetValue(day, out var vals))
+                    result.Add((day, vals.g, vals.c));
+                else
+                    result.Add((day, 0, 0));
+            }
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Son7GunHareketOzetleri error: " + ex); }
+        return result;
+    }
+
+    /// <summary>Stok rapor verisi — her kartın toplam giriş/çıkışını tek sorguda hesaplar</summary>
+    public List<(string KodNo, string Ad, double ToplamGiris, double ToplamCikis, double Mevcut)> StokRaporVerisi()
+    {
+        var result = new List<(string, string, double, double, double)>();
+        try
+        {
+            using var c = CreateConnection();
+            using var m = c.CreateCommand();
+            m.CommandText = @"
+                SELECT s.KodNo, s.Ad,
+                    COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE 0 END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0) as TopGiris,
+                    COALESCE((SELECT SUM(CASE WHEN h.Tur='Cikis' THEN h.Miktar ELSE 0 END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0) as TopCikis,
+                    COALESCE((SELECT SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) FROM StokHareketleri h WHERE h.StokKartId=s.Id),0) as Mevcut
+                FROM StokKartlari s
+                WHERE s.KartTipi='Alt'
+                ORDER BY s.KodNo";
+            using var r = m.ExecuteReader();
+            while (r.Read())
+                result.Add((r.GetString(0), r.GetString(1), r.GetDouble(2), r.GetDouble(3), r.GetDouble(4)));
+        }
+        catch (Exception ex) { System.Diagnostics.Debug.WriteLine("StokRaporVerisi error: " + ex); }
+        return result;
+    }
+
+
     // ═══ SERVIS KAYITLARI ═══
     public List<ServisKaydi> ServisKayitlariniGetir(DateTime? baslangic = null, DateTime? bitis = null, string? arama = null)
     {

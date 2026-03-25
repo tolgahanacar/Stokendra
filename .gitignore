@@ -1,4 +1,6 @@
 # Build results
+bin/
+obj/
 [Bb]in/
 [Oo]bj/
 StokTakip/bin/
