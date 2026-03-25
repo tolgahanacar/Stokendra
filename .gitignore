@@ -27,3 +27,8 @@ StokTakip/obj/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Installer
+Installer/
+
+*.iss
