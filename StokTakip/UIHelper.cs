@@ -4,44 +4,44 @@ namespace StokTakip;
 
 public static class UIHelper
 {
-    // ═══ RENK PALETİ (Premium Dark — Yüksek Kontrast) ═══
-    public static readonly Color BgDark       = Color.FromArgb(15, 17, 23);
-    public static readonly Color BgSidebar    = Color.FromArgb(18, 21, 30);
-    public static readonly Color BgPanel      = Color.FromArgb(22, 26, 38);
-    public static readonly Color BgCard       = Color.FromArgb(26, 31, 44);
-    public static readonly Color BgInput      = Color.FromArgb(30, 36, 52);
-    public static readonly Color BgAltRow     = Color.FromArgb(19, 22, 32);
-    public static readonly Color BgHover      = Color.FromArgb(32, 40, 58);
-    public static readonly Color BgToolbar    = Color.FromArgb(20, 24, 36);
+    // ═══ RENK PALETİ (Premium Dark — Canlı & Keskin) ═══
+    public static readonly Color BgDark       = Color.FromArgb(12, 14, 20);
+    public static readonly Color BgSidebar    = Color.FromArgb(14, 17, 26);
+    public static readonly Color BgPanel      = Color.FromArgb(18, 22, 34);
+    public static readonly Color BgCard       = Color.FromArgb(22, 28, 42);
+    public static readonly Color BgInput      = Color.FromArgb(25, 32, 48);
+    public static readonly Color BgAltRow     = Color.FromArgb(16, 19, 28);
+    public static readonly Color BgHover      = Color.FromArgb(28, 38, 58);
+    public static readonly Color BgToolbar    = Color.FromArgb(16, 20, 32);
 
-    // Aksan renkleri — canlı ve okunaklı
-    public static readonly Color AccentBlue   = Color.FromArgb(96, 165, 250);
-    public static readonly Color AccentGreen  = Color.FromArgb(52, 211, 153);
-    public static readonly Color AccentYellow = Color.FromArgb(251, 191, 36);
-    public static readonly Color AccentRed    = Color.FromArgb(248, 113, 113);
-    public static readonly Color AccentPurple = Color.FromArgb(167, 139, 250);
-    public static readonly Color AccentCyan   = Color.FromArgb(34, 211, 238);
-    public static readonly Color AccentOrange = Color.FromArgb(251, 146, 60);
+    // Aksan renkleri — doygun, canlı, parlak
+    public static readonly Color AccentBlue   = Color.FromArgb(56, 142, 255);
+    public static readonly Color AccentGreen  = Color.FromArgb(0, 220, 130);
+    public static readonly Color AccentYellow = Color.FromArgb(255, 200, 0);
+    public static readonly Color AccentRed    = Color.FromArgb(255, 75, 75);
+    public static readonly Color AccentPurple = Color.FromArgb(140, 100, 255);
+    public static readonly Color AccentCyan   = Color.FromArgb(0, 210, 255);
+    public static readonly Color AccentOrange = Color.FromArgb(255, 140, 30);
 
-    // Metin — yüksek kontrast
-    public static readonly Color TextWhite     = Color.FromArgb(250, 250, 255);
-    public static readonly Color TextPrimary   = Color.FromArgb(235, 240, 250);
-    public static readonly Color TextSecondary = Color.FromArgb(170, 180, 200);
-    public static readonly Color TextMuted     = Color.FromArgb(120, 135, 160);
-    public static readonly Color TextDim       = Color.FromArgb(85, 100, 125);
+    // Metin — yüksek kontrast, keskin
+    public static readonly Color TextWhite     = Color.FromArgb(255, 255, 255);
+    public static readonly Color TextPrimary   = Color.FromArgb(240, 244, 255);
+    public static readonly Color TextSecondary = Color.FromArgb(185, 195, 220);
+    public static readonly Color TextMuted     = Color.FromArgb(130, 145, 175);
+    public static readonly Color TextDim       = Color.FromArgb(90, 105, 135);
 
-    public static readonly Color GridLine     = Color.FromArgb(35, 42, 60);
-    public static readonly Color Divider      = Color.FromArgb(38, 48, 70);
-    public static readonly Color SelectionBg  = Color.FromArgb(40, 72, 130);
-    public static readonly Color BtnDark      = Color.FromArgb(55, 70, 95);
-    public static readonly Color BtnMid       = Color.FromArgb(75, 90, 115);
-    public static readonly Color BtnBarBg     = Color.FromArgb(55, 70, 95);
-    public static readonly Color StokWarning  = Color.FromArgb(248, 113, 113);
-    public static readonly Color StokLow      = Color.FromArgb(251, 191, 36);
+    public static readonly Color GridLine     = Color.FromArgb(30, 38, 55);
+    public static readonly Color Divider      = Color.FromArgb(35, 45, 65);
+    public static readonly Color SelectionBg  = Color.FromArgb(30, 80, 160);
+    public static readonly Color BtnDark      = Color.FromArgb(45, 58, 85);
+    public static readonly Color BtnMid       = Color.FromArgb(65, 82, 115);
+    public static readonly Color BtnBarBg     = Color.FromArgb(50, 65, 95);
+    public static readonly Color StokWarning  = Color.FromArgb(255, 75, 75);
+    public static readonly Color StokLow      = Color.FromArgb(255, 200, 0);
 
-    public static readonly Color SidebarActive  = Color.FromArgb(30, 41, 59);
-    public static readonly Color SidebarHover   = Color.FromArgb(26, 36, 54);
-    public static readonly Color SidebarDivider = Color.FromArgb(35, 48, 68);
+    public static readonly Color SidebarActive  = Color.FromArgb(24, 36, 58);
+    public static readonly Color SidebarHover   = Color.FromArgb(20, 32, 52);
+    public static readonly Color SidebarDivider = Color.FromArgb(30, 42, 62);
 
     // ═══ FONT ═══
     public static readonly Font FontGrid       = new("Segoe UI Semibold", 9.5f);
