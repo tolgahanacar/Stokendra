@@ -132,7 +132,14 @@ public class StokKartiDuzenleForm : Form
         var k = new StokKarti { Id = _mevcut?.Id ?? 0, Ad = txtAd.Text.Trim(), KodNo = txtKodNo.Text.Trim(),
             Aciklama = txtAciklama.Text.Trim(), MinStok = kartTipi == "Alt" ? minStok : 0,
             Kategori = cmbKategori.SelectedItem?.ToString() ?? "", KartTipi = kartTipi, UstKartId = ustKartId };
-        if (_mevcut == null) Program.DB!.StokKartiEkle(k); else Program.DB!.StokKartiGuncelle(k);
-        DialogResult = DialogResult.OK;
+        try
+        {
+            if (_mevcut == null) Program.DB!.StokKartiEkle(k); else Program.DB!.StokKartiGuncelle(k);
+            DialogResult = DialogResult.OK;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 }

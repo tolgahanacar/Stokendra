@@ -160,8 +160,15 @@ public class HareketEkleForm : Form
             Departman = cmbDept.SelectedItem!.ToString()!, Tarih = dtpTarih.Value, Aciklama = txtAciklama.Text.Trim()
         };
 
-        if (_mevcut != null) Program.DB!.HareketGuncelle(h);
-        else Program.DB!.HareketEkle(h);
-        DialogResult = DialogResult.OK;
+        try
+        {
+            if (_mevcut != null) Program.DB!.HareketGuncelle(h);
+            else Program.DB!.HareketEkle(h);
+            DialogResult = DialogResult.OK;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 }

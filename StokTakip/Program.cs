@@ -12,33 +12,31 @@ static class Program
     [STAThread]
     static void Main()
     {
-        Application.SetHighDpiMode(HighDpiMode.SystemAware);
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         ApplicationConfiguration.Initialize();
 
-        // Setup global error handling to track installation crashes
         Application.ThreadException += (s, e) => {
             LogError(e.Exception);
         };
         AppDomain.CurrentDomain.UnhandledException += (s, e) => {
             if (e.ExceptionObject is Exception ex) LogError(ex);
         };
+        TaskScheduler.UnobservedTaskException += (s, e) =>
+        {
+            LogError(e.Exception);
+            e.SetObserved();
+        };
 
         Settings = AppSettings.Yukle();
         LocalizationManager.Initialize(Settings.Language);
 
-        if (string.IsNullOrWhiteSpace(Settings.DbPath) || !File.Exists(Settings.DbPath))
-        {
-            using var setup = new DbPathForm();
-            if (setup.ShowDialog() != DialogResult.OK)
-                return;
-            Settings.DbPath = setup.SecilenYol;
-            Settings.Kaydet();
-        }
+        if (!EnsureDatabasePath())
+            return;
 
-        DB = new Data.Database(Settings.DbPath);
-        Application.ApplicationExit += (s, e) => DB?.Dispose();
+        if (!InitializeDatabase())
+            return;
 
-        // Login gate
         using var login = new LoginForm();
         if (login.ShowDialog() != DialogResult.OK)
             return;
@@ -46,14 +44,70 @@ static class Program
         Application.Run(new MainForm());
     }
 
+    private static bool EnsureDatabasePath()
+    {
+        if (!string.IsNullOrWhiteSpace(Settings.DbPath))
+        {
+            try
+            {
+                Settings.DbPath = AppPaths.NormalizeDatabasePath(Settings.DbPath);
+                Settings.Kaydet();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogError(ex);
+            }
+        }
+
+        using var setup = new DbPathForm();
+        if (setup.ShowDialog() != DialogResult.OK)
+            return false;
+
+        Settings.DbPath = setup.SecilenYol;
+        Settings.Kaydet();
+        return true;
+    }
+
+    private static bool InitializeDatabase()
+    {
+        try
+        {
+            DB = new Data.Database(Settings.DbPath);
+            Application.ApplicationExit += (s, e) => DB?.Dispose();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            LogError(ex);
+            MessageBox.Show(
+                "Veritabani acilamadi veya dogrulanamadi.\nLutfen yeni bir veritabani konumu secin.",
+                "Hata",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+
+            using var setup = new DbPathForm();
+            if (setup.ShowDialog() != DialogResult.OK)
+                return false;
+
+            Settings.DbPath = setup.SecilenYol;
+            Settings.Kaydet();
+
+            DB = new Data.Database(Settings.DbPath);
+            Application.ApplicationExit += (s, e) => DB?.Dispose();
+            return true;
+        }
+    }
+
     private static void LogError(Exception ex)
     {
         try
         {
-            var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra");
-            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "crash_log.txt"), ex.ToString());
-            MessageBox.Show("Kritik Hata: " + ex.Message + "\n\nLog: " + System.IO.Path.Combine(dir, "crash_log.txt"), "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _ = AppPaths.ApplicationDataDirectory;
+            File.AppendAllText(
+                AppPaths.CrashLogPath,
+                $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}{Environment.NewLine}{Environment.NewLine}");
+            MessageBox.Show("Kritik Hata: " + ex.Message + "\n\nLog: " + AppPaths.CrashLogPath, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         catch { }
     }

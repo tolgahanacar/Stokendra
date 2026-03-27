@@ -81,6 +81,8 @@ public class LoginForm : Form
         if (Program.DB!.KullaniciDogrula(user, pass))
         {
             Program.CurrentUser = user;
+            if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && Program.DB.VarsayilanAdminSifresiKullanimda())
+                MessageBox.Show(L("default_admin_password_warning"), L("warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.OK;
         }
         else

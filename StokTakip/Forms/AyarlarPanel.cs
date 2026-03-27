@@ -57,7 +57,18 @@ public class AyarlarPanel : UserControl
         txtDbPath = new TextBox { Width = 250, ReadOnly = true, Text = Program.Settings.DbPath };
         UIHelper.StyleTextBox(txtDbPath); txtDbPath.ForeColor = UIHelper.TextDim;
         var btnDbDeg = UIHelper.MakeButton(L("change_db"), UIHelper.BtnMid, 0, 0, 90, 28);
-        btnDbDeg.Click += (_, _) => { using var d = new SaveFileDialog { Title = L("db_location"), Filter = "SQLite DB|*.db", FileName = "stok.db" }; if (d.ShowDialog() == DialogResult.OK) txtDbPath.Text = d.FileName; };
+        btnDbDeg.Click += (_, _) =>
+        {
+            using var d = new SaveFileDialog
+            {
+                Title = L("db_location"),
+                Filter = "SQLite DB|*.db",
+                InitialDirectory = AppPaths.ApplicationDataDirectory,
+                FileName = Path.GetFileName(AppPaths.DefaultDatabasePath)
+            };
+            if (d.ShowDialog() == DialogResult.OK)
+                txtDbPath.Text = AppPaths.NormalizeDatabasePath(d.FileName);
+        };
         pnlDbPath.Controls.AddRange(new Control[] { txtDbPath, btnDbDeg });
         bodyDb.Controls.Add(MakeLabelPair(L("db_path_label"), pnlDbPath));
 
@@ -86,6 +97,9 @@ public class AyarlarPanel : UserControl
         bodySec.Controls.Add(MakeLabelPair(L("old_password"), txtEski));
         bodySec.Controls.Add(MakeLabelPair(L("new_password"), txtYeni));
         bodySec.Controls.Add(MakeLabelPair(L("confirm_password"), txtTekrar));
+        bodySec.Controls.Add(new Label { Text = L("password_policy_hint"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, -2, 0, 8) });
+        if (Program.DB?.VarsayilanAdminSifresiKullanimda() == true)
+            bodySec.Controls.Add(new Label { Text = L("default_admin_password_warning"), Font = new Font("Segoe UI", 8.5f, FontStyle.Bold), ForeColor = UIHelper.AccentOrange, AutoSize = true, Margin = new Padding(0, 0, 0, 10) });
         
         var btnSifre = UIHelper.MakeButton(L("change_password"), UIHelper.AccentOrange, 0, 10, 200, 36);
         btnSifre.ForeColor = Color.Black;
@@ -95,6 +109,9 @@ public class AyarlarPanel : UserControl
             { MessageBox.Show(L("password_empty")); return; }
             if (txtYeni.Text != txtTekrar.Text)
             { MessageBox.Show(L("password_mismatch")); return; }
+            string? passwordError = Program.DB!.SifrePolitikasiHatasi(txtYeni.Text, Program.CurrentUser);
+            if (passwordError != null)
+            { MessageBox.Show(passwordError, L("warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             if (Program.DB!.SifreDegistir(Program.CurrentUser, txtEski.Text, txtYeni.Text))
             { MessageBox.Show(L("password_changed"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); txtEski.Clear(); txtYeni.Clear(); txtTekrar.Clear(); }
             else MessageBox.Show(L("password_wrong"), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -154,7 +171,7 @@ public class AyarlarPanel : UserControl
     {
         using var dlg = new SaveFileDialog { Title = L("backup_db"), Filter = "SQLite DB|*.db", FileName = $"stokendra_yedek_{DateTime.Now:yyyyMMdd_HHmm}.db" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
-        try { File.Copy(Program.Settings.DbPath, dlg.FileName, true); MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); }
+        try { Program.DB!.CreateBackup(dlg.FileName); MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); }
         catch (Exception ex) { MessageBox.Show(L("backup_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
@@ -162,44 +179,7 @@ public class AyarlarPanel : UserControl
     {
         using var dlg = new SaveFileDialog { Title = L("backup_sql"), Filter = "SQL|*.sql", FileName = $"stokendra_yedek_{DateTime.Now:yyyyMMdd_HHmm}.sql" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
-        try
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("-- Stokendra SQL Backup");
-            sb.AppendLine($"-- Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-
-            using var con = new SqliteConnection($"Data Source={Program.Settings.DbPath}");
-            con.Open();
-            string[] tables = { "StokKartlari", "StokHareketleri", "Notlar", "Birimler", "Departmanlar", "AppConfig", "AuditLog", "Kullanicilar", "ServisKayitlari" };
-            foreach (var table in tables)
-            {
-                try
-                {
-                    using var cmd = con.CreateCommand();
-                    cmd.CommandText = $"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table}'";
-                    var createSql = cmd.ExecuteScalar()?.ToString();
-                    if (!string.IsNullOrEmpty(createSql)) { sb.AppendLine($"DROP TABLE IF EXISTS {table};"); sb.AppendLine(createSql + ";"); }
-
-                    using var cmd2 = con.CreateCommand();
-                    cmd2.CommandText = $"SELECT * FROM {table}";
-                    using var r = cmd2.ExecuteReader();
-                    while (r.Read())
-                    {
-                        var vals = new List<string>();
-                        for (int i = 0; i < r.FieldCount; i++)
-                        {
-                            if (r.IsDBNull(i)) vals.Add("NULL");
-                            else if (r.GetFieldType(i) == typeof(long) || r.GetFieldType(i) == typeof(double)) vals.Add(r.GetValue(i).ToString()!);
-                            else vals.Add($"'{r.GetString(i).Replace("'", "''")}'");
-                        }
-                        sb.AppendLine($"INSERT INTO {table} VALUES ({string.Join(",", vals)});");
-                    }
-                }
-                catch { }
-            }
-            File.WriteAllText(dlg.FileName, sb.ToString(), Encoding.UTF8);
-            MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
+        try { Program.DB!.ExportSqlBackup(dlg.FileName); MessageBox.Show(L("backup_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information); }
         catch (Exception ex) { MessageBox.Show(L("backup_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
@@ -209,7 +189,7 @@ public class AyarlarPanel : UserControl
         bool dilDegisti = secilenDil != Program.Settings.Language;
         Program.Settings.Language = secilenDil;
         Program.Settings.CompanyName = txtFirma.Text.Trim();
-        if (!string.IsNullOrWhiteSpace(txtDbPath.Text)) Program.Settings.DbPath = txtDbPath.Text;
+        if (!string.IsNullOrWhiteSpace(txtDbPath.Text)) Program.Settings.DbPath = AppPaths.NormalizeDatabasePath(txtDbPath.Text);
         Program.Settings.Kaydet();
         if (dilDegisti) MessageBox.Show(L("saved_restart"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         else MessageBox.Show(L("settings_saved"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);

@@ -140,8 +140,15 @@ public class ServislerPanel : UserControl
         using var frm = new ServisEkleForm();
         if (frm.ShowDialog() == DialogResult.OK)
         {
-            Program.DB?.ServisKaydiEkle(frm.Kayit);
-            Filtrele();
+            try
+            {
+                Program.DB?.ServisKaydiEkle(frm.Kayit);
+                Filtrele();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 
@@ -157,8 +164,15 @@ public class ServislerPanel : UserControl
         using var frm = new ServisEkleForm(secili);
         if (frm.ShowDialog() == DialogResult.OK)
         {
-            Program.DB?.ServisKaydiGuncelle(frm.Kayit);
-            Filtrele();
+            try
+            {
+                Program.DB?.ServisKaydiGuncelle(frm.Kayit);
+                Filtrele();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 
@@ -173,8 +187,15 @@ public class ServislerPanel : UserControl
 
         if (MessageBox.Show(L("confirm_service_delete", "Bu servis kaydı silinsin mi?"), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
         {
-            Program.DB?.ServisKaydiSil(secili.Id);
-            Filtrele();
+            try
+            {
+                Program.DB?.ServisKaydiSil(secili.Id);
+                Filtrele();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 
@@ -192,7 +213,7 @@ public class ServislerPanel : UserControl
             if (range == null) { MessageBox.Show(L("import_no_data")); return; }
             var rows = range.RowsUsed().Skip(1);
             
-            int eklenen = 0;
+            var kayitlar = new List<ServisKaydi>();
             foreach (var row in rows)
             {
                 var s = new ServisKaydi
@@ -207,12 +228,13 @@ public class ServislerPanel : UserControl
 
                 if (!string.IsNullOrEmpty(s.CihazAdi))
                 {
-                    Program.DB?.ServisKaydiEkle(s);
-                    eklenen++;
+                    kayitlar.Add(s);
                 }
             }
+            if (kayitlar.Count > 0)
+                Program.DB?.TopluServisKaydiEkle(kayitlar);
             Filtrele();
-            MessageBox.Show(L("import_success", eklenen));
+            MessageBox.Show(L("import_success", kayitlar.Count));
         }
         catch (Exception ex) { MessageBox.Show(ex.Message); }
     }

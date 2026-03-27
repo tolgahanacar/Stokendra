@@ -9,26 +9,26 @@ public class AppSettings
     public string CompanyName { get; set; } = "";
     public string Theme { get; set; } = "dark";
 
-    private static readonly string SettingsFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-        "Stokendra", 
-        "ayarlar.json");
-
     static AppSettings()
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra");
-        if (!Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+        _ = AppPaths.ApplicationDataDirectory;
     }
 
     public static AppSettings Yukle()
     {
-        if (File.Exists(SettingsFile))
+        if (File.Exists(AppPaths.SettingsFilePath))
         {
             try
             {
-                var json = File.ReadAllText(SettingsFile);
-                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                var json = File.ReadAllText(AppPaths.SettingsFilePath);
+                var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                settings.DbPath = string.IsNullOrWhiteSpace(settings.DbPath)
+                    ? ""
+                    : AppPaths.NormalizeDatabasePath(settings.DbPath);
+                settings.Language = Array.Exists(LocalizationManager.SupportedLanguages, x => x == settings.Language)
+                    ? settings.Language
+                    : "tr";
+                return settings;
             }
             catch (Exception ex)
             {
@@ -42,8 +42,17 @@ public class AppSettings
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(DbPath))
+                DbPath = AppPaths.NormalizeDatabasePath(DbPath);
+
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFile, json);
+            string tempFile = AppPaths.SettingsFilePath + ".tmp";
+            File.WriteAllText(tempFile, json);
+
+            if (File.Exists(AppPaths.SettingsFilePath))
+                File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+            else
+                File.Move(tempFile, AppPaths.SettingsFilePath);
         }
         catch (Exception ex)
         {

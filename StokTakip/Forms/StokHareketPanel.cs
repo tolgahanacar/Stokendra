@@ -188,7 +188,14 @@ public class StokHareketPanel : UserControl
         if (cell?.Value == null) { MessageBox.Show(L("select_rows_to_delete")); return; }
         if (MessageBox.Show(L("confirm_movement_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo) == DialogResult.Yes)
         {
-            Program.DB!.HareketSil(Convert.ToInt32(cell.Value)); Filtrele();
+            try
+            {
+                Program.DB!.HareketSil(Convert.ToInt32(cell.Value)); Filtrele();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
     void TopluSil()
@@ -196,13 +203,22 @@ public class StokHareketPanel : UserControl
         if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("select_rows_to_delete")); return; }
         int c = grid.SelectedRows.Count;
         if (MessageBox.Show(L("confirm_bulk_movement_delete", c), L("confirm_delete_title"), MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-        foreach (DataGridViewRow r in grid.SelectedRows)
+        try
         {
-            var cell = r.Cells["Id"];
-            if (cell?.Value == null) continue;
-            Program.DB!.HareketSil(Convert.ToInt32(cell.Value));
+            var ids = new List<int>();
+            foreach (DataGridViewRow r in grid.SelectedRows)
+            {
+                var cell = r.Cells["Id"];
+                if (cell?.Value == null) continue;
+                ids.Add(Convert.ToInt32(cell.Value));
+            }
+            Program.DB!.TopluHareketSil(ids);
+            Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c));
         }
-        Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c));
+        catch (Exception ex)
+        {
+            MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     // ═══ DÜZENLE ═══
@@ -285,6 +301,7 @@ public class StokHareketPanel : UserControl
             var altKartlar = Program.DB!.AltKartlariGetir();
             int imported = 0, skipped = 0;
             var warnings = new List<string>();
+            var hareketler = new List<StokHareketi>();
 
             for (int r = 2; r <= lastRow; r++)
             {
@@ -310,12 +327,17 @@ public class StokHareketPanel : UserControl
                 if (!DateTime.TryParseExact(tarihStr, fmt, CultureInfo.InvariantCulture, DateTimeStyles.None, out tarih))
                     if (ws.Cell(r, 6).TryGetValue(out DateTime dtVal)) tarih = dtVal;
 
-                Program.DB!.HareketEkle(new StokHareketi
+                hareketler.Add(new StokHareketi
                 {
                     StokKartId = kart.Id, Tur = tur, Miktar = miktar,
                     TeslimEdilen = teslim, Departman = dept, Tarih = tarih, Aciklama = aciklama
                 });
-                imported++;
+            }
+
+            if (hareketler.Count > 0)
+            {
+                Program.DB!.TopluHareketEkle(hareketler);
+                imported = hareketler.Count;
             }
 
             Filtrele();

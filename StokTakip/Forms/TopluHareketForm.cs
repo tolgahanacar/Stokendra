@@ -100,6 +100,7 @@ public class TopluHareketForm : Form
         string turDb = cmbTur.SelectedIndex == 0 ? "Giris" : "Cikis";
         string dept = cmbDept.SelectedItem!.ToString()!;
         int saved = 0; var errors = new List<string>();
+        var hareketler = new List<StokHareketi>();
         foreach (DataGridViewRow row in grid.Rows)
         {
             if (row.Cells["Sec"].Value is not true) continue;
@@ -109,8 +110,19 @@ public class TopluHareketForm : Form
             { if (!double.TryParse(ms, out m) || m <= 0) { errors.Add(L("invalid_qty_row", row.Index + 1, ms)); continue; } }
             var idCell = row.Cells["Id"];
             if (idCell?.Value == null) { errors.Add(L("invalid_qty_row", row.Index + 1, ms)); continue; }
-            Program.DB!.HareketEkle(new StokHareketi { StokKartId = Convert.ToInt32(idCell.Value), Tur = turDb, Miktar = m, TeslimEdilen = txtTeslim.Text.Trim(), Departman = dept, Tarih = dtpTarih.Value });
-            saved++;
+            hareketler.Add(new StokHareketi { StokKartId = Convert.ToInt32(idCell.Value), Tur = turDb, Miktar = m, TeslimEdilen = txtTeslim.Text.Trim(), Departman = dept, Tarih = dtpTarih.Value });
+        }
+        try
+        {
+            if (hareketler.Count > 0)
+            {
+                Program.DB!.TopluHareketEkle(hareketler);
+                saved = hareketler.Count;
+            }
+        }
+        catch (Exception ex)
+        {
+            errors.Add(ex.Message);
         }
         if (errors.Count > 0) MessageBox.Show(L("bulk_save_result", saved, string.Join("\n", errors)), L("bulk_movement"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
         else if (saved == 0) MessageBox.Show(L("bulk_no_save"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);

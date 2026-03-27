@@ -5,6 +5,9 @@ obj/
 [Oo]bj/
 StokTakip/bin/
 StokTakip/obj/
+StokTakip.HardTests/bin/
+StokTakip.HardTests/obj/
+.dotnet-home/
 
 # Visual Studio files
 .vs/

@@ -96,7 +96,7 @@ public class StokKartlariPanel : UserControl
         if (cell?.Value == null) { MessageBox.Show(L("select_row_first")); return null; }
         return _tumListe.Find(k => k.Id == Convert.ToInt32(cell.Value));
     }
-    void SilKart() { var k = Sec(); if (k == null) return; if (MessageBox.Show(L("confirm_delete", k.Ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { Program.DB!.StokKartiSil(k.Id); YukleGrid(); } }
+    void SilKart() { var k = Sec(); if (k == null) return; if (MessageBox.Show(L("confirm_delete", k.Ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { try { Program.DB!.StokKartiSil(k.Id); YukleGrid(); } catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); } } }
     void TopluSil()
     {
         if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("bulk_delete_min")); return; }
@@ -106,7 +106,8 @@ public class StokKartlariPanel : UserControl
         {
             var cell = r.Cells["Id"];
             if (cell?.Value == null) continue;
-            Program.DB!.StokKartiSil(Convert.ToInt32(cell.Value));
+            try { Program.DB!.StokKartiSil(Convert.ToInt32(cell.Value)); }
+            catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
         }
         YukleGrid(); MessageBox.Show(L("bulk_delete_success", c));
     }
@@ -173,8 +174,8 @@ public class StokKartlariPanel : UserControl
 
                 if (!string.IsNullOrEmpty(k.KodNo) && !string.IsNullOrEmpty(k.Ad))
                 {
-                    Program.DB!.StokKartiEkle(k);
-                    eklenen++;
+                    try { Program.DB!.StokKartiEkle(k); eklenen++; }
+                    catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 }
             }
             YukleGrid();

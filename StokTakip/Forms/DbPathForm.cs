@@ -30,18 +30,18 @@ public class DbPathForm : Form
             {
                 Title = L("db_location"),
                 Filter = "SQLite DB|*.db",
-                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Stokendra"),
-                FileName = "stok.db"
+                InitialDirectory = AppPaths.ApplicationDataDirectory,
+                FileName = Path.GetFileName(AppPaths.DefaultDatabasePath)
             };
             if (dlg.ShowDialog() == DialogResult.OK)
-                txtYol.Text = dlg.FileName;
+                txtYol.Text = AppPaths.NormalizeDatabasePath(dlg.FileName);
         };
 
         btnTamam.Text = L("ok"); btnTamam.Left = 320; btnTamam.Top = 90; btnTamam.Width = 85;
         btnTamam.Click += (_, _) =>
         {
             if (string.IsNullOrWhiteSpace(txtYol.Text)) { MessageBox.Show(L("no_location_selected")); return; }
-            SecilenYol = txtYol.Text;
+            SecilenYol = AppPaths.NormalizeDatabasePath(txtYol.Text);
             DialogResult = DialogResult.OK;
         };
 
