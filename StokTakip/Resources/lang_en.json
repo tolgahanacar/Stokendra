@@ -243,5 +243,9 @@
     "depleted": "Depleted",
     "category_stock_diversity": "Stock Diversity by Category",
     "last_7_days_movements": "Last 7 Days Stock Movements",
-    "default_admin_password_warning": "Default Admin Password in use, please update."
+    "default_admin_password_warning": "Default Admin Password in use, please update.",
+    "auto_backup_folder": "Auto Backup Folder",
+    "auto_backup_folder_select": "Select Auto Backup Folder",
+    "password_policy_hint": "Password must be at least 8 characters, with letters and numbers.",
+    "type_empty": "Empty"
 }

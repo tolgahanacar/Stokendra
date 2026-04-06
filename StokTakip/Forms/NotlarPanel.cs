@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class NotlarPanel : UserControl
+public sealed class NotlarPanel : UserControl
 {
     private static readonly Font BaslikFont = new("Segoe UI", 10f, FontStyle.Bold);
     private static readonly Font TarihFont = new("Segoe UI", 8.5f);

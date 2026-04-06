@@ -7,6 +7,13 @@ namespace StokTakip;
 
 public static class UpdateChecker
 {
+    private static readonly HttpClient _client = new();
+
+    static UpdateChecker()
+    {
+        _client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-App");
+    }
+
     public static async Task CheckManualAsync()
     {
         Cursor.Current = Cursors.WaitCursor;
@@ -32,10 +39,8 @@ public static class UpdateChecker
 
     private static async Task<bool> DoCheckAsync(bool isManual)
     {
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-App");
         string url = "https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest";
-        var response = await client.GetAsync(url);
+        var response = await _client.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             var jsonString = await response.Content.ReadAsStringAsync();

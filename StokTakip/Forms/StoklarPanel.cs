@@ -4,7 +4,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class StoklarPanel : UserControl
+public sealed class StoklarPanel : UserControl
 {
     private static readonly Font StokBoldFont = new("Segoe UI", 10.5f, FontStyle.Bold);
     private DataGridView grid = new();

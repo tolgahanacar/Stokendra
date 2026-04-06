@@ -7,7 +7,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Data;
 
-public class Database : IDisposable
+public sealed partial class Database : IDisposable
 {
     private readonly string _databasePath;
     private readonly string _connectionString;
@@ -18,8 +18,8 @@ public class Database : IDisposable
     private const int PasswordIterationsV3 = 120000;
     private const int PasswordHashSize = 32;
 
-    private static readonly string[] ValidMovementTypes = { "Giris", "Cikis", "Bos" };
-    private static readonly string[] ValidCardTypes = { "Alt", "Ust" };
+    private static readonly string[] ValidMovementTypes = { nameof(HareketTuru.Giris), nameof(HareketTuru.Cikis), nameof(HareketTuru.Bos) };
+    private static readonly string[] ValidCardTypes = { nameof(KartTipi.Alt), nameof(KartTipi.Ust) };
     private static readonly string[] SqlBackupTables =
     {
         "StokKartlari",
@@ -55,6 +55,19 @@ public class Database : IDisposable
 
     public void Dispose()
     {
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+            cmd.ExecuteNonQuery();
+        }
+        catch { /* Best-effort checkpoint */ }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+        }
     }
 
     private SqliteConnection CreateConnection()
@@ -964,6 +977,7 @@ public class Database : IDisposable
             command.Parameters.AddWithValue("$b", normalized.Baslik);
             command.Parameters.AddWithValue("$i", normalized.Icerik);
             command.ExecuteNonQuery();
+            not.Id = GetLastInsertRowId(connection, transaction);
             transaction.Commit();
         }
         catch (Exception ex)

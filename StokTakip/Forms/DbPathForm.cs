@@ -2,7 +2,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class DbPathForm : Form
+public sealed class DbPathForm : Form
 {
     public string SecilenYol { get; private set; } = "";
 

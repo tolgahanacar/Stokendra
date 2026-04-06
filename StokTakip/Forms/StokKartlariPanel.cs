@@ -5,7 +5,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class StokKartlariPanel : UserControl
+public sealed class StokKartlariPanel : UserControl
 {
     private static readonly Font StokBoldFont = new("Segoe UI", 10f, FontStyle.Bold);
     private static readonly Font KartTipiFont = new("Segoe UI Semibold", 9f);
@@ -87,7 +87,7 @@ public class StokKartlariPanel : UserControl
         foreach (var k in _tumListe)
         {
             if (!string.IsNullOrEmpty(a) && !k.Ad.ToLowerInvariant().Contains(a) && !k.KodNo.ToLowerInvariant().Contains(a) && !k.Aciklama.ToLowerInvariant().Contains(a) && !k.UstKartAd.ToLowerInvariant().Contains(a)) continue;
-            grid.Rows.Add(k.Id, k.KodNo, k.Ad, k.KartTipi == "Ust" ? L("parent_card") : L("child_card"), string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.KartTipi == "Alt" ? k.MinStok.ToString() : "");
+            grid.Rows.Add(k.Id, k.KodNo, k.Ad, k.KartTipi == nameof(KartTipi.Ust) ? L("parent_card") : L("child_card"), string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.KartTipi == nameof(KartTipi.Alt) ? k.MinStok.ToString() : "");
         }
         Info();
     }
@@ -170,7 +170,7 @@ public class StokKartlariPanel : UserControl
                     Barkod = row.Cell(7).GetString().Trim(),
                     BirimFiyat = row.Cell(8).GetDouble(),
                     MinStok = (int)row.Cell(9).GetDouble(),
-                    KartTipi = "Alt",
+                    KartTipi = nameof(KartTipi.Alt),
                     Aciklama = row.Cell(10).GetString().Trim()
                 };
 

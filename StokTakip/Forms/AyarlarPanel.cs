@@ -7,7 +7,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class AyarlarPanel : UserControl
+public sealed class AyarlarPanel : UserControl
 {
     private ComboBox cmbDil = new();
     private TextBox txtFirma = new(), txtDbPath = new(), txtAutoBackupPath = new();
@@ -78,12 +78,12 @@ public class AyarlarPanel : UserControl
         var btnAutoBackupDeg = UIHelper.MakeButton(L("browse"), UIHelper.BtnMid, 0, 0, 90, 28);
         btnAutoBackupDeg.Click += (_, _) =>
         {
-            using var d = new FolderBrowserDialog { Description = "Otomatik Yedekleme Klasörü Seçin" };
+            using var d = new FolderBrowserDialog { Description = L("auto_backup_folder_select") };
             if (d.ShowDialog() == DialogResult.OK)
                 txtAutoBackupPath.Text = d.SelectedPath;
         };
         pnlAutoBackupPath.Controls.AddRange(new Control[] { txtAutoBackupPath, btnAutoBackupDeg });
-        bodyDb.Controls.Add(MakeLabelPair("Otomatik Yedekleme Klasörü", pnlAutoBackupPath));
+        bodyDb.Controls.Add(MakeLabelPair(L("auto_backup_folder"), pnlAutoBackupPath));
 
         bodyDb.Controls.Add(new Panel { Height = 10, Width = 10 });
         var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, 0, 240, 36);

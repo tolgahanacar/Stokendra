@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class TopluHareketForm : Form
+public sealed class TopluHareketForm : Form
 {
     private DataGridView grid = new();
     private ComboBox cmbTur = new(), cmbDept = new();
@@ -44,7 +44,7 @@ public class TopluHareketForm : Form
         txtTeslim = new TextBox { Left = fx, Top = 10, Width = 100 }; UIHelper.StyleTextBox(txtTeslim); fx += 110;
 
         pnlS.Controls.Add(new Label { Text = L("date_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 40;
-        dtpTarih = new DateTimePicker { Left = fx, Top = 10, Width = 130, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy HH:mm", Value = DateTime.Now };
+        dtpTarih = new DateTimePicker { Left = fx, Top = 10, Width = 140, Value = DateTime.Now }; UIHelper.StyleDatePicker(dtpTarih, true);
 
         pnlS.Controls.AddRange(new Control[] { cmbTur, cmbDept, txtTeslim, dtpTarih });
 
@@ -97,7 +97,7 @@ public class TopluHareketForm : Form
     private void Kaydet(object? s, EventArgs e)
     {
         if (cmbDept.SelectedIndex < 0) { MessageBox.Show(L("select_dept")); return; }
-        string turDb = cmbTur.SelectedIndex == 0 ? "Giris" : "Cikis";
+        string turDb = cmbTur.SelectedIndex == 0 ? nameof(HareketTuru.Giris) : nameof(HareketTuru.Cikis);
         string dept = cmbDept.SelectedItem!.ToString()!;
         int saved = 0; var errors = new List<string>();
         var hareketler = new List<StokHareketi>();

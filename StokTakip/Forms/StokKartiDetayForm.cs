@@ -4,7 +4,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class StokKartiDetayForm : Form
+public sealed class StokKartiDetayForm : Form
 {
     private static readonly Font GCFont = new("Segoe UI", 9, FontStyle.Bold);
     private DataGridView grid = new();
@@ -100,13 +100,13 @@ public class StokKartiDetayForm : Form
 
         _hareketler = Program.DB!.HareketleriGetir(_stokKartId);
         var son30 = _hareketler.Where(h => h.Tarih >= DateTime.Now.AddDays(-30)).ToList();
-        lblGirisOzet.Text = $"▲ {L("total_entry")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == "Giris").Sum(h => h.Miktar))}";
-        lblCikisOzet.Text = $"▼ {L("total_exit")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == "Cikis").Sum(h => h.Miktar))}";
+        lblGirisOzet.Text = $"▲ {L("total_entry")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == nameof(HareketTuru.Giris)).Sum(h => h.Miktar))}";
+        lblCikisOzet.Text = $"▼ {L("total_exit")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == nameof(HareketTuru.Cikis)).Sum(h => h.Miktar))}";
 
         grid.Rows.Clear();
         foreach (var h in _hareketler)
         {
-            string gc = h.Tur == "Giris" ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == "Cikis" ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
+            string gc = h.Tur == nameof(HareketTuru.Giris) ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == nameof(HareketTuru.Cikis) ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
             grid.Rows.Add(h.Id, h.Tarih.ToString("dd.MM.yyyy HH:mm"), gc, h.TeslimEdilen, h.Departman, h.Aciklama);
         }
     }
@@ -151,7 +151,7 @@ public class StokKartiDetayForm : Form
             for (int i = ps; i < end; i++)
             {
                 var h = _hareketler[i]; if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 15);
-                x = lm; bool giris = h.Tur == "Giris";
+                x = lm; bool giris = h.Tur == nameof(HareketTuru.Giris);
                 string gc = giris ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]";
                 string[] cells = { h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih.ToString("dd.MM.yyyy HH:mm"), h.Aciklama };
                 for (int c = 0; c < cells.Length; c++)

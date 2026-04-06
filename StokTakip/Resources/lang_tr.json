@@ -261,5 +261,9 @@
   "unit_price": "Birim Fiyat",
   "backup_full_excel": "📊 Tam Excel Yedeği",
   "backup_full_excel_desc": "Tüm verileri Excel dosyaları olarak ZIP'e aktarır",
-  "confirm_service_delete": "Bu servis kaydı silinsin mi?"
+  "confirm_service_delete": "Bu servis kaydı silinsin mi?",
+  "auto_backup_folder": "Otomatik Yedekleme Klasörü",
+  "auto_backup_folder_select": "Otomatik Yedekleme Klasörü Seçin",
+  "password_policy_hint": "Şifre en az 8 karakter olmalı, büyük/küçük harf ve rakam içermelidir.",
+  "type_empty": "Boş"
 }

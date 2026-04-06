@@ -14,7 +14,7 @@ using ContentAlignment = System.Drawing.ContentAlignment;
 
 namespace StokTakip.Forms;
 
-public class RaporlarPanel : UserControl
+public sealed class RaporlarPanel : UserControl
 {
     private DateTimePicker dtpStart = new(), dtpEnd = new();
     private ComboBox cmbUser = new(), cmbDept = new(), cmbCategory = new();
@@ -328,7 +328,7 @@ public class RaporlarPanel : UserControl
     private ReportData BuildReportData(DateTime start, DateTime end, string? user, string? dept, string? cat, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        var allMoves = Program.DB!.HareketleriGetir(null, start, end, null, "Cikis");
+        var allMoves = Program.DB!.HareketleriGetir(null, start, end, null, nameof(HareketTuru.Cikis));
         token.ThrowIfCancellationRequested();
         var filtered = allMoves.Where(h =>
             (user == null || h.TeslimEdilen == user) &&

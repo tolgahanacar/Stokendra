@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class MainForm : Form
+public sealed class MainForm : Form
 {
     private Panel pnlContent = new();
     private Panel pnlSidebar = new();

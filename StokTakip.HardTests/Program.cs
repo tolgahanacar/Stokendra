@@ -18,7 +18,8 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Password policy enforced", TestPasswordPolicy),
     ("Concurrent writes stay consistent", TestConcurrentWrites),
     ("Backup and SQL export", TestBackupAndSqlExport),
-    ("Bulk service insert", TestBulkServiceInsert)
+    ("Bulk service insert", TestBulkServiceInsert),
+    ("Note CRUD operations", TestNotCRUD)
 };
 
 var failures = new List<string>();
@@ -108,6 +109,34 @@ static Task TestDeletingCriticalEntryBlocked()
     return Task.CompletedTask;
 }
 
+static Task TestNotCRUD()
+{
+    using var scope = new TestScope("note-crud");
+    using var db = new Database(scope.DbPath);
+
+    // Create
+    var note = new Not { Baslik = "Test Note", Icerik = "Test Content", Tarih = DateTime.Now };
+    db.NotEkle(note);
+    AssertTrue(note.Id > 0, "Note ID should be populated.");
+
+    // Read
+    var notes = db.NotlariGetir();
+    AssertEqual(1, notes.Count, "Should retrieve exactly 1 note.");
+    AssertEqual("Test Note", notes[0].Baslik, "Title should match.");
+
+    // Update
+    notes[0].Baslik = "Updated Note";
+    db.NotGuncelle(notes[0]);
+    var updatedNotes = db.NotlariGetir();
+    AssertEqual("Updated Note", updatedNotes[0].Baslik, "Title should be updated.");
+
+    // Delete
+    db.NotSil(notes[0].Id);
+    var remainingNotes = db.NotlariGetir();
+    AssertEqual(0, remainingNotes.Count, "Should retrieve 0 notes after deletion.");
+
+    return Task.CompletedTask;
+}
 static Task TestParentCardRejectsMovements()
 {
     using var scope = new TestScope("parent-card");

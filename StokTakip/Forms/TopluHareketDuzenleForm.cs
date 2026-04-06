@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class TopluHareketDuzenleForm : Form
+public sealed class TopluHareketDuzenleForm : Form
 {
     private List<StokHareketi> _hareketler;
     

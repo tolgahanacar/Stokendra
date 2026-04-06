@@ -162,7 +162,7 @@ internal class AlertCard : Control
     }
 }
 
-public class DashboardPanel : UserControl
+public sealed class DashboardPanel : UserControl
 {
     public DashboardPanel()
     {

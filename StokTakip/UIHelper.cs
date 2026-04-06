@@ -105,12 +105,14 @@ public static class UIHelper
         c.Font = FontInput; c.FlatStyle = FlatStyle.Popup;
     }
 
-    public static void StyleDatePicker(DateTimePicker d)
+    public static void StyleDatePicker(DateTimePicker d, bool showTime = false)
     {
+        d.Format = DateTimePickerFormat.Custom;
+        d.CustomFormat = showTime ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy";
         d.CalendarMonthBackground = BgInput; d.CalendarForeColor = TextPrimary;
         d.BackColor = BgInput; d.ForeColor = TextPrimary;
         d.Font = new Font("Segoe UI Semibold", 9.5f);
-        if (d.Width < 130) d.Width = 130;
+        if (d.Width < 140) d.Width = 140;
     }
 
     // ═══ PREMIUM BUTON (İkon Destekli) ═══
@@ -321,16 +323,12 @@ public static class UIHelper
     }
 
     /// <summary>İki DatePicker (başlangıç–bitiş) yan yana — standart tarih filtresi</summary>
-    public static Panel MakeDateRangeCell(string label, DateTimePicker dtpStart, DateTimePicker dtpEnd, int pickerWidth = 130)
+    public static Panel MakeDateRangeCell(string label, DateTimePicker dtpStart, DateTimePicker dtpEnd, int pickerWidth = 140)
     {
         dtpStart.Width = pickerWidth;
-        dtpStart.Format = DateTimePickerFormat.Custom;
-        dtpStart.CustomFormat = "dd.MM.yyyy";
         StyleDatePicker(dtpStart);
 
         dtpEnd.Width = pickerWidth;
-        dtpEnd.Format = DateTimePickerFormat.Custom;
-        dtpEnd.CustomFormat = "dd.MM.yyyy";
         StyleDatePicker(dtpEnd);
 
         var lblLabel = new Label { Text = label, AutoSize = true, Font = new Font("Segoe UI Semibold", 7.5f), ForeColor = TextMuted };

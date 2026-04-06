@@ -5,7 +5,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class ServislerPanel : UserControl
+public sealed class ServislerPanel : UserControl
 {
     private DataGridView dgv = new DataGridView();
     private List<ServisKaydi> _kayitlar = new();

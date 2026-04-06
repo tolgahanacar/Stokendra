@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class ServisEkleForm : Form
+public sealed class ServisEkleForm : Form
 {
     public ServisKaydi Kayit { get; private set; }
 
@@ -57,8 +57,8 @@ public class ServisEkleForm : Form
 
         // Bakım Tarihi
         tbl.Controls.Add(MakeLabel(L("maintenance_date", "Bakım Tarihi *")), 0, row);
-        dtBakimTarihi = new DateTimePicker { Dock = DockStyle.Fill, Format = DateTimePickerFormat.Short };
-        UIHelper.StyleDatePicker(dtBakimTarihi);
+        dtBakimTarihi = new DateTimePicker { Dock = DockStyle.Fill };
+        UIHelper.StyleDatePicker(dtBakimTarihi, false);
         tbl.Controls.Add(dtBakimTarihi, 1, row); row++;
 
 

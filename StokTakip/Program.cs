@@ -93,9 +93,22 @@ static class Program
             Settings.DbPath = setup.SecilenYol;
             Settings.Kaydet();
 
-            DB = new Data.Database(Settings.DbPath);
-            Application.ApplicationExit += (s, e) => DB?.Dispose();
-            return true;
+            try
+            {
+                DB = new Data.Database(Settings.DbPath);
+                Application.ApplicationExit += (s, e) => DB?.Dispose();
+                return true;
+            }
+            catch (Exception retryEx)
+            {
+                LogError(retryEx);
+                MessageBox.Show(
+                    "Yeni konum da açılamadı.\n" + retryEx.Message,
+                    "Kritik Hata",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return false;
+            }
         }
     }
 

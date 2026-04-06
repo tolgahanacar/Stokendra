@@ -4,7 +4,7 @@ using static StokTakip.LocalizationManager;
 namespace StokTakip.Forms;
 
 /// <summary>Hareket ekleme VE düzenleme formu</summary>
-public class HareketEkleForm : Form
+public sealed class HareketEkleForm : Form
 {
     private ComboBox cmbStok = new(), cmbTur = new(), cmbDept = new();
     private TextBox txtMiktar = new(), txtTeslim = new(), txtAciklama = new(), txtKodAra = new();
@@ -79,13 +79,14 @@ public class HareketEkleForm : Form
 
         // Tarih
         tbl.Controls.Add(ML(L("date_label")), 0, row);
-        dtpTarih = new DateTimePicker { Dock = DockStyle.Fill, Format = DateTimePickerFormat.Custom, CustomFormat = "dd.MM.yyyy HH:mm", Value = DateTime.Now };
+        dtpTarih = new DateTimePicker { Dock = DockStyle.Fill, Value = DateTime.Now }; UIHelper.StyleDatePicker(dtpTarih, true);
         tbl.Controls.Add(dtpTarih, 1, row); row++;
 
         // Açıklama
         tbl.Controls.Add(ML(L("description_label")), 0, row);
         txtAciklama = MakeTB(); txtAciklama.MaxLength = 500;
         tbl.Controls.Add(txtAciklama, 1, row); row++;
+
 
         // Butonlar
         var pnlBtn = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, Height = 40, Padding = new Padding(0, 4, 0, 0) };
@@ -104,14 +105,14 @@ public class HareketEkleForm : Form
         if (edit && mevcut != null)
         {
             int idx = _altKartlar.FindIndex(k => k.Id == mevcut.StokKartId); if (idx >= 0) cmbStok.SelectedIndex = idx;
-            cmbTur.SelectedIndex = mevcut.Tur == "Giris" ? 0 : (mevcut.Tur == "Cikis" ? 1 : 2);
+            cmbTur.SelectedIndex = mevcut.Tur == nameof(HareketTuru.Giris) ? 0 : (mevcut.Tur == nameof(HareketTuru.Cikis) ? 1 : 2);
             txtMiktar.Text = UIHelper.FormatMiktar(mevcut.Miktar);
             txtTeslim.Text = mevcut.TeslimEdilen;
             txtAciklama.Text = mevcut.Aciklama;
             dtpTarih.Value = mevcut.Tarih;
             for (int i = 0; i < cmbDept.Items.Count; i++) if (cmbDept.Items[i]?.ToString() == mevcut.Departman) { cmbDept.SelectedIndex = i; break; }
         }
-        else if (onceden != null && onceden.KartTipi == "Alt")
+        else if (onceden != null && onceden.KartTipi == nameof(KartTipi.Alt))
         { int idx = _altKartlar.FindIndex(k => k.Id == onceden.Id); if (idx >= 0) cmbStok.SelectedIndex = idx; }
         else if (_altKartlar.Count > 0) cmbStok.SelectedIndex = 0;
 
@@ -155,7 +156,7 @@ public class HareketEkleForm : Form
         var h = new StokHareketi
         {
             Id = _mevcut?.Id ?? 0,
-            StokKartId = sk.Id, Tur = cmbTur.SelectedIndex == 0 ? "Giris" : (cmbTur.SelectedIndex == 1 ? "Cikis" : "Bos"),
+            StokKartId = sk.Id, Tur = cmbTur.SelectedIndex == 0 ? nameof(HareketTuru.Giris) : (cmbTur.SelectedIndex == 1 ? nameof(HareketTuru.Cikis) : nameof(HareketTuru.Bos)),
             Miktar = isBos ? 0 : m, TeslimEdilen = txtTeslim.Text.Trim(),
             Departman = cmbDept.SelectedItem!.ToString()!, Tarih = dtpTarih.Value, Aciklama = txtAciklama.Text.Trim()
         };

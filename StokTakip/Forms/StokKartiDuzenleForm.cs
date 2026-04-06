@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class StokKartiDuzenleForm : Form
+public sealed class StokKartiDuzenleForm : Form
 {
     private TextBox txtAd = new(), txtKodNo = new(), txtAciklama = new(), txtMinStok = new();
     private TextBox txtBirim = new(), txtKonum = new(), txtTedarikci = new(), txtBarkod = new(), txtBirimFiyat = new();
@@ -137,7 +137,7 @@ public class StokKartiDuzenleForm : Form
             txtTedarikci.Text = kart.Tedarikci;
             txtBarkod.Text = kart.Barkod;
             txtBirimFiyat.Text = kart.BirimFiyat.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            cmbKartTipi.SelectedIndex = kart.KartTipi == "Ust" ? 1 : 0;
+            cmbKartTipi.SelectedIndex = kart.KartTipi == nameof(KartTipi.Ust) ? 1 : 0;
             int ci = -1; for (int i = 0; i < cmbKategori.Items.Count; i++) if (cmbKategori.Items[i]?.ToString() == kart.Kategori) { ci = i; break; }
             if (ci >= 0) cmbKategori.SelectedIndex = ci;
             if (kart.UstKartId.HasValue) { int ui = _ustKartlar.FindIndex(u => u.Id == kart.UstKartId.Value); if (ui >= 0) cmbUstKart.SelectedIndex = ui + 1; }
@@ -174,9 +174,9 @@ public class StokKartiDuzenleForm : Form
         int minStok = 0;
         if (txtMinStok.Visible && !string.IsNullOrWhiteSpace(txtMinStok.Text) && !int.TryParse(txtMinStok.Text, out minStok))
         { MessageBox.Show(L("min_stock_invalid")); return; }
-        string kartTipi = cmbKartTipi.SelectedIndex == 1 ? "Ust" : "Alt";
+        string kartTipi = cmbKartTipi.SelectedIndex == 1 ? nameof(KartTipi.Ust) : nameof(KartTipi.Alt);
         int? ustKartId = null;
-        if (kartTipi == "Alt" && cmbUstKart.SelectedIndex > 0) ustKartId = _ustKartlar[cmbUstKart.SelectedIndex - 1].Id;
+        if (kartTipi == nameof(KartTipi.Alt) && cmbUstKart.SelectedIndex > 0) ustKartId = _ustKartlar[cmbUstKart.SelectedIndex - 1].Id;
         double birimFiyat = 0;
         if (!string.IsNullOrWhiteSpace(txtBirimFiyat.Text))
             double.TryParse(txtBirimFiyat.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out birimFiyat);
@@ -185,7 +185,7 @@ public class StokKartiDuzenleForm : Form
             Ad = txtAd.Text.Trim(),
             KodNo = txtKodNo.Text.Trim(),
             Aciklama = txtAciklama.Text.Trim(),
-            MinStok = kartTipi == "Alt" ? minStok : 0,
+            MinStok = kartTipi == nameof(KartTipi.Alt) ? minStok : 0,
             Kategori = cmbKategori.SelectedItem?.ToString() ?? "",
             KartTipi = kartTipi,
             UstKartId = ustKartId,

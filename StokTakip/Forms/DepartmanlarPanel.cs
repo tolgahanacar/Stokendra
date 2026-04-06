@@ -2,7 +2,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class DepartmanlarPanel : UserControl
+public sealed class DepartmanlarPanel : UserControl
 {
     private DataGridView grid = new();
     private TextBox txtYeni = new();

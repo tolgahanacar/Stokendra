@@ -2,7 +2,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class LoginForm : Form
+public sealed class LoginForm : Form
 {
     private TextBox txtUser = new(), txtPass = new();
     private Label lblError = new();

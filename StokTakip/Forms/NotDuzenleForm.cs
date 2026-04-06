@@ -3,7 +3,7 @@ using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
 
-public class NotDuzenleForm : Form
+public sealed class NotDuzenleForm : Form
 {
     private TextBox txtBaslik = new(), txtIcerik = new();
     private DateTimePicker dtpTarih = new();
