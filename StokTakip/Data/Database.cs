@@ -433,6 +433,8 @@ public class Database : IDisposable
         command.Parameters.AddWithValue("$ki", id);
         command.Parameters.AddWithValue("$d", TrimTo(detay, 500));
         command.ExecuteNonQuery();
+        
+        AppPaths.LogActivity(tip.ToLowerInvariant(), tablo.ToLowerInvariant(), detay);
     }
 
     public List<string> DepartmanlariGetir()

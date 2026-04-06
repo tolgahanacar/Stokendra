@@ -35,3 +35,8 @@ Thumbs.db
 Installer/
 
 *.iss
+
+#Logo & Icon
+StokTakip.png
+StokTakip.ico
+

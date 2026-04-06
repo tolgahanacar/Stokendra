@@ -6,8 +6,10 @@ namespace StokTakip.Forms;
 public class StokKartiDuzenleForm : Form
 {
     private TextBox txtAd = new(), txtKodNo = new(), txtAciklama = new(), txtMinStok = new();
+    private TextBox txtBirim = new(), txtKonum = new(), txtTedarikci = new(), txtBarkod = new(), txtBirimFiyat = new();
     private ComboBox cmbKategori = new(), cmbKartTipi = new(), cmbUstKart = new();
     private Label lblUstKart = new(), lblMinStok = new();
+    private Label lblBirim = new(), lblKonum = new(), lblTedarikci = new(), lblBarkod = new(), lblBirimFiyat = new();
     private readonly StokKarti? _mevcut;
     private List<StokKarti> _ustKartlar = new();
 
@@ -21,10 +23,11 @@ public class StokKartiDuzenleForm : Form
 
         // ── TableLayoutPanel ile esnek form ──
         var tbl = new TableLayoutPanel
+        // NOTE: RowCount increased to accommodate new fields
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
-            RowCount = 9,
+            RowCount = 14,
             Padding = new Padding(16, 8, 16, 8),
             BackColor = UIHelper.BgPanel,
             AutoSize = true,
@@ -78,6 +81,36 @@ public class StokKartiDuzenleForm : Form
         txtMinStok = MakeTextBox(); txtMinStok.Text = "0"; txtMinStok.Width = 80;
         tbl.Controls.Add(txtMinStok, 1, row); row++;
 
+        // Birim
+        lblBirim = MakeLabel(L("unit"));
+        tbl.Controls.Add(lblBirim, 0, row);
+        txtBirim = MakeTextBox(); txtBirim.Text = "Adet";
+        tbl.Controls.Add(txtBirim, 1, row); row++;
+
+        // Konum
+        lblKonum = MakeLabel(L("location", "Konum"));
+        tbl.Controls.Add(lblKonum, 0, row);
+        txtKonum = MakeTextBox();
+        tbl.Controls.Add(txtKonum, 1, row); row++;
+
+        // Tedarikçi
+        lblTedarikci = MakeLabel(L("supplier", "Tedarikçi"));
+        tbl.Controls.Add(lblTedarikci, 0, row);
+        txtTedarikci = MakeTextBox();
+        tbl.Controls.Add(txtTedarikci, 1, row); row++;
+
+        // Barkod
+        lblBarkod = MakeLabel(L("barcode", "Barkod"));
+        tbl.Controls.Add(lblBarkod, 0, row);
+        txtBarkod = MakeTextBox();
+        tbl.Controls.Add(txtBarkod, 1, row); row++;
+
+        // Birim Fiyat
+        lblBirimFiyat = MakeLabel(L("unit_price", "Birim Fiyat"));
+        tbl.Controls.Add(lblBirimFiyat, 0, row);
+        txtBirimFiyat = MakeTextBox(); txtBirimFiyat.Text = "0";
+        tbl.Controls.Add(txtBirimFiyat, 1, row); row++;
+
         // Açıklama
         tbl.Controls.Add(MakeLabel(L("description_label")), 0, row);
         txtAciklama = new TextBox { Dock = DockStyle.Fill, Multiline = true, Height = 55, MaxLength = 500,
@@ -99,6 +132,11 @@ public class StokKartiDuzenleForm : Form
         {
             txtAd.Text = kart.Ad; txtKodNo.Text = kart.KodNo; txtAciklama.Text = kart.Aciklama;
             txtMinStok.Text = kart.MinStok.ToString();
+            txtBirim.Text = string.IsNullOrWhiteSpace(kart.Birim) ? "Adet" : kart.Birim;
+            txtKonum.Text = kart.Konum;
+            txtTedarikci.Text = kart.Tedarikci;
+            txtBarkod.Text = kart.Barkod;
+            txtBirimFiyat.Text = kart.BirimFiyat.ToString(System.Globalization.CultureInfo.InvariantCulture);
             cmbKartTipi.SelectedIndex = kart.KartTipi == "Ust" ? 1 : 0;
             int ci = -1; for (int i = 0; i < cmbKategori.Items.Count; i++) if (cmbKategori.Items[i]?.ToString() == kart.Kategori) { ci = i; break; }
             if (ci >= 0) cmbKategori.SelectedIndex = ci;
@@ -117,7 +155,17 @@ public class StokKartiDuzenleForm : Form
     static TextBox MakeTextBox() { var t = new TextBox { Dock = DockStyle.Fill }; UIHelper.StyleTextBox(t); return t; }
     static ComboBox MakeCombo(string[] items, int sel) { var c = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(c); c.Items.AddRange(items); if (sel >= 0 && sel < items.Length) c.SelectedIndex = sel; return c; }
 
-    private void KartTipiDegisti() { bool alt = cmbKartTipi.SelectedIndex == 0; lblUstKart.Visible = cmbUstKart.Visible = alt; lblMinStok.Visible = txtMinStok.Visible = alt; }
+    private void KartTipiDegisti()
+    {
+        bool alt = cmbKartTipi.SelectedIndex == 0;
+        lblUstKart.Visible = cmbUstKart.Visible = alt;
+        lblMinStok.Visible = txtMinStok.Visible = alt;
+        lblBirim.Visible = txtBirim.Visible = alt;
+        lblKonum.Visible = txtKonum.Visible = alt;
+        lblTedarikci.Visible = txtTedarikci.Visible = alt;
+        lblBarkod.Visible = txtBarkod.Visible = alt;
+        lblBirimFiyat.Visible = txtBirimFiyat.Visible = alt;
+    }
 
     private void Kaydet(object? s, EventArgs e)
     {
@@ -129,9 +177,24 @@ public class StokKartiDuzenleForm : Form
         string kartTipi = cmbKartTipi.SelectedIndex == 1 ? "Ust" : "Alt";
         int? ustKartId = null;
         if (kartTipi == "Alt" && cmbUstKart.SelectedIndex > 0) ustKartId = _ustKartlar[cmbUstKart.SelectedIndex - 1].Id;
-        var k = new StokKarti { Id = _mevcut?.Id ?? 0, Ad = txtAd.Text.Trim(), KodNo = txtKodNo.Text.Trim(),
-            Aciklama = txtAciklama.Text.Trim(), MinStok = kartTipi == "Alt" ? minStok : 0,
-            Kategori = cmbKategori.SelectedItem?.ToString() ?? "", KartTipi = kartTipi, UstKartId = ustKartId };
+        double birimFiyat = 0;
+        if (!string.IsNullOrWhiteSpace(txtBirimFiyat.Text))
+            double.TryParse(txtBirimFiyat.Text.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out birimFiyat);
+        var k = new StokKarti {
+            Id = _mevcut?.Id ?? 0,
+            Ad = txtAd.Text.Trim(),
+            KodNo = txtKodNo.Text.Trim(),
+            Aciklama = txtAciklama.Text.Trim(),
+            MinStok = kartTipi == "Alt" ? minStok : 0,
+            Kategori = cmbKategori.SelectedItem?.ToString() ?? "",
+            KartTipi = kartTipi,
+            UstKartId = ustKartId,
+            Birim = txtBirim.Text.Trim(),
+            Konum = txtKonum.Text.Trim(),
+            Tedarikci = txtTedarikci.Text.Trim(),
+            Barkod = txtBarkod.Text.Trim(),
+            BirimFiyat = birimFiyat
+        };
         try
         {
             if (_mevcut == null) Program.DB!.StokKartiEkle(k); else Program.DB!.StokKartiGuncelle(k);

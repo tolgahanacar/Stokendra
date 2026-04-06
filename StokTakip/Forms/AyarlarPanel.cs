@@ -10,7 +10,7 @@ namespace StokTakip.Forms;
 public class AyarlarPanel : UserControl
 {
     private ComboBox cmbDil = new();
-    private TextBox txtFirma = new(), txtDbPath = new();
+    private TextBox txtFirma = new(), txtDbPath = new(), txtAutoBackupPath = new();
 
     public AyarlarPanel()
     {
@@ -72,6 +72,19 @@ public class AyarlarPanel : UserControl
         pnlDbPath.Controls.AddRange(new Control[] { txtDbPath, btnDbDeg });
         bodyDb.Controls.Add(MakeLabelPair(L("db_path_label"), pnlDbPath));
 
+        var pnlAutoBackupPath = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+        txtAutoBackupPath = new TextBox { Width = 250, ReadOnly = true, Text = Program.Settings.AutoBackupPath };
+        UIHelper.StyleTextBox(txtAutoBackupPath); txtAutoBackupPath.ForeColor = UIHelper.TextDim;
+        var btnAutoBackupDeg = UIHelper.MakeButton(L("browse"), UIHelper.BtnMid, 0, 0, 90, 28);
+        btnAutoBackupDeg.Click += (_, _) =>
+        {
+            using var d = new FolderBrowserDialog { Description = "Otomatik Yedekleme Klasörü Seçin" };
+            if (d.ShowDialog() == DialogResult.OK)
+                txtAutoBackupPath.Text = d.SelectedPath;
+        };
+        pnlAutoBackupPath.Controls.AddRange(new Control[] { txtAutoBackupPath, btnAutoBackupDeg });
+        bodyDb.Controls.Add(MakeLabelPair("Otomatik Yedekleme Klasörü", pnlAutoBackupPath));
+
         bodyDb.Controls.Add(new Panel { Height = 10, Width = 10 });
         var btnBackupDb = UIHelper.MakeButton(L("backup_db"), UIHelper.AccentYellow, 0, 0, 240, 36);
         btnBackupDb.ForeColor = Color.Black; btnBackupDb.Click += (_, _) => BackupDb();
@@ -81,7 +94,12 @@ public class AyarlarPanel : UserControl
         var btnBackupSql = UIHelper.MakeButton(L("backup_sql"), UIHelper.AccentCyan, 0, 0, 240, 36);
         btnBackupSql.Click += (_, _) => BackupSql();
         bodyDb.Controls.Add(btnBackupSql);
-        bodyDb.Controls.Add(new Label { Text = L("backup_sql_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 0) });
+        bodyDb.Controls.Add(new Label { Text = L("backup_sql_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 10) });
+
+        var btnBackupExcel = UIHelper.MakeButton(L("backup_full_excel"), UIHelper.AccentGreen, 0, 0, 240, 36);
+        btnBackupExcel.Click += (_, _) => BackupFullExcel();
+        bodyDb.Controls.Add(btnBackupExcel);
+        bodyDb.Controls.Add(new Label { Text = L("backup_full_excel_desc"), Font = new Font("Segoe UI", 8), ForeColor = UIHelper.TextDim, AutoSize = true, Margin = new Padding(0, 4, 0, 0) });
 
         tbl.Controls.Add(cardDb, 1, 0);
 
@@ -130,7 +148,7 @@ public class AyarlarPanel : UserControl
         var lblDesc = new Label { Text = "Bu yazılım lisanslıdır. Tüm hakları saklıdır.", AutoSize = true, Font = new Font("Segoe UI", 8.5f), ForeColor = UIHelper.TextDim, Margin = new Padding(0, 0, 0, 15) };
         
         var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 0, 0, 200, 32);
-        btnUpdate.ForeColor = Color.Black; btnUpdate.Click += async (_, _) => await CheckForUpdates();
+        btnUpdate.ForeColor = Color.Black; btnUpdate.Click += async (_, _) => await UpdateChecker.CheckManualAsync();
         
         bodyAbout.Controls.AddRange(new Control[] { lblTitle, lblVer, lblDesc, btnUpdate });
         tbl.Controls.Add(cardAbout, 1, 1);
@@ -183,43 +201,29 @@ public class AyarlarPanel : UserControl
         catch (Exception ex) { MessageBox.Show(L("backup_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
+    private void BackupFullExcel()
+    {
+        using var dlg = new FolderBrowserDialog { Description = L("backup_full_excel") };
+        if (dlg.ShowDialog() != DialogResult.OK) return;
+        try
+        {
+            string zipPath = BackupManager.ExportAllExcel(dlg.SelectedPath);
+            MessageBox.Show(L("backup_success", zipPath), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex) { MessageBox.Show(L("backup_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
+    }
+
     private void KaydetAyarlar(object? s, EventArgs e)
     {
         string secilenDil = LocalizationManager.SupportedLanguages[cmbDil.SelectedIndex];
         bool dilDegisti = secilenDil != Program.Settings.Language;
         Program.Settings.Language = secilenDil;
         Program.Settings.CompanyName = txtFirma.Text.Trim();
+        Program.Settings.AutoBackupPath = txtAutoBackupPath.Text;
         if (!string.IsNullOrWhiteSpace(txtDbPath.Text)) Program.Settings.DbPath = AppPaths.NormalizeDatabasePath(txtDbPath.Text);
         Program.Settings.Kaydet();
         if (dilDegisti) MessageBox.Show(L("saved_restart"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         else MessageBox.Show(L("settings_saved"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
     
-    private async Task CheckForUpdates()
-    {
-        Cursor.Current = Cursors.WaitCursor;
-        try
-        {
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-App");
-            string url = "https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest";
-            var response = await client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonString = await response.Content.ReadAsStringAsync();
-                using var jsonDoc = JsonDocument.Parse(jsonString);
-                string latestVersion = jsonDoc.RootElement.GetProperty("tag_name").GetString() ?? "";
-                string htmlUrl = jsonDoc.RootElement.GetProperty("html_url").GetString() ?? "";
-                string currentVersion = "v" + Application.ProductVersion;
-                if (string.Compare(latestVersion, currentVersion, StringComparison.OrdinalIgnoreCase) > 0)
-                {
-                    if (MessageBox.Show(L("update_available", latestVersion, currentVersion), L("update_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
-                    { Process.Start(new ProcessStartInfo { FileName = htmlUrl, UseShellExecute = true }); }
-                }
-                else MessageBox.Show(L("up_to_date", currentVersion), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-        catch (Exception ex) { MessageBox.Show(L("update_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
-        finally { Cursor.Current = Cursors.Default; }
-    }
 }

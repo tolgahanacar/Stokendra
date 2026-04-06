@@ -6,6 +6,7 @@ namespace StokTakip.Forms;
 
 public class StokKartiDetayForm : Form
 {
+    private static readonly Font GCFont = new("Segoe UI", 9, FontStyle.Bold);
     private DataGridView grid = new();
     private Label lblAd = new(), lblKod = new(), lblKategori = new(), lblAciklama = new(), lblMevcut = new();
     private Label lblGirisOzet = new(), lblCikisOzet = new(), lblUstKart = new();
@@ -64,8 +65,8 @@ public class StokKartiDetayForm : Form
             if (e.RowIndex >= 0 && grid.Columns[e.ColumnIndex].Name == "GC") {
                 string v = e.Value?.ToString() ?? "";
                 if (e.CellStyle != null) {
-                    e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : UIHelper.AccentGreen;
-                    e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+                    e.CellStyle.ForeColor = v.Contains("[Ç]") ? UIHelper.StokWarning : (v.Contains("[B]") ? UIHelper.TextSecondary : UIHelper.AccentGreen);
+                    e.CellStyle.Font = GCFont;
                 }
             }
         };
@@ -105,7 +106,7 @@ public class StokKartiDetayForm : Form
         grid.Rows.Clear();
         foreach (var h in _hareketler)
         {
-            string gc = h.Tur == "Giris" ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]";
+            string gc = h.Tur == "Giris" ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == "Cikis" ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
             grid.Rows.Add(h.Id, h.Tarih.ToString("dd.MM.yyyy HH:mm"), gc, h.TeslimEdilen, h.Departman, h.Aciklama);
         }
     }

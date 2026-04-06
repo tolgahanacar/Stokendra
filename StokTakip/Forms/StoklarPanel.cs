@@ -6,10 +6,14 @@ namespace StokTakip.Forms;
 
 public class StoklarPanel : UserControl
 {
+    private static readonly Font StokBoldFont = new("Segoe UI", 10.5f, FontStyle.Bold);
     private DataGridView grid = new();
     private TextBox txtAra = new();
     private Label lblInfo = new();
     private List<StokKarti> _altKartlar = new();
+    private int _currentPage = 1;
+    private int _pageSize = 50;
+    private Button btnPrev = new(), btnNext = new();
 
     public StoklarPanel()
     {
@@ -18,7 +22,7 @@ public class StoklarPanel : UserControl
         var pnlH = UIHelper.MakeHeader(L("stocks"));
 
         var pnlT = UIHelper.MakeToolbar();
-        txtAra = UIHelper.MakeSearchBox(L("stock_code_search"), 300); txtAra.TextChanged += (_, _) => FilterGrid();
+        txtAra = UIHelper.MakeSearchBox(L("stock_code_search"), 300); txtAra.TextChanged += (_, _) => { _currentPage = 1; FilterGrid(); };
         
         var btnRapor = UIHelper.MakeFlowButton(L("report_al"), UIHelper.AccentBlue, 110);
         btnRapor.Click += (_, _) => RaporAl();
@@ -45,7 +49,7 @@ public class StoklarPanel : UserControl
                 if (e.CellStyle != null)
                 {
                     e.CellStyle.ForeColor = UIHelper.StokRengi(s);
-                    e.CellStyle.Font = new Font("Segoe UI", 10.5f, FontStyle.Bold);
+                    e.CellStyle.Font = StokBoldFont;
                 }
                 
                 if (s <= 3)
@@ -63,9 +67,14 @@ public class StoklarPanel : UserControl
         };
 
         // Status
-        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
-        pnlSt.Controls.Add(lblInfo);
+        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = UIHelper.BgPanel };
+        lblInfo = new Label { Left = 20, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        btnPrev = UIHelper.MakeButton("<", UIHelper.BtnMid, 0, 5, 40, 30);
+        btnNext = UIHelper.MakeButton(">", UIHelper.BtnMid, 0, 5, 40, 30);
+        btnPrev.Click += (_, _) => { if (_currentPage > 1) { _currentPage--; FilterGrid(); } };
+        btnNext.Click += (_, _) => { _currentPage++; FilterGrid(); };
+        pnlSt.Controls.AddRange(new Control[] { lblInfo, btnPrev, btnNext });
+        pnlSt.Resize += (_, _) => { btnNext.Left = pnlSt.Width - 60; btnPrev.Left = pnlSt.Width - 110; };
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlH); Controls.Add(pnlSt);
         YukleGrid();
@@ -76,13 +85,27 @@ public class StoklarPanel : UserControl
     void FilterGrid()
     {
         grid.Rows.Clear(); var a = txtAra.Text.Trim().ToLowerInvariant(); int dusuk = 0;
+        var filtered = new List<StokKarti>();
         foreach (var k in _altKartlar)
         {
             if (!string.IsNullOrEmpty(a) && !k.Ad.ToLowerInvariant().Contains(a) && !k.KodNo.ToLowerInvariant().Contains(a) && !k.UstKartAd.ToLowerInvariant().Contains(a)) continue;
-            grid.Rows.Add(k.Id, k.KodNo, k.Ad, string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.MinStok);
+            filtered.Add(k);
             if (k.MevcutStok <= 3) dusuk++;
         }
-        lblInfo.Text = L("stocks_subtitle") + $"  •  {_altKartlar.Count} {L("child_card").ToLower()}  •  ⚠ {dusuk} {L("low_stock").ToLower()}";
+        
+        int totalPages = (int)Math.Ceiling(filtered.Count / (double)_pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (_currentPage > totalPages) _currentPage = totalPages;
+        
+        btnPrev.Enabled = _currentPage > 1;
+        btnNext.Enabled = _currentPage < totalPages;
+
+        var paged = filtered.Skip((_currentPage - 1) * _pageSize).Take(_pageSize);
+        foreach (var k in paged)
+        {
+            grid.Rows.Add(k.Id, k.KodNo, k.Ad, string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.MinStok);
+        }
+        lblInfo.Text = L("stocks_subtitle") + $"  •  {filtered.Count} {L("child_card").ToLower()}  •  ⚠ {dusuk} {L("low_stock").ToLower()}  |  Sayfa: {_currentPage} / {totalPages}";
     }
 
     private void ExcelExport()
@@ -177,7 +200,7 @@ public class StoklarPanel : UserControl
                 g.FillRectangle(brHd, lm, y, pw, 22);
                 float x = lm;
                 for (int i = 0; i < hdr.Length; i++) { 
-                    var sf = new StringFormat{ Alignment = i >= 2 ? StringAlignment.Far : StringAlignment.Near };
+                    using var sf = new StringFormat{ Alignment = i >= 2 ? StringAlignment.Far : StringAlignment.Near };
                     g.DrawString(hdr[i], fHeader, br, new RectangleF(x, y + 3, w[i] - 5, 20), sf); 
                     x += w[i]; 
                 } 
@@ -201,9 +224,10 @@ public class StoklarPanel : UserControl
                 
                 float x = lm;
                 g.DrawString(item.KodNo, fRow, br, new RectangleF(x, y + 2, w[0], 20)); x += w[0];
-                g.DrawString(item.Ad, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); x += w[1];
+                using var sfEllipsis = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
+                g.DrawString(item.Ad, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), sfEllipsis); x += w[1];
                 
-                var sfRight = new StringFormat{ Alignment = StringAlignment.Far };
+                using var sfRight = new StringFormat{ Alignment = StringAlignment.Far };
                 g.DrawString(UIHelper.FormatMiktar(item.ToplamGiris), fRow, brGreen, new RectangleF(x, y + 2, w[2]-5, 20), sfRight); x += w[2];
                 g.DrawString(UIHelper.FormatMiktar(item.ToplamCikis), fRow, brRed, new RectangleF(x, y + 2, w[3]-5, 20), sfRight); x += w[3];
                 g.DrawString(UIHelper.FormatMiktar(item.Mevcut), fRow, br, new RectangleF(x, y + 2, w[4]-5, 20), sfRight);

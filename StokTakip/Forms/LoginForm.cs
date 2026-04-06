@@ -10,7 +10,7 @@ public class LoginForm : Form
 
     public LoginForm()
     {
-        Text = "Stokendra - Stok Takip Programı \u2014 Giriş";
+        Text = "Stokendra";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false; MinimizeBox = false;

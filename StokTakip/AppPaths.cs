@@ -10,6 +10,18 @@ public static class AppPaths
     public static string SettingsFilePath => Path.Combine(ApplicationDataDirectory, "ayarlar.json");
     public static string CrashLogPath => Path.Combine(ApplicationDataDirectory, "crash_log.txt");
     public static string DefaultDatabasePath => Path.Combine(ApplicationDataDirectory, "stok.db");
+    
+    public static string ActivityLogPath => Path.Combine(EnsureDirectory(Path.Combine(ApplicationDataDirectory, "logs")), "userActivity.txt");
+
+    public static void LogActivity(string action, string module, string details)
+    {
+        try
+        {
+            string logLine = $"{action}_{module}_{details}_{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            File.AppendAllText(ActivityLogPath, logLine + Environment.NewLine);
+        }
+        catch { }
+    }
 
     public static string NormalizeDatabasePath(string? dbPath)
     {

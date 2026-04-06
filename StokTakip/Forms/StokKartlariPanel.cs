@@ -7,6 +7,8 @@ namespace StokTakip.Forms;
 
 public class StokKartlariPanel : UserControl
 {
+    private static readonly Font StokBoldFont = new("Segoe UI", 10f, FontStyle.Bold);
+    private static readonly Font KartTipiFont = new("Segoe UI Semibold", 9f);
     private DataGridView grid = new();
     private TextBox txtAra = new();
     private Label lblInfo = new(), lblStatus = new();
@@ -59,9 +61,9 @@ public class StokKartlariPanel : UserControl
             if (e.CellStyle != null)
             {
                 if (cn == "MevcutStok" && double.TryParse(e.Value?.ToString(), out double s))
-                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold); }
+                { e.CellStyle.ForeColor = UIHelper.StokRengi(s); e.CellStyle.Font = StokBoldFont; }
                 else if (cn == "KartTipi")
-                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = new Font("Segoe UI Semibold", 9f); }
+                { e.CellStyle.ForeColor = e.Value?.ToString() == L("parent_card") ? UIHelper.AccentCyan : UIHelper.AccentGreen; e.CellStyle.Font = KartTipiFont; }
             }
         };
         grid.DoubleClick += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };

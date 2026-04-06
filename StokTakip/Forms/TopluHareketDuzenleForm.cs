@@ -111,23 +111,31 @@ public class TopluHareketDuzenleForm : Form
         }
 
         int updated = 0;
-        foreach (var h in _hareketler)
+        try
         {
-            bool modified = false;
-
-            if (chkTeslim.Checked) { h.TeslimEdilen = txtTeslim.Text.Trim(); modified = true; }
-            if (chkDept.Checked) { h.Departman = cmbDept.SelectedItem?.ToString() ?? ""; modified = true; }
-            if (chkTarih.Checked) { h.Tarih = dtpTarih.Value; modified = true; }
-            if (chkAcik.Checked) { h.Aciklama = txtAciklama.Text.Trim(); modified = true; }
-
-            if (modified)
+            foreach (var h in _hareketler)
             {
-                Program.DB!.HareketGuncelle(h);
-                updated++;
-            }
-        }
+                bool modified = false;
 
-        MessageBox.Show(L("bulk_edit_success", updated), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        DialogResult = DialogResult.OK;
+                if (chkTeslim.Checked) { h.TeslimEdilen = txtTeslim.Text.Trim(); modified = true; }
+                if (chkDept.Checked) { h.Departman = cmbDept.SelectedItem?.ToString() ?? ""; modified = true; }
+                if (chkTarih.Checked) { h.Tarih = dtpTarih.Value; modified = true; }
+                if (chkAcik.Checked) { h.Aciklama = txtAciklama.Text.Trim(); modified = true; }
+
+                if (modified)
+                {
+                    Program.DB!.HareketGuncelle(h);
+                    updated++;
+                }
+            }
+
+            MessageBox.Show(L("bulk_edit_success", updated), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            DialogResult = DialogResult.OK;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"{updated} kayıt güncellendi, ancak bir hata oluştu:\n{ex.Message}", L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (updated > 0) DialogResult = DialogResult.OK;
+        }
     }
 }

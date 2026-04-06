@@ -620,7 +620,8 @@ public class RaporlarPanel : UserControl
                 y += 12;
                 g.DrawLine(pen, lm, y, lm + pw, y); y += 8;
                 string totalStr = L("total_consumption") + ": " + lblTotalInfo.Text;
-                g.DrawString(totalStr, fTotal, new SolidBrush(Color.DarkBlue), lm, y);
+                using var brTotal = new SolidBrush(Color.DarkBlue);
+                g.DrawString(totalStr, fTotal, brTotal, lm, y);
             }
 
             g.DrawString(

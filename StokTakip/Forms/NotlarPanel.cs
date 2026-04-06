@@ -5,6 +5,8 @@ namespace StokTakip.Forms;
 
 public class NotlarPanel : UserControl
 {
+    private static readonly Font BaslikFont = new("Segoe UI", 10f, FontStyle.Bold);
+    private static readonly Font TarihFont = new("Segoe UI", 8.5f);
     private DataGridView grid = new();
     private List<Not> _notlar = new();
 
@@ -62,13 +64,13 @@ public class NotlarPanel : UserControl
             if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
             if (grid.Columns[e.ColumnIndex].Name == "Baslik" && e.CellStyle != null)
             {
-                e.CellStyle.Font = new Font("Segoe UI", 10f, FontStyle.Bold);
+                e.CellStyle.Font = BaslikFont;
                 e.CellStyle.ForeColor = UIHelper.TextWhite;
             }
             if (grid.Columns[e.ColumnIndex].Name == "Tarih" && e.CellStyle != null)
             {
                 e.CellStyle.ForeColor = UIHelper.AccentCyan;
-                e.CellStyle.Font = new Font("Segoe UI", 8.5f);
+                e.CellStyle.Font = TarihFont;
             }
             if (grid.Columns[e.ColumnIndex].Name == "Icerik" && e.CellStyle != null)
             {

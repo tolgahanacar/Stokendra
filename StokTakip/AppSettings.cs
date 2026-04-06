@@ -8,6 +8,8 @@ public class AppSettings
     public string Language { get; set; } = "tr";
     public string CompanyName { get; set; } = "";
     public string Theme { get; set; } = "dark";
+    public string AutoBackupPath { get; set; } = "";
+    public DateTime? LastBackupDate { get; set; }
 
     static AppSettings()
     {

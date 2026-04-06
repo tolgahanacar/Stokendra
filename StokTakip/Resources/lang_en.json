@@ -242,5 +242,6 @@
     "no_low_stock": "✔ All stocks are at adequate levels",
     "depleted": "Depleted",
     "category_stock_diversity": "Stock Diversity by Category",
-    "last_7_days_movements": "Last 7 Days Stock Movements"
+    "last_7_days_movements": "Last 7 Days Stock Movements",
+    "default_admin_password_warning": "Default Admin Password in use, please update."
 }

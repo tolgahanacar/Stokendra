@@ -1,7 +1,7 @@
 {
   "app_title": "Stokendra - Stok Takip Programı",
   "app_name": "Stokendra",
-  "app_version": "v3.9.1",
+  "app_version": "v3.9.4",
   "menu": "MENÜ",
   "dashboard": "Dashboard",
   "stock_cards": "Stok Kartları",
@@ -253,5 +253,13 @@
   "no_low_stock": "✔ Tüm stoklar yeterli seviyede",
   "depleted": "Tükendi",
   "category_stock_diversity": "Kategorilere Göre Stok Çeşitliliği",
-  "last_7_days_movements": "Son 7 Günlük Stok Hareketleri"
+  "last_7_days_movements": "Son 7 Günlük Stok Hareketleri",
+  "default_admin_password_warning": "Klasik Admin Şifresi, lütfen güncelleyiniz.",
+  "location": "Konum",
+  "supplier": "Tedarikçi",
+  "barcode": "Barkod",
+  "unit_price": "Birim Fiyat",
+  "backup_full_excel": "📊 Tam Excel Yedeği",
+  "backup_full_excel_desc": "Tüm verileri Excel dosyaları olarak ZIP'e aktarır",
+  "confirm_service_delete": "Bu servis kaydı silinsin mi?"
 }

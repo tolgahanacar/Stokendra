@@ -8,12 +8,16 @@ namespace StokTakip.Forms;
 
 public class StokHareketPanel : UserControl
 {
+    private static readonly Font GirisCikisFont = new("Segoe UI", 9.5f, FontStyle.Bold);
     private DataGridView grid = new();
     private ComboBox cmbStok = new(), cmbDept = new(), cmbTur = new();
     private DateTimePicker dtpBas = new(), dtpBit = new();
     private Label lblInfo = new();
     private TextBox txtSearch = new();
     private List<StokHareketi> _liste = new();
+    private int _currentPage = 1;
+    private int _pageSize = 50;
+    private Button btnPrev = new(), btnNext = new();
 
     public StokHareketPanel()
     {
@@ -47,12 +51,12 @@ public class StokHareketPanel : UserControl
 
         // Arama
         txtSearch = UIHelper.MakeSearchBox(L("search_placeholder"), 200);
-        txtSearch.TextChanged += (_, _) => ApplyLiveSearch();
+        txtSearch.TextChanged += (_, _) => { _currentPage = 1; ApplyLiveSearch(); };
 
         // Butonlar
         var btnFil = UIHelper.MakeFlowButton(L("filter"), UIHelper.AccentBlue, 80, 30);
         var btnClr = UIHelper.MakeFlowButton(L("clear_filter"), UIHelper.BtnDark, 80, 30);
-        btnFil.Click += (_, _) => Filtrele();
+        btnFil.Click += (_, _) => { _currentPage = 1; Filtrele(); };
         btnClr.Click += (_, _) => Temizle();
 
         // Standart filtre barı
@@ -128,16 +132,21 @@ public class StokHareketPanel : UserControl
                     if (v.Contains("[Ç]")) e.CellStyle.ForeColor = UIHelper.StokWarning;
                     else if (v.Contains("[B]")) e.CellStyle.ForeColor = UIHelper.TextSecondary;
                     else e.CellStyle.ForeColor = UIHelper.AccentGreen;
-                    e.CellStyle.Font = new Font("Segoe UI", 9.5f, FontStyle.Bold);
+                    e.CellStyle.Font = GirisCikisFont;
                 }
             }
         };
         grid.DoubleClick += (_, _) => DuzenleHareket();
 
-        // Status
-        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 34, BackColor = UIHelper.BgPanel };
-        lblInfo = new Label { Left = 20, Top = 8, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
-        pnlSt.Controls.Add(lblInfo);
+        // Status + Pagination
+        var pnlSt = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = UIHelper.BgPanel };
+        lblInfo = new Label { Left = 20, Top = 12, AutoSize = true, Font = new Font("Segoe UI Semibold", 9f), ForeColor = UIHelper.TextMuted };
+        btnPrev = UIHelper.MakeButton("<", UIHelper.BtnMid, 0, 5, 40, 30);
+        btnNext = UIHelper.MakeButton(">", UIHelper.BtnMid, 0, 5, 40, 30);
+        btnPrev.Click += (_, _) => { if (_currentPage > 1) { _currentPage--; ApplyLiveSearch(); } };
+        btnNext.Click += (_, _) => { _currentPage++; ApplyLiveSearch(); };
+        pnlSt.Controls.AddRange(new Control[] { lblInfo, btnPrev, btnNext });
+        pnlSt.Resize += (_, _) => { btnNext.Left = pnlSt.Width - 60; btnPrev.Left = pnlSt.Width - 110; };
 
         Controls.Add(grid); Controls.Add(pnlT); Controls.Add(pnlF); Controls.Add(pnlH); Controls.Add(pnlSt);
         Filtrele();
@@ -171,13 +180,19 @@ public class StokHareketPanel : UserControl
         }
 
         grid.Rows.Clear();
-        foreach (var h in data)
+        int totalPages = (int)Math.Ceiling(data.Count / (double)_pageSize);
+        if (totalPages == 0) totalPages = 1;
+        if (_currentPage > totalPages) _currentPage = totalPages;
+        btnPrev.Enabled = _currentPage > 1;
+        btnNext.Enabled = _currentPage < totalPages;
+        var paged = data.Skip((_currentPage - 1) * _pageSize).Take(_pageSize);
+        foreach (var h in paged)
         {
             string gc = h.Tur == "Giris" ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == "Cikis" ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
             grid.Rows.Add(h.Id, h.StokKartId, h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih, h.Aciklama,
                 h.Tur, h.Miktar.ToString(CultureInfo.InvariantCulture), h.Tarih.ToString("o"));
         }
-        lblInfo.Text = L("movements_count", data.Count);
+        lblInfo.Text = L("movements_count", data.Count) + $"  |  Sayfa: {_currentPage} / {totalPages}";
     }
 
     void Temizle() { dtpBas.Value = DateTime.Now.AddMonths(-1); dtpBit.Value = DateTime.Now; cmbStok.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbTur.SelectedIndex = 0; txtSearch.Clear(); Filtrele(); }
@@ -460,3 +475,5 @@ public class StokHareketPanel : UserControl
         using var pv = new PrintPreviewDialog { Document = pd, Width = 1100, Height = 700, StartPosition = FormStartPosition.CenterParent }; pv.ShowDialog(this);
     }
 }
+
+

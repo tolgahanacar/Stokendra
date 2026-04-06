@@ -32,6 +32,8 @@ public class MainForm : Form
         BuildSidebar();
         BuildContent();
         ShowPage("dashboard");
+        Load += (_, _) => _ = UpdateChecker.CheckSilentAsync();
+        Load += (_, _) => _ = BackupManager.CheckWeeklyBackupAsync();
     }
 
     private void BuildSidebar()
