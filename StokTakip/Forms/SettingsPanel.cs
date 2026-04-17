@@ -144,7 +144,7 @@ public sealed class AyarlarPanel : UserControl
         cardAbout.Dock = DockStyle.Fill;
         
         var lblTitle = new Label { Text = "Stokendra", AutoSize = true, Font = new Font("Segoe UI", 14, FontStyle.Bold), ForeColor = UIHelper.AccentCyan, Margin = new Padding(0, 0, 0, 4) };
-        var lblVer = new Label { Text = "v3.9.4  •  Geliştirici: Tolgahan Acar", AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 10) };
+        var lblVer = new Label { Text = $"v{Application.ProductVersion}  •  Geliştirici: Tolgahan Acar", AutoSize = true, Font = new Font("Segoe UI Semibold", 9), ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 10) };
         var lblDesc = new Label { Text = "Bu yazılım lisanslıdır. Tüm hakları saklıdır.", AutoSize = true, Font = new Font("Segoe UI", 8.5f), ForeColor = UIHelper.TextDim, Margin = new Padding(0, 0, 0, 15) };
         
         var btnUpdate = UIHelper.MakeButton(L("check_updates"), UIHelper.AccentCyan, 0, 0, 200, 32);

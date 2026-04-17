@@ -52,7 +52,7 @@ public sealed class MainForm : Form
         };
         try { picLogo.Image = Icon.ExtractAssociatedIcon(AppDomain.CurrentDomain.FriendlyName)?.ToBitmap() ?? Image.FromFile("StokTakip.ico"); } catch { try { picLogo.Image = Image.FromFile("StokTakip.ico"); } catch { } }
         var lblTitle = new Label { Text = "Stokendra", Font = new Font("Segoe UI", 15), ForeColor = UIHelper.TextWhite, Left = 62, Top = 14, AutoSize = true };
-        var lblVer = new Label { Text = "v3.9.4", Font = new Font("Segoe UI", 10), ForeColor = UIHelper.AccentCyan, Left = 62, Top = 38, AutoSize = true };
+        var lblVer = new Label { Text = "v" + Application.ProductVersion, Font = new Font("Segoe UI", 10), ForeColor = UIHelper.AccentCyan, Left = 62, Top = 38, AutoSize = true };
         pnlLogo.Controls.AddRange(new Control[] { picLogo, lblTitle, lblVer });
 
         var divTop = new Panel { Dock = DockStyle.Top, Height = 1, BackColor = UIHelper.SidebarDivider };
