@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
-using Microsoft.Data.Sqlite;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
