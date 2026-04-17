@@ -93,12 +93,13 @@ public sealed class MainForm : Form
         UpdateSidebarSelection(key);
         pnlContent.SuspendLayout(); 
         
-        // FIX: Dispose old controls to prevent memory leaks
-        foreach (Control c in pnlContent.Controls)
+        // FIX: Remove control from layout before disposing to prevent ObjectDisposedException on background elements like ScottPlot
+        while (pnlContent.Controls.Count > 0)
         {
-            if (!c.IsDisposed) c.Dispose();
+            var oldCtrl = pnlContent.Controls[0];
+            pnlContent.Controls.Remove(oldCtrl);
+            if (!oldCtrl.IsDisposed) oldCtrl.Dispose();
         }
-        pnlContent.Controls.Clear();
 
         Control content = key switch {
             "menu_dashboard" => new DashboardPanel(), "menu_reports" => new RaporlarPanel(),

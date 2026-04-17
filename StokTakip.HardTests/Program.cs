@@ -19,7 +19,10 @@ var tests = new List<(string Name, Func<Task> Run)>
     ("Concurrent writes stay consistent", TestConcurrentWrites),
     ("Backup and SQL export", TestBackupAndSqlExport),
     ("Bulk service insert", TestBulkServiceInsert),
-    ("Note CRUD operations", TestNotCRUD)
+    ("Note CRUD operations", TestNotCRUD),
+    ("Dashboard stats & logic", TestDashboardDataIntegrity),
+    ("Report generation", TestReportGeneration),
+    ("Service ops & UI searches", TestServiceOperations)
 };
 
 var failures = new List<string>();
@@ -315,6 +318,73 @@ static void AssertContains(string needle, string haystack, string message)
 {
     if (!haystack.Contains(needle, StringComparison.Ordinal))
         throw new InvalidOperationException(message);
+}
+
+static Task TestDashboardDataIntegrity()
+{
+    using var scope = new TestScope("dashboard-stats");
+    using var db = new Database(scope.DbPath);
+
+    int dev1 = AddCard(db, "DEV-01", "Device 1", kartTipi: "Alt");
+    int dev2 = AddCard(db, "DEV-02", "Device 2", kartTipi: "Alt");
+    
+    // Add entry and exit movements
+    db.HareketEkle(new StokHareketi { StokKartId = dev1, Tur = "Giris", Miktar = 10, Departman = "IT", Tarih = DateTime.Now });
+    db.HareketEkle(new StokHareketi { StokKartId = dev2, Tur = "Giris", Miktar = 5, Departman = "IT", Tarih = DateTime.Now });
+    db.HareketEkle(new StokHareketi { StokKartId = dev1, Tur = "Cikis", Miktar = 2, Departman = "IT", Tarih = DateTime.Now });
+
+    var stats = db.DashboardIstatistikleriGetir();
+    AssertEqual(2, stats.toplamKart, "Total cards count should be 2");
+    AssertNear(13, stats.toplamStok, 0.001, "Remaining stock should be (10+5)-2 = 13");
+    AssertEqual(3, stats.toplamHareket, "Total movements should be 3");
+
+    var summary7 = db.Son7GunHareketOzetleri();
+    AssertTrue(summary7.Count > 0, "Should have 7-day summary.");
+
+    var altKartlar = db.AltKartlariGetir();
+    AssertEqual(2, altKartlar.Count, "Should return 2 alt cards");
+
+    return Task.CompletedTask;
+}
+
+static Task TestReportGeneration()
+{
+    using var scope = new TestScope("reports-gen");
+    using var db = new Database(scope.DbPath);
+
+    int cardId = AddCard(db, "REP-100", "Report Card");
+    db.HareketEkle(new StokHareketi { StokKartId = cardId, Tur = "Giris", Miktar = 50, Departman = "IT", Tarih = DateTime.Today.AddDays(-2) });
+
+    var moves = db.HareketleriGetir(null, DateTime.Today.AddDays(-5), DateTime.Today, "IT");
+    AssertEqual(1, moves.Count, "Should find 1 report row matching criteria in HareketleriGetir.");
+    AssertNear(50, moves[0].Miktar, 0.001, "Report entry quantity should match.");
+
+    var noData = db.HareketleriGetir(null, DateTime.Today.AddDays(1), DateTime.Today.AddDays(5), "IT");
+    AssertEqual(0, noData.Count, "Should find 0 report rows in future dates.");
+
+    return Task.CompletedTask;
+}
+
+
+
+static Task TestServiceOperations()
+{
+    using var scope = new TestScope("service-ops");
+    using var db = new Database(scope.DbPath);
+
+    var rec = new ServisKaydi { CihazAdi = "Laptop", SeriNumarasi = "SN123", Firma = "ACME", Sorun = "Screen broken", BakimTarihi = DateTime.Today };
+    db.ServisKaydiEkle(rec);
+
+    var results = db.ServisKayitlariniGetir(null, null, "ACME");
+    AssertEqual(1, results.Count, "Search by Firma should find 1 record.");
+
+    results[0].Sonuc = "Fixed";
+    db.ServisKaydiGuncelle(results[0]);
+
+    var verify = db.ServisKayitlariniGetir(null, null, "123");
+    AssertEqual("Fixed", verify[0].Sonuc, "Result should be correctly updated.");
+
+    return Task.CompletedTask;
 }
 
 static void AssertThrows<TException>(Action action, string message) where TException : Exception
