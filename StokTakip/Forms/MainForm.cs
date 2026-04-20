@@ -72,7 +72,7 @@ public sealed class MainForm : Form
         var pnlFooter = new Panel { Dock = DockStyle.Bottom, Height = 48, BackColor = UIHelper.BgSidebar };
         pnlFooter.Controls.AddRange(new Control[] {
             new Label { Text = "© 2026 Tolgahan Acar", Font = new Font("Segoe UI", 10), ForeColor = UIHelper.TextDim, Left = 20, Top = 8, AutoSize = true },
-            new Label { Text = "Tüm hakları saklıdır.", Font = new Font("Segoe UI", 8), ForeColor = Color.FromArgb(60, 70, 90), Left = 20, Top = 26, AutoSize = true }
+            new Label { Text = L("all_rights_reserved"), Font = new Font("Segoe UI", 8), ForeColor = Color.FromArgb(60, 70, 90), Left = 20, Top = 26, AutoSize = true }
         });
 
         pnlSidebar.Controls.AddRange(new Control[] { navPanel, divTop, pnlLogo, pnlFooter });

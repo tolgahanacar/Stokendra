@@ -264,5 +264,8 @@
   "auto_backup_folder": "Otomatik Yedekleme Klasörü",
   "auto_backup_folder_select": "Otomatik Yedekleme Klasörü Seçin",
   "password_policy_hint": "Şifre en az 8 karakter olmalı, büyük/küçük harf ve rakam içermelidir.",
-  "type_empty": "Boş"
+  "type_empty": "Boş",
+  "developer": "Geliştirici:",
+  "software_licensed": "Bu yazılım lisanslıdır. Tüm hakları saklıdır.",
+  "all_rights_reserved": "Tüm hakları saklıdır."
 }

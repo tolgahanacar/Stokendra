@@ -264,5 +264,8 @@
     "barcode": "Barcode",
     "unit_price": "Unit Price",
     "backup_full_excel": "📊 Full Excel Backup",
-    "backup_full_excel_desc": "Exports all data as Excel files into a ZIP archive"
+    "backup_full_excel_desc": "Exports all data as Excel files into a ZIP archive",
+    "developer": "Developer:",
+    "software_licensed": "This software is licensed. All rights reserved.",
+    "all_rights_reserved": "All rights reserved."
 }

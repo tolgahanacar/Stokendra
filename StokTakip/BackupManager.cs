@@ -104,7 +104,14 @@ public static class BackupManager
     {
         string dbPath = string.IsNullOrWhiteSpace(Program.Settings.DbPath) ? AppPaths.DefaultDatabasePath : Program.Settings.DbPath;
         if (File.Exists(dbPath))
+        {
             File.Copy(dbPath, Path.Combine(tempDir, "stok.db"), true);
+            string origName = Path.GetFileName(dbPath);
+            if (!origName.Equals("stok.db", StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(dbPath, Path.Combine(tempDir, origName), true);
+            }
+        }
     }
 
     private static void ExportSql(string tempDir)
