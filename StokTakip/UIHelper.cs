@@ -111,7 +111,8 @@ public static class UIHelper
         d.CustomFormat = showTime ? "dd.MM.yyyy HH:mm" : "dd.MM.yyyy";
         d.CalendarMonthBackground = BgInput; d.CalendarForeColor = TextPrimary;
         d.BackColor = BgInput; d.ForeColor = TextPrimary;
-        d.Font = new Font("Segoe UI Semibold", 9.5f);
+        d.Font = new Font("Segoe UI", 9.5f);
+        d.MinimumSize = new Size(0, 26);
         if (d.Width < 140) d.Width = 140;
     }
 

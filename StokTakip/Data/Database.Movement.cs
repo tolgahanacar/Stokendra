@@ -57,7 +57,7 @@ public sealed partial class Database
 
     public void TopluHareketEkle(IEnumerable<StokHareketi> hareketler)
     {
-        var liste = hareketler?.Select(NormalizeHareket).ToList() ?? new List<StokHareketi>();
+        var liste = hareketler?.Select(NormalizeMovement).ToList() ?? new List<StokHareketi>();
         if (liste.Count == 0)
             throw new InvalidOperationException(L("bulk_operation_empty"));
 
@@ -67,7 +67,7 @@ public sealed partial class Database
         {
             foreach (var hareket in liste)
             {
-                ValidateHareket(connection, transaction, hareket);
+                ValidateMovement(connection, transaction, hareket);
                 EnsureMovementWillNotCreateNegativeStock(connection, transaction, hareket.StokKartId, MovementImpact(hareket));
 
                 using var command = CreateCommand(connection, transaction, @"
@@ -91,14 +91,14 @@ public sealed partial class Database
 
     public void HareketGuncelle(StokHareketi hareket)
     {
-        StokHareketi normalized = NormalizeHareket(hareket);
+        StokHareketi normalized = NormalizeMovement(hareket);
 
         using var connection = CreateConnection();
         using var transaction = connection.BeginTransaction();
         try
         {
             StokHareketi mevcut = GetMovementById(connection, transaction, normalized.Id) ?? throw new InvalidOperationException(L("movement_not_found"));
-            ValidateHareket(connection, transaction, normalized);
+            ValidateMovement(connection, transaction, normalized);
 
             double oldCardProjected = GetCurrentStockCore(connection, transaction, mevcut.StokKartId) - MovementImpact(mevcut);
             if (oldCardProjected < 0)

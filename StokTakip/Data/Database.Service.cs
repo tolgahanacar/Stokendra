@@ -59,13 +59,13 @@ public sealed partial class Database
 
     public void ServisKaydiGuncelle(ServisKaydi kayit)
     {
-        ServisKaydi normalized = NormalizeServisKaydi(kayit);
+        ServisKaydi normalized = NormalizeServiceRecord(kayit);
 
         using var connection = CreateConnection();
         using var transaction = connection.BeginTransaction();
         try
         {
-            ValidateServisKaydi(normalized);
+            ValidateServiceRecord(normalized);
 
             using var command = CreateCommand(connection, transaction, @"
                 UPDATE ServisKayitlari
