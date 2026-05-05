@@ -31,11 +31,36 @@ public sealed partial class Database
     }
 
 
+    /// <summary>
+    /// Veritabanındaki tüm stok kartlarını (Alt ve Üst) getirir (Senkron).
+    /// </summary>
     public List<StokKarti> StokKartlariniGetir() => GetStockCards();
 
+    /// <summary>
+    /// Veritabanındaki tüm üst stok kartlarını (KartTipi='Ust') getirir (Senkron).
+    /// </summary>
     public List<StokKarti> UstKartlariGetir() => GetStockCards("Ust");
 
+    /// <summary>
+    /// Veritabanındaki tüm alt stok kartlarını (KartTipi='Alt') getirir (Senkron).
+    /// </summary>
+    /// <param name="ustId">Belirli bir üst karta ait alt kartları filtrelemek için ID.</param>
     public List<StokKarti> AltKartlariGetir(int? ustId = null) => GetStockCards("Alt", ustId);
+
+    /// <summary>
+    /// Veritabanındaki tüm stok kartlarını asenkron olarak getirir.
+    /// </summary>
+    public async Task<List<StokKarti>> StokKartlariniGetirAsync() => await GetStockCardsAsync();
+
+    /// <summary>
+    /// Veritabanındaki tüm üst stok kartlarını (KartTipi='Ust') asenkron olarak getirir.
+    /// </summary>
+    public async Task<List<StokKarti>> UstKartlariGetirAsync() => await GetStockCardsAsync("Ust");
+
+    /// <summary>
+    /// Veritabanındaki tüm alt stok kartlarını (KartTipi='Alt') asenkron olarak getirir.
+    /// </summary>
+    public async Task<List<StokKarti>> AltKartlariGetirAsync(int? ustId = null) => await GetStockCardsAsync("Alt", ustId);
 
 
     private List<StokKarti> GetStockCards(string? kartTipi = null, int? ustKartId = null, int? id = null)
@@ -60,7 +85,32 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            AppLogger.LogError("StokKartlariniGetir error: " + ex);
+            AppLogger.LogError("GetStockCards error: " + ex);
+        }
+
+        return liste;
+    }
+
+    private async Task<List<StokKarti>> GetStockCardsAsync(string? kartTipi = null, int? ustKartId = null, int? id = null)
+    {
+        var liste = new List<StokKarti>();
+
+        try
+        {
+            using var connection = CreateConnection();
+            using var command = CreateCommand(connection, null, BuildStockCardQuery(kartTipi, ustKartId, id));
+
+            if (!string.IsNullOrWhiteSpace(kartTipi)) command.Parameters.AddWithValue("$kartTipi", kartTipi);
+            if (ustKartId.HasValue) command.Parameters.AddWithValue("$ustKartId", ustKartId.Value);
+            if (id.HasValue) command.Parameters.AddWithValue("$id", id.Value);
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+                liste.Add(ReadStockCard(reader));
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("GetStockCardsAsync error", ex);
         }
 
         return liste;
@@ -73,6 +123,10 @@ public sealed partial class Database
     }
 
 
+    /// <summary>
+    /// Yeni bir stok kartını veritabanına ekler (Senkron).
+    /// </summary>
+    /// <param name="stokKarti">Eklenecek stok kartı nesnesi.</param>
     public void StokKartiEkle(StokKarti stokKarti)
     {
         StokKarti normalized = NormalizeStokKarti(stokKarti);
@@ -100,6 +154,40 @@ public sealed partial class Database
         catch (Exception ex)
         {
             AppLogger.LogError("StokKartiEkle error: " + ex);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Yeni bir stok kartını veritabanına asenkron olarak ekler (Async).
+    /// </summary>
+    public async Task StokKartiEkleAsync(StokKarti stokKarti)
+    {
+        StokKarti normalized = NormalizeStokKarti(stokKarti);
+
+        using var connection = CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            ValidateStokKarti(connection, transaction, normalized, false);
+
+            using var command = CreateCommand(connection, transaction, @"
+                INSERT INTO StokKartlari
+                    (Ad, KodNo, Aciklama, MinStok, Kategori, KartTipi, UstKartId, OlusturmaTarihi, Birim, Konum, Tedarikci, Barkod, BirimFiyat)
+                VALUES
+                    ($a, $k, $ac, $ms, $kat, $kt, $uk, $ot, $b, $kon, $ted, $bar, $bf)");
+            BindStockCardParameters(command, normalized, includeId: false);
+            command.Parameters.AddWithValue("$ot", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
+            await command.ExecuteNonQueryAsync();
+
+            int newId = GetLastInsertRowId(connection, transaction);
+            stokKarti.Id = newId;
+            InsertAuditLog(connection, transaction, "EKLE", "StokKartlari", newId, $"{normalized.Ad} ({normalized.KodNo}) [{normalized.KartTipi}]");
+            transaction.Commit();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("StokKartiEkleAsync error", ex);
             throw;
         }
     }

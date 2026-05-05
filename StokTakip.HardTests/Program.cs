@@ -320,7 +320,7 @@ static void AssertContains(string needle, string haystack, string message)
         throw new InvalidOperationException(message);
 }
 
-static Task TestDashboardDataIntegrity()
+static async Task TestDashboardDataIntegrity()
 {
     using var scope = new TestScope("dashboard-stats");
     using var db = new Database(scope.DbPath);
@@ -333,18 +333,16 @@ static Task TestDashboardDataIntegrity()
     db.HareketEkle(new StokHareketi { StokKartId = dev2, Tur = "Giris", Miktar = 5, Departman = "IT", Tarih = DateTime.Now });
     db.HareketEkle(new StokHareketi { StokKartId = dev1, Tur = "Cikis", Miktar = 2, Departman = "IT", Tarih = DateTime.Now });
 
-    var stats = db.DashboardIstatistikleriGetir();
+    var stats = await db.DashboardIstatistikleriGetirAsync();
     AssertEqual(2, stats.toplamKart, "Total cards count should be 2");
     AssertNear(13, stats.toplamStok, 0.001, "Remaining stock should be (10+5)-2 = 13");
     AssertEqual(3, stats.toplamHareket, "Total movements should be 3");
 
-    var summary7 = db.Son7GunHareketOzetleri();
+    var summary7 = await db.Son7GunHareketOzetleriAsync();
     AssertTrue(summary7.Count > 0, "Should have 7-day summary.");
 
     var altKartlar = db.AltKartlariGetir();
     AssertEqual(2, altKartlar.Count, "Should return 2 alt cards");
-
-    return Task.CompletedTask;
 }
 
 static Task TestReportGeneration()

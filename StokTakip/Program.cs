@@ -1,12 +1,25 @@
-using StokTakip.Forms;
 using StokTakip.Data;
+using StokTakip.Data.Interfaces;
+using StokTakip.Forms;
+using StokTakip.Infrastructure;
 
 namespace StokTakip;
 
+/// <summary>
+/// Uygulama giriş noktası. Servis kaydı, veritabanı başlatma ve form akışını yönetir.
+/// </summary>
 static class Program
 {
+    /// <summary>Uygulama genelinde kullanılan IoC container.</summary>
+    public static ServiceContainer Services { get; } = new();
+
+    /// <summary>Aktif veritabanı bağlantısı. Login öncesinde <c>null</c> olabilir.</summary>
     public static Database? DB { get; private set; }
+
+    /// <summary>Yüklü uygulama ayarları.</summary>
     public static AppSettings Settings { get; private set; } = new();
+
+    /// <summary>Oturum açmış kullanıcı adı.</summary>
     public static string CurrentUser { get; set; } = "admin";
 
     [STAThread]
@@ -16,13 +29,12 @@ static class Program
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         ApplicationConfiguration.Initialize();
 
-        Application.ThreadException += (s, e) => {
-            LogError(e.Exception);
-        };
-        AppDomain.CurrentDomain.UnhandledException += (s, e) => {
+        Application.ThreadException += (_, e) => LogError(e.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
             if (e.ExceptionObject is Exception ex) LogError(ex);
         };
-        TaskScheduler.UnobservedTaskException += (s, e) =>
+        TaskScheduler.UnobservedTaskException += (_, e) =>
         {
             LogError(e.Exception);
             e.SetObserved();
@@ -42,6 +54,25 @@ static class Program
             return;
 
         Application.Run(new MainForm());
+    }
+
+    /// <summary>
+    /// Tüm servisleri IoC container'a kaydeder.
+    /// Veritabanı başlatıldıktan sonra çağrılmalıdır.
+    /// </summary>
+    private static void ConfigureServices()
+    {
+        if (DB == null) return;
+
+        Services
+            .RegisterInstance<IStockCardRepository>(DB)
+            .RegisterInstance<IMovementRepository>(DB)
+            .RegisterInstance<IServiceRecordRepository>(DB)
+            .RegisterInstance<INoteRepository>(DB)
+            .RegisterInstance<IDepartmentRepository>(DB)
+            .RegisterInstance<IReportRepository>(DB)
+            .RegisterInstance<IUserRepository>(DB)
+            .RegisterInstance<IConfigRepository>(DB);
     }
 
     private static bool EnsureDatabasePath()
@@ -73,8 +104,13 @@ static class Program
     {
         try
         {
-            DB = new Data.Database(Settings.DbPath);
-            Application.ApplicationExit += (s, e) => DB?.Dispose();
+            DB = new Database(Settings.DbPath);
+            ConfigureServices();
+            Application.ApplicationExit += (_, _) =>
+            {
+                DB?.Dispose();
+                Services.Dispose();
+            };
             return true;
         }
         catch (Exception ex)
@@ -95,8 +131,13 @@ static class Program
 
             try
             {
-                DB = new Data.Database(Settings.DbPath);
-                Application.ApplicationExit += (s, e) => DB?.Dispose();
+                DB = new Database(Settings.DbPath);
+                ConfigureServices();
+                Application.ApplicationExit += (_, _) =>
+                {
+                    DB?.Dispose();
+                    Services.Dispose();
+                };
                 return true;
             }
             catch (Exception retryEx)
@@ -120,7 +161,11 @@ static class Program
             File.AppendAllText(
                 AppPaths.CrashLogPath,
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}{Environment.NewLine}{Environment.NewLine}");
-            MessageBox.Show("Kritik Hata: " + ex.Message + "\n\nLog: " + AppPaths.CrashLogPath, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(
+                "Kritik Hata: " + ex.Message + "\n\nLog: " + AppPaths.CrashLogPath,
+                "Hata",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
         catch { }
     }

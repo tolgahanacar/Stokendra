@@ -2,12 +2,26 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Data.Sqlite;
+using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Data;
 
-public sealed partial class Database : IDisposable
+/// <summary>
+/// SQLite tabanlı ana veritabanı sınıfı.
+/// Tüm repository arayüzlerini tek bir bağlantı yönetimi altında uygular.
+/// </summary>
+public sealed partial class Database :
+    IStockCardRepository,
+    IMovementRepository,
+    IServiceRecordRepository,
+    INoteRepository,
+    IDepartmentRepository,
+    IReportRepository,
+    IUserRepository,
+    IConfigRepository,
+    IDisposable
 {
     private readonly string _databasePath;
     private readonly string _connectionString;
@@ -330,6 +344,10 @@ public sealed partial class Database : IDisposable
         }
     }
 
+    /// <summary>
+    /// Veritabanının SQLite yedeğini belirtilen dosya yoluna kopyalar.
+    /// </summary>
+    /// <param name="destinationPath">Hedef yedek dosya yolu.</param>
     public void CreateBackup(string destinationPath)
     {
         string normalizedPath = AppPaths.NormalizeWritableFilePath(destinationPath);
@@ -344,6 +362,164 @@ public sealed partial class Database : IDisposable
         destination.Open();
         source.BackupDatabase(destination);
     }
+
+    // ── IConfigRepository ──────────────────────────────────────────────────
+    /// <inheritdoc/>
+    void IConfigRepository.WriteAuditLog(string type, string table, int recordId, string detail)
+        => AuditLogYaz(type, table, recordId, detail);
+
+    /// <inheritdoc/>
+    List<Birim> IConfigRepository.GetUnits() => BirimleriGetir();
+
+    // ── IStockCardRepository ───────────────────────────────────────────────
+    /// <inheritdoc/>
+    List<StokKarti> IStockCardRepository.GetAll() => StokKartlariniGetir();
+
+    /// <inheritdoc/>
+    Task<List<StokKarti>> IStockCardRepository.GetAllAsync() => StokKartlariniGetirAsync();
+
+    /// <inheritdoc/>
+    List<StokKarti> IStockCardRepository.GetParentCards() => UstKartlariGetir();
+
+    /// <inheritdoc/>
+    Task<List<StokKarti>> IStockCardRepository.GetParentCardsAsync() => UstKartlariGetirAsync();
+
+    /// <inheritdoc/>
+    List<StokKarti> IStockCardRepository.GetChildCards(int? parentId) => AltKartlariGetir(parentId);
+
+    /// <inheritdoc/>
+    Task<List<StokKarti>> IStockCardRepository.GetChildCardsAsync(int? parentId) => AltKartlariGetirAsync(parentId);
+
+    /// <inheritdoc/>
+    StokKarti? IStockCardRepository.GetById(int id) => StokKartiDetayGetir(id);
+
+    /// <inheritdoc/>
+    void IStockCardRepository.Add(StokKarti stokKarti) => StokKartiEkle(stokKarti);
+
+    /// <inheritdoc/>
+    Task IStockCardRepository.AddAsync(StokKarti stokKarti) => StokKartiEkleAsync(stokKarti);
+
+    /// <inheritdoc/>
+    void IStockCardRepository.Update(StokKarti stokKarti) => StokKartiGuncelle(stokKarti);
+
+    /// <inheritdoc/>
+    void IStockCardRepository.Delete(int id) => StokKartiSil(id);
+
+    /// <inheritdoc/>
+    string IStockCardRepository.GetNextCode() => SonrakiStokKodu();
+
+    // ── IMovementRepository ────────────────────────────────────────────────
+    /// <inheritdoc/>
+    List<StokHareketi> IMovementRepository.GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType)
+        => HareketleriGetir(stockCardId, startDate, endDate, department, movementType);
+
+    /// <inheritdoc/>
+    Task<List<StokHareketi>> IMovementRepository.GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType)
+        => HareketleriGetirAsync(stockCardId, startDate, endDate, department, movementType);
+
+    /// <inheritdoc/>
+    void IMovementRepository.Add(StokHareketi hareket) => HareketEkle(hareket);
+
+    /// <inheritdoc/>
+    Task IMovementRepository.AddAsync(StokHareketi hareket) => HareketEkleAsync(hareket);
+
+    /// <inheritdoc/>
+    void IMovementRepository.AddBulk(IEnumerable<StokHareketi> hareketler) => TopluHareketEkle(hareketler);
+
+    /// <inheritdoc/>
+    Task IMovementRepository.AddBulkAsync(IEnumerable<StokHareketi> hareketler) => TopluHareketEkleAsync(hareketler);
+
+    /// <inheritdoc/>
+    void IMovementRepository.Update(StokHareketi hareket) => HareketGuncelle(hareket);
+
+    /// <inheritdoc/>
+    void IMovementRepository.Delete(int id) => HareketSil(id);
+
+    /// <inheritdoc/>
+    void IMovementRepository.DeleteBulk(IEnumerable<int> ids) => TopluHareketSil(ids);
+
+    /// <inheritdoc/>
+    async Task<List<(DateTime Date, double Entry, double Exit)>> IMovementRepository.GetLast7DaysSummaryAsync()
+    {
+        var raw = await Son7GunHareketOzetleriAsync();
+        return raw.Select(x => (x.Tarih, x.Giris, x.Cikis)).ToList();
+    }
+
+    /// <inheritdoc/>
+    List<string> IMovementRepository.GetDeliveredPersons() => GetTeslimEdilenler();
+
+    // ── IServiceRecordRepository ───────────────────────────────────────────
+    /// <inheritdoc/>
+    List<ServisKaydi> IServiceRecordRepository.GetAll(DateTime? startDate, DateTime? endDate, string? searchTerm)
+        => ServisKayitlariniGetir(startDate, endDate, searchTerm);
+
+    /// <inheritdoc/>
+    void IServiceRecordRepository.Add(ServisKaydi kayit) => ServisKaydiEkle(kayit);
+
+    /// <inheritdoc/>
+    void IServiceRecordRepository.AddBulk(IEnumerable<ServisKaydi> kayitlar) => TopluServisKaydiEkle(kayitlar);
+
+    /// <inheritdoc/>
+    void IServiceRecordRepository.Update(ServisKaydi kayit) => ServisKaydiGuncelle(kayit);
+
+    /// <inheritdoc/>
+    void IServiceRecordRepository.Delete(int id) => ServisKaydiSil(id);
+
+    // ── INoteRepository ────────────────────────────────────────────────────
+    /// <inheritdoc/>
+    List<Not> INoteRepository.GetAll() => NotlariGetir();
+
+    /// <inheritdoc/>
+    void INoteRepository.Add(Not not) => NotEkle(not);
+
+    /// <inheritdoc/>
+    void INoteRepository.Update(Not not) => NotGuncelle(not);
+
+    /// <inheritdoc/>
+    void INoteRepository.Delete(int id) => NotSil(id);
+
+    // ── IDepartmentRepository ──────────────────────────────────────────────
+    /// <inheritdoc/>
+    List<string> IDepartmentRepository.GetAll() => DepartmanlariGetir();
+
+    /// <inheritdoc/>
+    void IDepartmentRepository.Add(string name) => DepartmanEkle(name);
+
+    /// <inheritdoc/>
+    void IDepartmentRepository.Delete(string name) => DepartmanSil(name);
+
+    // ── IReportRepository ──────────────────────────────────────────────────
+    /// <inheritdoc/>
+    async Task<DashboardStats> IReportRepository.GetDashboardStatsAsync()
+    {
+        var t = await DashboardIstatistikleriGetirAsync();
+        return new DashboardStats(t.toplamKart, t.toplamStok, t.dusuk, t.tukenmis, t.toplamHareket, t.bugunHareket);
+    }
+
+    /// <inheritdoc/>
+    async Task<List<StockReportRow>> IReportRepository.GetStockReportAsync()
+    {
+        var raw = await StokRaporVerisiAsync();
+        return raw.Select(r => new StockReportRow(r.KodNo, r.Ad, r.ToplamGiris, r.ToplamCikis, r.Mevcut)).ToList();
+    }
+
+    /// <inheritdoc/>
+    void IReportRepository.ExportSqlBackup(string destinationPath) => ExportSqlBackup(destinationPath);
+
+    // ── IUserRepository ────────────────────────────────────────────────────
+    /// <inheritdoc/>
+    bool IUserRepository.Authenticate(string username, string password) => KullaniciDogrula(username, password);
+
+    /// <inheritdoc/>
+    bool IUserRepository.ChangePassword(string username, string oldPassword, string newPassword)
+        => SifreDegistir(username, oldPassword, newPassword);
+
+    /// <inheritdoc/>
+    bool IUserRepository.IsDefaultAdminPasswordInUse() => VarsayilanAdminSifresiKullanimda();
+
+    /// <inheritdoc/>
+    string? IUserRepository.ValidatePasswordPolicy(string password, string? username)
+        => SifrePolitikasiHatasi(password, username);
 
     private static SqliteCommand CreateCommand(SqliteConnection connection, SqliteTransaction? transaction, string sql)
     {

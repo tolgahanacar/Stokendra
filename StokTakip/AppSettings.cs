@@ -2,13 +2,27 @@ using System.Text.Json;
 
 namespace StokTakip;
 
+/// <summary>
+/// JSON tabanlı uygulama ayarları. <c>AppData/Local/Stokendra/ayarlar.json</c> dosyasında saklanır.
+/// </summary>
 public class AppSettings
 {
+    /// <summary>SQLite veritabanı dosya yolu.</summary>
     public string DbPath { get; set; } = "";
+
+    /// <summary>Arayüz dili kodu (örn. "tr", "en").</summary>
     public string Language { get; set; } = "tr";
+
+    /// <summary>Şirket adı (raporlarda kullanılır).</summary>
     public string CompanyName { get; set; } = "";
+
+    /// <summary>Tema adı (şu an yalnızca "dark" desteklenmektedir).</summary>
     public string Theme { get; set; } = "dark";
+
+    /// <summary>Otomatik yedekleme hedef klasörü. Boşsa otomatik yedekleme devre dışıdır.</summary>
     public string AutoBackupPath { get; set; } = "";
+
+    /// <summary>Son başarılı yedekleme tarihi.</summary>
     public DateTime? LastBackupDate { get; set; }
 
     static AppSettings()
@@ -16,6 +30,9 @@ public class AppSettings
         _ = AppPaths.ApplicationDataDirectory;
     }
 
+    /// <summary>
+    /// Ayarları disk'ten yükler. Dosya yoksa veya bozuksa varsayılan ayarları döner.
+    /// </summary>
     public static AppSettings Yukle()
     {
         if (File.Exists(AppPaths.SettingsFilePath))
@@ -40,6 +57,9 @@ public class AppSettings
         return new AppSettings();
     }
 
+    /// <summary>
+    /// Ayarları disk'e kaydeder. Atomik yazma için geçici dosya kullanır.
+    /// </summary>
     public void Kaydet()
     {
         try
