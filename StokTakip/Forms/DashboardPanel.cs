@@ -2,7 +2,6 @@ using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
 using ScottPlot.WinForms;
-using System.Data;
 using System.Drawing.Drawing2D;
 
 namespace StokTakip.Forms;

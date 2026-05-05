@@ -1,5 +1,4 @@
 using System.Drawing.Printing;
-using StokTakip.Data;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 

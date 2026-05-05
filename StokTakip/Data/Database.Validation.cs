@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using StokTakip.Models;

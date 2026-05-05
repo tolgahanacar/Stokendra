@@ -1,8 +1,3 @@
-using System.Diagnostics;
-using System.Net.Http;
-using System.Text;
-using System.Text.Json;
-using Microsoft.Data.Sqlite;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -172,17 +167,6 @@ public sealed class AyarlarPanel : UserControl
         p.Controls.Add(new Label { Text = label, AutoSize = true, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary, Margin = new Padding(0, 0, 0, 4) });
         p.Controls.Add(input);
         return p;
-    }
-
-    static Label MakeLbl(string t, int x, int y) => new Label { Text = t, Left = x, Top = y + 3, Width = 190, Font = UIHelper.FontLabel, ForeColor = UIHelper.TextSecondary };
-    static Panel MakeDiv(ref int y) { var p = new Panel { Left = 0, Top = y, Width = 600, Height = 1, BackColor = UIHelper.Divider }; y += 14; return p; }
-    static Panel SectionHeader(string text, Color c, ref int y)
-    {
-        var pnl = new Panel { Left = 0, Top = y, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, BackColor = Color.Transparent };
-        var lblText = new Label { Text = text, Left = 0, Top = 0, AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold), ForeColor = c };
-        pnl.Controls.Add(lblText);
-        y += 30;
-        return pnl;
     }
 
     private void BackupDb()

@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using Microsoft.Data.Sqlite;
 using static StokTakip.LocalizationManager;

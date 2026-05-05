@@ -1,8 +1,5 @@
-using System.Data;
 using System.Drawing.Printing;
 using System.Drawing.Drawing2D;
-using System.Threading;
-using System.Threading.Tasks;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
