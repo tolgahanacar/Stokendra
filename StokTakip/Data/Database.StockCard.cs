@@ -60,7 +60,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("StokKartlariniGetir error: " + ex);
+            AppLogger.LogError("StokKartlariniGetir error: " + ex);
         }
 
         return liste;
@@ -99,7 +99,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("StokKartiEkle error: " + ex);
+            AppLogger.LogError("StokKartiEkle error: " + ex);
             throw;
         }
     }
@@ -144,7 +144,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("StokKartiGuncelle error: " + ex);
+            AppLogger.LogError("StokKartiGuncelle error: " + ex);
             throw;
         }
     }
@@ -182,7 +182,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("StokKartiSil error: " + ex);
+            AppLogger.LogError("StokKartiSil error: " + ex);
             throw;
         }
     }

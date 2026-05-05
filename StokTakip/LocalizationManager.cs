@@ -45,7 +45,7 @@ public static class LocalizationManager
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Localization load error for " + filePath + ": " + ex);
+                AppLogger.LogError("Localization load error for " + filePath + ": " + ex);
                 _strings = new Dictionary<string, string>();
             }
         }

@@ -129,7 +129,7 @@ public sealed class StoklarPanel : UserControl
         catch (Exception ex) { MessageBox.Show(ex.Message, L("error")); }
     }
 
-    private void RaporAl()
+    private async void RaporAl()
     {
         if (_altKartlar.Count == 0) { MessageBox.Show(L("report_no_data"), L("info")); return; }
         
@@ -139,7 +139,7 @@ public sealed class StoklarPanel : UserControl
         pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
 
         // Optimized: Single query instead of N+1
-        var raporVerisi = Program.DB!.StokRaporVerisi();
+        var raporVerisi = await Program.DB!.StokRaporVerisiAsync();
 
         // Use filtered data if search is active
         var filter = txtAra.Text.Trim().ToLowerInvariant();

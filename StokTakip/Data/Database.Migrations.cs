@@ -113,7 +113,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("TryAlter error: " + ex);
+            AppLogger.LogError("TryAlter error: " + ex);
         }
     }
 
@@ -222,7 +222,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("Seed Birimler error: " + ex);
+            AppLogger.LogError("Seed Birimler error: " + ex);
         }
 
         try
@@ -241,7 +241,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("Seed Kullanicilar error: " + ex);
+            AppLogger.LogError("Seed Kullanicilar error: " + ex);
         }
     }
 }

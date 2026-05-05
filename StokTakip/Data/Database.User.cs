@@ -28,7 +28,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("VarsayilanAdminSifresiKullanimda error: " + ex);
+            AppLogger.LogError("VarsayilanAdminSifresiKullanimda error: " + ex);
             return false;
         }
     }
@@ -89,7 +89,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("KullaniciDogrula error: " + ex);
+            AppLogger.LogError("KullaniciDogrula error: " + ex);
             return false;
         }
     }
@@ -126,7 +126,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("SifreDegistir error: " + ex);
+            AppLogger.LogError("SifreDegistir error: " + ex);
             return false;
         }
     }

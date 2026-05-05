@@ -42,7 +42,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("HareketleriGetir error: " + ex);
+            AppLogger.LogError("HareketleriGetir error: " + ex);
         }
 
         return liste;
@@ -83,7 +83,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("TopluHareketEkle error: " + ex);
+            AppLogger.LogError("TopluHareketEkle error: " + ex);
             throw;
         }
     }
@@ -131,7 +131,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("HareketGuncelle error: " + ex);
+            AppLogger.LogError("HareketGuncelle error: " + ex);
             throw;
         }
     }

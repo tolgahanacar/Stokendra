@@ -34,7 +34,7 @@ public class AppSettings
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("AppSettings.Yukle error: " + ex);
+                AppLogger.LogError("AppSettings.Yukle error: " + ex);
             }
         }
         return new AppSettings();
@@ -58,7 +58,7 @@ public class AppSettings
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("AppSettings.Kaydet error: " + ex);
+            AppLogger.LogError("AppSettings.Kaydet error: " + ex);
         }
     }
 }

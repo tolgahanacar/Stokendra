@@ -26,7 +26,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("GetConfig error: " + ex);
+            AppLogger.LogError("GetConfig error: " + ex);
             return def;
         }
     }
@@ -51,7 +51,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("SetConfig error: " + ex);
+            AppLogger.LogError("SetConfig error: " + ex);
             throw;
         }
     }
@@ -86,7 +86,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("DepartmanlariGetir error: " + ex);
+            AppLogger.LogError("DepartmanlariGetir error: " + ex);
         }
 
         return liste;
@@ -108,7 +108,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("DepartmanEkle error: " + ex);
+            AppLogger.LogError("DepartmanEkle error: " + ex);
             throw;
         }
     }
@@ -129,7 +129,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("DepartmanSil error: " + ex);
+            AppLogger.LogError("DepartmanSil error: " + ex);
             throw;
         }
     }
@@ -155,7 +155,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("BirimleriGetir error: " + ex);
+            AppLogger.LogError("BirimleriGetir error: " + ex);
         }
 
         return liste;
@@ -184,7 +184,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("NotlariGetir error: " + ex);
+            AppLogger.LogError("NotlariGetir error: " + ex);
         }
 
         return liste;
@@ -210,7 +210,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("NotEkle error: " + ex);
+            AppLogger.LogError("NotEkle error: " + ex);
             throw;
         }
     }
@@ -238,7 +238,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("NotGuncelle error: " + ex);
+            AppLogger.LogError("NotGuncelle error: " + ex);
             throw;
         }
     }
@@ -260,7 +260,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("NotSil error: " + ex);
+            AppLogger.LogError("NotSil error: " + ex);
             throw;
         }
     }

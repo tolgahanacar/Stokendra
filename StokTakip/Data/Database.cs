@@ -151,7 +151,7 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("AuditLogYaz error: " + ex);
+            AppLogger.LogError("AuditLogYaz error: " + ex);
         }
     }
 
@@ -170,7 +170,7 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("GetTeslimEdilenler error: " + ex);
+            AppLogger.LogError("GetTeslimEdilenler error: " + ex);
         }
 
         return liste;
@@ -203,12 +203,12 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("TopluHareketSil error: " + ex);
+            AppLogger.LogError("TopluHareketSil error: " + ex);
             throw;
         }
     }
 
-    public List<(DateTime Tarih, double Giris, double Cikis)> Son7GunHareketOzetleri()
+    public async Task<List<(DateTime Tarih, double Giris, double Cikis)>> Son7GunHareketOzetleriAsync()
     {
         var result = new List<(DateTime Tarih, double Giris, double Cikis)>();
 
@@ -226,9 +226,9 @@ public sealed partial class Database : IDisposable
                 ORDER BY DATE(Tarih)");
             command.Parameters.AddWithValue("$bas", DateTime.Today.AddDays(-6).ToString(DateFormat, CultureInfo.InvariantCulture));
 
-            using var reader = command.ExecuteReader();
+            using var reader = await command.ExecuteReaderAsync();
             var dataMap = new Dictionary<DateTime, (double g, double c)>();
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 DateTime day = ParseDateSafe(reader.GetString(0)).Date;
                 dataMap[day] = (reader.GetDouble(1), reader.GetDouble(2));
@@ -245,13 +245,13 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("Son7GunHareketOzetleri error: " + ex);
+            AppLogger.LogError("Son7GunHareketOzetleriAsync error", ex);
         }
 
         return result;
     }
 
-    public List<(string KodNo, string Ad, double ToplamGiris, double ToplamCikis, double Mevcut)> StokRaporVerisi()
+    public async Task<List<(string KodNo, string Ad, double ToplamGiris, double ToplamCikis, double Mevcut)>> StokRaporVerisiAsync()
     {
         var result = new List<(string, string, double, double, double)>();
 
@@ -278,8 +278,8 @@ public sealed partial class Database : IDisposable
                 LEFT JOIN hareket_ozet h ON h.StokKartId = s.Id
                 WHERE COALESCE(s.KartTipi, 'Alt')='Alt'
                 ORDER BY s.KodNo COLLATE NOCASE, s.Id");
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
                 result.Add((
                     reader.GetString(0),
@@ -291,7 +291,7 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("StokRaporVerisi error: " + ex);
+            AppLogger.LogError("StokRaporVerisiAsync error", ex);
         }
 
         return result;
@@ -325,7 +325,7 @@ public sealed partial class Database : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("TopluServisKaydiEkle error: " + ex);
+            AppLogger.LogError("TopluServisKaydiEkle error: " + ex);
             throw;
         }
     }

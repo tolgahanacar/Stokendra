@@ -59,8 +59,16 @@ public static class UIHelper
     public static string ToUpperTr(this string s) => s.ToUpper(TrCulture);
 
     // ═══ GRID STİLLENDİRME ═══
+    public static void EnableDoubleBuffered(Control control)
+    {
+        typeof(Control).InvokeMember("DoubleBuffered",
+            System.Reflection.BindingFlags.SetProperty | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            null, control, new object[] { true });
+    }
+
     public static void StyleGrid(DataGridView g, bool multiSelect = false)
     {
+        EnableDoubleBuffered(g);
         g.ReadOnly = true;
         g.MultiSelect = multiSelect;
         g.SelectionMode = DataGridViewSelectionMode.FullRowSelect;

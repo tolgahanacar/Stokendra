@@ -12,7 +12,7 @@ namespace StokTakip.Data;
 public sealed partial class Database
 {
 
-    public (int toplamKart, double toplamStok, int dusuk, int tukenmis, int toplamHareket, int bugunHareket) DashboardIstatistikleriGetir()
+    public async Task<(int toplamKart, double toplamStok, int dusuk, int tukenmis, int toplamHareket, int bugunHareket)> DashboardIstatistikleriGetirAsync()
     {
         try
         {
@@ -43,8 +43,8 @@ public sealed partial class Database
                     (SELECT COUNT(*) FROM StokHareketleri WHERE Tarih LIKE $today);");
             command.Parameters.AddWithValue("$today", DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + "%");
 
-            using var reader = command.ExecuteReader();
-            if (reader.Read())
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
             {
                 return (
                     reader.GetInt32(0),
@@ -57,7 +57,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("DashboardIstatistikleriGetir error: " + ex);
+            AppLogger.LogError("DashboardIstatistikleriGetirAsync error", ex);
         }
 
         return (0, 0, 0, 0, 0, 0);

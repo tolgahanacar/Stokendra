@@ -44,7 +44,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("ServisKayitlariniGetir error: " + ex);
+            AppLogger.LogError("ServisKayitlariniGetir error: " + ex);
         }
 
         return liste;
@@ -87,7 +87,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("ServisKaydiGuncelle error: " + ex);
+            AppLogger.LogError("ServisKaydiGuncelle error: " + ex);
             throw;
         }
     }
@@ -113,7 +113,7 @@ public sealed partial class Database
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("ServisKaydiSil error: " + ex);
+            AppLogger.LogError("ServisKaydiSil error: " + ex);
             throw;
         }
     }

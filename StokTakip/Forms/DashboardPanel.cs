@@ -167,11 +167,16 @@ public sealed class DashboardPanel : UserControl
     public DashboardPanel()
     {
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
+        this.Load += async (s, e) => await InitializeAsync();
+    }
+
+    private async Task InitializeAsync()
+    {
         SuspendLayout();
 
-        var stats     = Program.DB!.DashboardIstatistikleriGetir();
+        var stats     = await Program.DB!.DashboardIstatistikleriGetirAsync();
         var altKartlar = Program.DB!.AltKartlariGetir();
-        var last7Data  = Program.DB!.Son7GunHareketOzetleri();
+        var last7Data  = await Program.DB!.Son7GunHareketOzetleriAsync();
 
         // ═══ HEADER ═══
         var pnlH = UIHelper.MakeHeader(L("dashboard"), L("dashboard_subtitle"));
