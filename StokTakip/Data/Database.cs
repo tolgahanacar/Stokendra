@@ -211,6 +211,9 @@ public sealed partial class Database :
                 deleteCommand.Parameters.AddWithValue("$id", id);
                 if (deleteCommand.ExecuteNonQuery() == 0)
                     throw new InvalidOperationException(L("movement_not_found"));
+
+                InsertAuditLog(connection, transaction, "SIL", "StokHareketleri", id,
+                    $"{mevcut.Tur} | Miktar: {mevcut.Miktar} | Dept: {mevcut.Departman} | KartId: {mevcut.StokKartId}");
             }
 
             transaction.Commit();
@@ -313,26 +316,31 @@ public sealed partial class Database :
 
     public void TopluServisKaydiEkle(IEnumerable<ServisKaydi> kayitlar)
     {
-        var liste = kayitlar?.Select(NormalizeServiceRecord).ToList() ?? new List<ServisKaydi>();
-        if (liste.Count == 0)
+        var kayitListesi = kayitlar?.ToList() ?? new List<ServisKaydi>();
+        if (kayitListesi.Count == 0)
             throw new InvalidOperationException(L("bulk_operation_empty"));
+
+        var normalizedListesi = kayitListesi.Select(NormalizeServiceRecord).ToList();
 
         using var connection = CreateConnection();
         using var transaction = connection.BeginTransaction();
         try
         {
-            foreach (var kayit in liste)
+            for (int i = 0; i < normalizedListesi.Count; i++)
             {
-                ValidateServiceRecord(kayit);
+                var normalized = normalizedListesi[i];
+                ValidateServiceRecord(normalized);
 
                 using var command = CreateCommand(connection, transaction, @"
                     INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc)
                     VALUES ($ca, $sn, $f, $bt, $sr, $sc)");
-                BindServisKaydiParameters(command, kayit, includeId: false);
+                BindServisKaydiParameters(command, normalized, includeId: false);
                 command.ExecuteNonQuery();
 
                 int newId = GetLastInsertRowId(connection, transaction);
-                InsertAuditLog(connection, transaction, "EKLE", "ServisKayitlari", newId, kayit.CihazAdi);
+                // Orijinal nesneye de Id'yi yaz
+                kayitListesi[i].Id = newId;
+                InsertAuditLog(connection, transaction, "EKLE", "ServisKayitlari", newId, normalized.CihazAdi);
             }
 
             transaction.Commit();

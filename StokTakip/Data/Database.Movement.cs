@@ -134,6 +134,11 @@ public sealed partial class Database
                         ($sk, $t, $m, $kv, $d, $ta, $ac)");
                 BindMovementParameters(command, hareket, includeId: false);
                 command.ExecuteNonQuery();
+
+                int newId = GetLastInsertRowId(connection, transaction);
+                hareket.Id = newId;
+                InsertAuditLog(connection, transaction, "EKLE", "StokHareketleri", newId,
+                    $"{hareket.Tur} | Miktar: {hareket.Miktar} | Dept: {hareket.Departman} | KartId: {hareket.StokKartId}");
             }
 
             transaction.Commit();
@@ -170,6 +175,11 @@ public sealed partial class Database
                         ($sk, $t, $m, $kv, $d, $ta, $ac)");
                 BindMovementParameters(command, hareket, includeId: false);
                 await command.ExecuteNonQueryAsync();
+
+                int newId = GetLastInsertRowId(connection, transaction);
+                hareket.Id = newId;
+                InsertAuditLog(connection, transaction, "EKLE", "StokHareketleri", newId,
+                    $"{hareket.Tur} | Miktar: {hareket.Miktar} | Dept: {hareket.Departman} | KartId: {hareket.StokKartId}");
             }
 
             transaction.Commit();
@@ -194,13 +204,14 @@ public sealed partial class Database
             ValidateMovement(connection, transaction, normalized);
 
             double oldCardProjected = GetCurrentStockCore(connection, transaction, mevcut.StokKartId) - MovementImpact(mevcut);
-            if (oldCardProjected < 0)
+            bool sameCard = mevcut.StokKartId == normalized.StokKartId;
+
+            if (!sameCard && oldCardProjected < 0)
                 throw new InvalidOperationException(L("stock_would_go_negative"));
 
-            double newCardBase = mevcut.StokKartId == normalized.StokKartId
-                ? oldCardProjected
-                : GetCurrentStockCore(connection, transaction, normalized.StokKartId);
-            double newCardProjected = newCardBase + MovementImpact(normalized);
+            double newCardProjected = sameCard
+                ? oldCardProjected + MovementImpact(normalized)
+                : GetCurrentStockCore(connection, transaction, normalized.StokKartId) + MovementImpact(normalized);
             if (newCardProjected < 0)
                 throw new InvalidOperationException(L("stock_would_go_negative"));
 
@@ -219,6 +230,9 @@ public sealed partial class Database
 
             if (command.ExecuteNonQuery() == 0)
                 throw new InvalidOperationException(L("movement_not_found"));
+
+            InsertAuditLog(connection, transaction, "GUNCELLE", "StokHareketleri", normalized.Id,
+                $"{normalized.Tur} | Miktar: {normalized.Miktar} | Dept: {normalized.Departman} | KartId: {normalized.StokKartId}");
 
             transaction.Commit();
         }

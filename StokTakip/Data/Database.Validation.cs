@@ -42,6 +42,9 @@ public sealed partial class Database
         };
     }
 
+    // Makul bir üst sınır: 1 milyar birim. double precision sorunlarını ve overflow'u önler.
+    private const double MaxMiktar = 1_000_000_000.0;
+
     private static void ValidateMovement(SqliteConnection connection, SqliteTransaction transaction, StokHareketi hareket)
     {
         if (!ValidMovementTypes.Contains(hareket.Tur))
@@ -49,6 +52,10 @@ public sealed partial class Database
         if (hareket.StokKartId <= 0)
             throw new InvalidOperationException(L("select_stock_card"));
         if (hareket.Tur != "Bos" && hareket.Miktar <= 0)
+            throw new InvalidOperationException(L("enter_valid_qty"));
+        if (hareket.Tur != "Bos" && hareket.Miktar > MaxMiktar)
+            throw new InvalidOperationException(L("qty_too_large"));
+        if (double.IsNaN(hareket.Miktar) || double.IsInfinity(hareket.Miktar))
             throw new InvalidOperationException(L("enter_valid_qty"));
         if (hareket.Tur == "Bos")
             hareket.Miktar = 0;

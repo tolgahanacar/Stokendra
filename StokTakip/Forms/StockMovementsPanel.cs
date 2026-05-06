@@ -399,9 +399,9 @@ public sealed class StokHareketPanel : UserControl
             ws.Columns().AdjustToContents();
             wb.SaveAs(dest);
             System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{dest}\"");
-            MessageBox.Show($"\u00d6rnek dosya masa\u00fcst\u00fcne olu\u015fturuldu:\n{dest}", L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(L("sample_file_created", dest), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
-        catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+        catch (Exception ex) { MessageBox.Show(L("error_with_details", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
     }
 
     // ═══ XLSX EXPORT (ClosedXML) ═══

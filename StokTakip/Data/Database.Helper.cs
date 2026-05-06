@@ -100,7 +100,9 @@ public sealed partial class Database
         {
             using var command = CreateCommand(connection, transaction, "INSERT OR IGNORE INTO Departmanlar (Ad) VALUES ($a)");
             command.Parameters.AddWithValue("$a", normalized);
-            command.ExecuteNonQuery();
+            int affected = command.ExecuteNonQuery();
+            if (affected > 0)
+                InsertAuditLog(connection, transaction, "EKLE", "Departmanlar", 0, normalized);
             transaction.Commit();
         }
         catch (Exception ex)
@@ -121,7 +123,9 @@ public sealed partial class Database
         {
             using var command = CreateCommand(connection, transaction, "DELETE FROM Departmanlar WHERE Ad=$a");
             command.Parameters.AddWithValue("$a", normalized);
-            command.ExecuteNonQuery();
+            int affected = command.ExecuteNonQuery();
+            if (affected > 0)
+                InsertAuditLog(connection, transaction, "SIL", "Departmanlar", 0, normalized);
             transaction.Commit();
         }
         catch (Exception ex)
@@ -203,6 +207,7 @@ public sealed partial class Database
             command.Parameters.AddWithValue("$i", normalized.Icerik);
             command.ExecuteNonQuery();
             not.Id = GetLastInsertRowId(connection, transaction);
+            InsertAuditLog(connection, transaction, "EKLE", "Notlar", not.Id, normalized.Baslik);
             transaction.Commit();
         }
         catch (Exception ex)
@@ -231,6 +236,7 @@ public sealed partial class Database
             if (command.ExecuteNonQuery() == 0)
                 throw new InvalidOperationException(L("record_not_found"));
 
+            InsertAuditLog(connection, transaction, "GUNCELLE", "Notlar", normalized.Id, normalized.Baslik);
             transaction.Commit();
         }
         catch (Exception ex)
@@ -247,12 +253,21 @@ public sealed partial class Database
         using var transaction = connection.BeginTransaction();
         try
         {
+            // Silmeden önce başlığı al (audit log için)
+            string baslik = "";
+            using (var getCmd = CreateCommand(connection, transaction, "SELECT Baslik FROM Notlar WHERE Id=$id"))
+            {
+                getCmd.Parameters.AddWithValue("$id", id);
+                baslik = getCmd.ExecuteScalar()?.ToString() ?? "";
+            }
+
             using var command = CreateCommand(connection, transaction, "DELETE FROM Notlar WHERE Id=$id");
             command.Parameters.AddWithValue("$id", id);
 
             if (command.ExecuteNonQuery() == 0)
                 throw new InvalidOperationException(L("record_not_found"));
 
+            InsertAuditLog(connection, transaction, "SIL", "Notlar", id, baslik);
             transaction.Commit();
         }
         catch (Exception ex)

@@ -267,5 +267,19 @@
   "type_empty": "Boş",
   "developer": "Geliştirici:",
   "software_licensed": "Bu yazılım lisanslıdır. Tüm hakları saklıdır.",
-  "all_rights_reserved": "Tüm hakları saklıdır."
+  "all_rights_reserved": "Tüm hakları saklıdır.",
+  "qty_too_large": "Miktar çok büyük. Maksimum 1.000.000.000 girilebilir.",
+  "movement_not_found": "Hareket kaydı bulunamadı.",
+  "stock_would_go_negative": "Bu işlem stok miktarını negatife düşürür.",
+  "movement_type_invalid": "Geçersiz hareket türü.",
+  "movement_only_child_cards": "Hareket yalnızca alt kartlara eklenebilir.",
+  "parent_card_self": "Kart kendisinin üst kartı olamaz.",
+  "parent_card_not_found": "Üst kart bulunamadı.",
+  "parent_card_with_movements": "Hareketi olan kart üst karta dönüştürülemez.",
+  "parent_card_loop": "Döngüsel üst kart ilişkisi oluşturulamaz.",
+  "stock_code_exists": "Bu stok kodu zaten kullanılıyor.",
+  "code_required": "Stok kodu zorunludur.",
+  "bulk_operation_empty": "İşlem listesi boş olamaz.",
+  "record_not_found": "Kayıt bulunamadı.",
+  "config_key_required": "Yapılandırma anahtarı zorunludur."
 }

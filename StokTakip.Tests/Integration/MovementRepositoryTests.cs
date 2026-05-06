@@ -275,4 +275,33 @@ public class MovementRepositoryTests : IDisposable
         Assert.Contains("Ahmet", persons);
         Assert.Contains("Mehmet", persons);
     }
+    [Fact]
+    public void Update_EntryWithDependentExit_AllowsSameCardUpdate()
+    {
+        _movRepo.Add(MakeEntry(10));
+        _movRepo.Add(MakeExit(5));
+
+        var entry = _movRepo.GetAll(stockCardId: _testCardId, movementType: "Giris").Single();
+        entry.Miktar = 12;
+
+        _movRepo.Update(entry);
+
+        var card = _cardRepo.GetById(_testCardId);
+        Assert.Equal(7, card?.MevcutStok);
+    }
+
+    [Fact]
+    public void Update_MoveEntryToDifferentCard_WhenOldCardWouldGoNegative_ThrowsInvalidOperationException()
+    {
+        var kart2 = new StokKarti { Ad = "Stok 2", KodNo = "TS002_MOVE", KartTipi = "Alt" };
+        _cardRepo.Add(kart2);
+
+        _movRepo.Add(MakeEntry(10));
+        _movRepo.Add(MakeExit(5));
+
+        var entry = _movRepo.GetAll(stockCardId: _testCardId, movementType: "Giris").Single();
+        entry.StokKartId = kart2.Id;
+
+        Assert.Throws<InvalidOperationException>(() => _movRepo.Update(entry));
+    }
 }

@@ -267,5 +267,19 @@
     "backup_full_excel_desc": "Exports all data as Excel files into a ZIP archive",
     "developer": "Developer:",
     "software_licensed": "This software is licensed. All rights reserved.",
-    "all_rights_reserved": "All rights reserved."
+    "all_rights_reserved": "All rights reserved.",
+    "qty_too_large": "Quantity is too large. Maximum allowed is 1,000,000,000.",
+    "movement_not_found": "Movement record not found.",
+    "stock_would_go_negative": "This operation would make the stock negative.",
+    "movement_type_invalid": "Invalid movement type.",
+    "movement_only_child_cards": "Movements can only be added to child cards.",
+    "parent_card_self": "A card cannot be its own parent.",
+    "parent_card_not_found": "Parent card not found.",
+    "parent_card_with_movements": "A card with movements cannot be converted to a parent card.",
+    "parent_card_loop": "Circular parent card relationship is not allowed.",
+    "stock_code_exists": "This stock code is already in use.",
+    "code_required": "Stock code is required.",
+    "bulk_operation_empty": "Operation list cannot be empty.",
+    "record_not_found": "Record not found.",
+    "config_key_required": "Configuration key is required."
 }
