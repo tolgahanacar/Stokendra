@@ -122,21 +122,33 @@ public sealed class StokKartlariPanel : UserControl
 
         using var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("StokKartlari");
-        ws.Cell(1, 1).Value = "KodNo"; ws.Cell(1, 2).Value = "Ad";
-        ws.Cell(1, 3).Value = "KartTipi"; ws.Cell(1, 4).Value = "UstKartAd";
-        ws.Cell(1, 5).Value = "Kategori"; ws.Cell(1, 6).Value = "MevcutStok";
-        ws.Cell(1, 7).Value = "KritikStok"; ws.Cell(1, 8).Value = "Aciklama";
 
-        var hR = ws.Range("A1:H1");
-        hR.Style.Font.Bold = true; hR.Style.Fill.BackgroundColor = XLColor.AirForceBlue; hR.Style.Font.FontColor = XLColor.White;
-
-        for (int i = 0; i < _tumListe.Count; i++)
+        // Import ile birebir uyumlu sütun sırası — bu dosya tekrar import edilebilir
+        string[] headers = { "KodNo", "Ad", "Kategori", "Birim", "Konum", "Tedarikci", "Barkod", "BirimFiyat", "MinStok", "Aciklama" };
+        for (int i = 0; i < headers.Length; i++)
         {
-            var k = _tumListe[i];
-            ws.Cell(i + 2, 1).Value = k.KodNo; ws.Cell(i + 2, 2).Value = k.Ad;
-            ws.Cell(i + 2, 3).Value = k.KartTipi; ws.Cell(i + 2, 4).Value = k.UstKartAd;
-            ws.Cell(i + 2, 5).Value = k.Kategori; ws.Cell(i + 2, 6).Value = k.MevcutStok;
-            ws.Cell(i + 2, 7).Value = k.MinStok; ws.Cell(i + 2, 8).Value = k.Aciklama;
+            ws.Cell(1, i + 1).Value = headers[i];
+            ws.Cell(1, i + 1).Style.Font.Bold = true;
+            ws.Cell(1, i + 1).Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+            ws.Cell(1, i + 1).Style.Font.FontColor = XLColor.White;
+        }
+
+        int row = 2;
+        foreach (var k in _tumListe)
+        {
+            // Sadece Alt kartları export et — Üst kartlar import'ta anlamsız
+            if (k.KartTipi != nameof(KartTipi.Alt)) continue;
+            ws.Cell(row, 1).Value = k.KodNo;
+            ws.Cell(row, 2).Value = k.Ad;
+            ws.Cell(row, 3).Value = k.Kategori;
+            ws.Cell(row, 4).Value = k.Birim;
+            ws.Cell(row, 5).Value = k.Konum;
+            ws.Cell(row, 6).Value = k.Tedarikci;
+            ws.Cell(row, 7).Value = k.Barkod;
+            ws.Cell(row, 8).Value = k.BirimFiyat;
+            ws.Cell(row, 9).Value = k.MinStok;
+            ws.Cell(row, 10).Value = k.Aciklama;
+            row++;
         }
         ws.Columns().AdjustToContents();
         try { wb.SaveAs(dlg.FileName); MessageBox.Show(L("export_success", dlg.FileName)); }

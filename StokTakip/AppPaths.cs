@@ -37,7 +37,12 @@ public static class AppPaths
     {
         try
         {
-            string logLine = $"{action}_{module}_{details}_{DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            // Tab-separated format: ayrıştırılabilir, detay içindeki özel karakterlerden etkilenmez
+            string logLine = string.Join("\t",
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                action?.Replace("\t", " ") ?? "",
+                module?.Replace("\t", " ") ?? "",
+                details?.Replace("\t", " ").Replace("\r", "").Replace("\n", " ") ?? "");
             File.AppendAllText(ActivityLogPath, logLine + Environment.NewLine);
         }
         catch { }

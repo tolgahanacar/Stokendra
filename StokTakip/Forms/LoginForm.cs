@@ -89,14 +89,16 @@ public sealed class LoginForm : Form
         {
             _attempts++;
             lblError.Text = L("login_failed");
+
+            // Her başarısız denemede gecikme katlanarak artar, sayaç sıfırlanmaz
             if (_attempts >= 3)
             {
-                lblError.Text += " (bekleniyor...)";
+                int delaySec = Math.Min(30, 3 * (_attempts - 2)); // 3s, 6s, 9s... max 30s
+                lblError.Text = L("login_failed") + $" ({delaySec}s bekleniyor...)";
                 Enabled = false;
-                await Task.Delay(3000);
+                await Task.Delay(delaySec * 1000);
                 Enabled = true;
                 lblError.Text = L("login_failed");
-                _attempts = 0;
             }
         }
     }

@@ -281,5 +281,6 @@
   "code_required": "Stok kodu zorunludur.",
   "bulk_operation_empty": "İşlem listesi boş olamaz.",
   "record_not_found": "Kayıt bulunamadı.",
-  "config_key_required": "Yapılandırma anahtarı zorunludur."
+  "config_key_required": "Yapılandırma anahtarı zorunludur.",
+  "db_path_changed_restart": "Veritabanı yolu değiştirildi. Yeni veritabanının aktif olması için uygulamayı yeniden başlatın."
 }

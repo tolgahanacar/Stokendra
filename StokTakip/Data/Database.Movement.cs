@@ -8,28 +8,20 @@ namespace StokTakip.Data;
 public sealed partial class Database
 {
 
-    /// <summary>
-    /// Belirtilen filtrelere göre stok hareketlerini getirir (Senkron).
-    /// </summary>
-    /// <param name="stokKartId">Stok kartı ID'si (opsiyonel)</param>
-    /// <param name="baslangic">Başlangıç tarihi (opsiyonel)</param>
-    /// <param name="bitis">Bitiş tarihi (opsiyonel)</param>
-    /// <param name="departman">Departman adı (opsiyonel)</param>
-    /// <param name="tur">Hareket türü: Giris/Cikis/Bos (opsiyonel)</param>
-    /// <returns>Stok hareketleri listesi.</returns>
     public List<StokHareketi> HareketleriGetir(
         int? stokKartId = null,
         DateTime? baslangic = null,
         DateTime? bitis = null,
         string? departman = null,
-        string? tur = null)
+        string? tur = null,
+        string? kategori = null)
     {
         var liste = new List<StokHareketi>();
 
         try
         {
             using var connection = CreateConnection();
-            using var command = CreateCommand(connection, null, BuildMovementQuery(stokKartId, baslangic, bitis, departman, tur));
+            using var command = CreateCommand(connection, null, BuildMovementQuery(stokKartId, baslangic, bitis, departman, tur, kategori));
 
             if (stokKartId.HasValue)
                 command.Parameters.AddWithValue("$kid", stokKartId.Value);
@@ -41,6 +33,8 @@ public sealed partial class Database
                 command.Parameters.AddWithValue("$dep", departman.Trim());
             if (!string.IsNullOrWhiteSpace(tur))
                 command.Parameters.AddWithValue("$tur", tur.Trim());
+            if (!string.IsNullOrWhiteSpace(kategori))
+                command.Parameters.AddWithValue("$kat", kategori.Trim());
 
             using var reader = command.ExecuteReader();
             while (reader.Read())
@@ -54,28 +48,27 @@ public sealed partial class Database
         return liste;
     }
 
-    /// <summary>
-    /// Belirtilen filtrelere göre stok hareketlerini asenkron (Async) olarak getirir.
-    /// </summary>
     public async Task<List<StokHareketi>> HareketleriGetirAsync(
         int? stokKartId = null,
         DateTime? baslangic = null,
         DateTime? bitis = null,
         string? departman = null,
-        string? tur = null)
+        string? tur = null,
+        string? kategori = null)
     {
         var liste = new List<StokHareketi>();
 
         try
         {
             using var connection = CreateConnection();
-            using var command = CreateCommand(connection, null, BuildMovementQuery(stokKartId, baslangic, bitis, departman, tur));
+            using var command = CreateCommand(connection, null, BuildMovementQuery(stokKartId, baslangic, bitis, departman, tur, kategori));
 
             if (stokKartId.HasValue) command.Parameters.AddWithValue("$kid", stokKartId.Value);
             if (baslangic.HasValue) command.Parameters.AddWithValue("$ts", baslangic.Value.ToString(DateFormat, CultureInfo.InvariantCulture));
             if (bitis.HasValue) command.Parameters.AddWithValue("$te", bitis.Value.ToString(DateFormat, CultureInfo.InvariantCulture));
             if (!string.IsNullOrWhiteSpace(departman)) command.Parameters.AddWithValue("$dep", departman.Trim());
             if (!string.IsNullOrWhiteSpace(tur)) command.Parameters.AddWithValue("$tur", tur.Trim());
+            if (!string.IsNullOrWhiteSpace(kategori)) command.Parameters.AddWithValue("$kat", kategori.Trim());
 
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())

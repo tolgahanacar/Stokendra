@@ -157,15 +157,26 @@ static class Program
     {
         try
         {
+            // Crash log'a yaz (AppLogger'dan ayrı — uygulama başlamadan önce de çalışmalı)
             _ = AppPaths.ApplicationDataDirectory;
             File.AppendAllText(
                 AppPaths.CrashLogPath,
                 $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {ex}{Environment.NewLine}{Environment.NewLine}");
-            MessageBox.Show(
-                "Kritik Hata: " + ex.Message + "\n\nLog: " + AppPaths.CrashLogPath,
-                "Hata",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+        }
+        catch { }
+
+        // MessageBox sadece ana thread'den (UI thread) gelen kritik hatalarda göster.
+        // Arka plan thread'lerinden gelen hatalar (TaskScheduler, AppDomain) sessizce loglanır.
+        try
+        {
+            if (Application.MessageLoop)
+            {
+                MessageBox.Show(
+                    "Kritik Hata: " + ex.Message + "\n\nLog: " + AppPaths.CrashLogPath,
+                    "Hata",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
         }
         catch { }
     }

@@ -102,15 +102,22 @@ public static class BackupManager
 
     private static void CopyDatabase(string tempDir)
     {
-        string dbPath = string.IsNullOrWhiteSpace(Program.Settings.DbPath) ? AppPaths.DefaultDatabasePath : Program.Settings.DbPath;
-        if (File.Exists(dbPath))
+        string dbPath = string.IsNullOrWhiteSpace(Program.Settings.DbPath)
+            ? AppPaths.DefaultDatabasePath
+            : Program.Settings.DbPath;
+
+        if (!File.Exists(dbPath)) return;
+
+        // Ham dosya kopyası yerine SQLite Online Backup API kullan.
+        // Bu yöntem WAL modunda tutarlı bir snapshot alır, -wal/-shm dosyalarına gerek kalmaz.
+        string destFile = Path.Combine(tempDir, "stok.db");
+        Program.DB!.CreateBackup(destFile);
+
+        // Orijinal dosya adı farklıysa onu da ekle (referans için)
+        string origName = Path.GetFileName(dbPath);
+        if (!origName.Equals("stok.db", StringComparison.OrdinalIgnoreCase))
         {
-            File.Copy(dbPath, Path.Combine(tempDir, "stok.db"), true);
-            string origName = Path.GetFileName(dbPath);
-            if (!origName.Equals("stok.db", StringComparison.OrdinalIgnoreCase))
-            {
-                File.Copy(dbPath, Path.Combine(tempDir, origName), true);
-            }
+            File.Copy(destFile, Path.Combine(tempDir, origName), true);
         }
     }
 

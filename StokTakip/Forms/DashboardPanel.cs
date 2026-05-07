@@ -319,7 +319,7 @@ public sealed class DashboardPanel : UserControl
 
 
         var dusukKartlar = altKartlar
-            .Where(k => k.MevcutStok <= (k.MinStok > 0 ? k.MinStok : 3))
+            .Where(k => !k.IsParentCard && k.MevcutStok > 0 && k.MevcutStok <= (k.MinStok > 0 ? k.MinStok : 3))
             .OrderBy(k => k.MevcutStok)
             .Take(15).ToList();
 

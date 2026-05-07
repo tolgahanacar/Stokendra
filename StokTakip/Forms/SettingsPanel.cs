@@ -201,13 +201,27 @@ public sealed class AyarlarPanel : UserControl
     {
         string secilenDil = LocalizationManager.SupportedLanguages[cmbDil.SelectedIndex];
         bool dilDegisti = secilenDil != Program.Settings.Language;
+        
+        string yeniDbPath = !string.IsNullOrWhiteSpace(txtDbPath.Text)
+            ? AppPaths.NormalizeDatabasePath(txtDbPath.Text)
+            : Program.Settings.DbPath;
+        bool dbDegisti = !string.Equals(yeniDbPath, Program.Settings.DbPath, StringComparison.OrdinalIgnoreCase);
+
         Program.Settings.Language = secilenDil;
         Program.Settings.CompanyName = txtFirma.Text.Trim();
         Program.Settings.AutoBackupPath = txtAutoBackupPath.Text;
-        if (!string.IsNullOrWhiteSpace(txtDbPath.Text)) Program.Settings.DbPath = AppPaths.NormalizeDatabasePath(txtDbPath.Text);
+        if (!string.IsNullOrWhiteSpace(txtDbPath.Text)) Program.Settings.DbPath = yeniDbPath;
         Program.Settings.Kaydet();
-        if (dilDegisti) MessageBox.Show(L("saved_restart"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        else MessageBox.Show(L("settings_saved"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        if (dilDegisti || dbDegisti)
+        {
+            string msg = dbDegisti
+                ? L("saved_restart") + "\n\n" + L("db_path_changed_restart")
+                : L("saved_restart");
+            MessageBox.Show(msg, L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        else
+            MessageBox.Show(L("settings_saved"), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
     
 }

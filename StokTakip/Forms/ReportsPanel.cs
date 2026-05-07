@@ -273,7 +273,6 @@ public sealed class RaporlarPanel : UserControl
         public string StokAd { get; init; } = "";
         public double Miktar { get; init; }
         public string Teslim { get; init; } = "";
-        public string? Kategori { get; init; }
         public int CardId { get; init; }
     }
 
@@ -325,16 +324,24 @@ public sealed class RaporlarPanel : UserControl
     private ReportData BuildReportData(DateTime start, DateTime end, string? user, string? dept, string? cat, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
-        var allMoves = Program.DB!.HareketleriGetir(null, start, end, null, nameof(HareketTuru.Cikis));
+
+        // Kategori filtresi artık DB sorgusunda — tüm kartları çekmeye gerek yok
+        var filtered = Program.DB!.HareketleriGetir(
+            baslangic: start,
+            bitis: end,
+            departman: dept,
+            tur: nameof(HareketTuru.Cikis),
+            kategori: cat);
+
         token.ThrowIfCancellationRequested();
-        var filtered = allMoves.Where(h =>
-            (user == null || h.TeslimEdilen == user) &&
-            (dept == null || h.Departman    == dept)
-        ).ToList();
 
-        var kartlar = Program.DB!.AltKartlariGetir();
-        var kartMap = kartlar.ToDictionary(k => k.Id);
+        // Kullanıcı filtresi hâlâ bellekte (DB'de KimeVerildi sütunu üzerinden yapılabilir
+        // ama mevcut interface bunu desteklemiyor — küçük veri seti için kabul edilebilir)
+        if (user != null)
+            filtered = filtered.Where(h => h.TeslimEdilen == user).ToList();
 
+        // Kategori bilgisi için kart map'i — sadece benzersiz ürün sayısı için gerekli
+        // Artık tüm kartları çekmiyoruz, sadece hareket içindeki kartları kullanıyoruz
         var rows = new List<ReportRow>(filtered.Count);
         var totals = new Dictionary<string, double>();
         var unique = new HashSet<int>();
@@ -343,25 +350,22 @@ public sealed class RaporlarPanel : UserControl
         foreach (var h in filtered)
         {
             token.ThrowIfCancellationRequested();
-            if (!kartMap.TryGetValue(h.StokKartId, out var k)) continue;
-            if (cat != null && k.Kategori != cat) continue;
 
             rows.Add(new ReportRow
             {
                 Tarih = h.Tarih,
-                StokAd = k.Ad,
+                StokAd = h.StokKartAd,
                 Miktar = h.Miktar,
                 Teslim = h.TeslimEdilen ?? "",
-                Kategori = k.Kategori,
-                CardId = k.Id
+                CardId = h.StokKartId
             });
 
             total += h.Miktar;
-            unique.Add(k.Id);
-            totals[k.Ad] = totals.TryGetValue(k.Ad, out var cur) ? cur + h.Miktar : h.Miktar;
+            unique.Add(h.StokKartId);
+            totals[h.StokKartAd] = totals.TryGetValue(h.StokKartAd, out var cur) ? cur + h.Miktar : h.Miktar;
         }
 
-        rows.Sort((a, b) => b.Tarih.CompareTo(a.Tarih)); // Newest first
+        rows.Sort((a, b) => b.Tarih.CompareTo(a.Tarih));
 
         var data = new ReportData
         {
@@ -391,7 +395,7 @@ public sealed class RaporlarPanel : UserControl
                     row.StokAd,
                     $"{UIHelper.FormatMiktar(row.Miktar)} [Ç]",
                     row.Teslim,
-                    row.Kategori);
+                    "");
             }
 
             lblTotalInfo.Text  = UIHelper.FormatMiktar(data.TotalConsumption);

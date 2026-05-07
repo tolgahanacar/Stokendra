@@ -281,5 +281,6 @@
     "code_required": "Stock code is required.",
     "bulk_operation_empty": "Operation list cannot be empty.",
     "record_not_found": "Record not found.",
-    "config_key_required": "Configuration key is required."
+    "config_key_required": "Configuration key is required.",
+    "db_path_changed_restart": "Database path changed. Restart the application for the new database to become active."
 }

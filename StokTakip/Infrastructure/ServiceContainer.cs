@@ -19,6 +19,7 @@ public sealed class ServiceContainer : IDisposable
     /// <summary>
     /// Bir türü singleton olarak kaydeder.
     /// İlk çözümlemede <paramref name="factory"/> çağrılır; sonraki çağrılarda aynı örnek döner.
+    /// Thread-safe: factory yalnızca bir kez çağrılır.
     /// </summary>
     public ServiceContainer RegisterSingleton<TInterface, TImplementation>(Func<TImplementation> factory)
         where TImplementation : class, TInterface
@@ -27,8 +28,14 @@ public sealed class ServiceContainer : IDisposable
         {
             if (!_singletons.TryGetValue(typeof(TInterface), out var existing))
             {
-                existing = factory();
-                _singletons[typeof(TInterface)] = existing;
+                lock (_singletons)
+                {
+                    if (!_singletons.TryGetValue(typeof(TInterface), out existing))
+                    {
+                        existing = factory();
+                        _singletons[typeof(TInterface)] = existing;
+                    }
+                }
             }
             return existing;
         };

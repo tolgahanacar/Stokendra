@@ -71,17 +71,23 @@ public sealed partial class Database :
     {
         try
         {
-            using var connection = new SqliteConnection(_connectionString);
+            // Pool'daki bağlantıları temizlemeden önce WAL checkpoint yap.
+            // Yeni bağlantı açmak yerine mevcut pool'dan al.
+            SqliteConnection.ClearAllPools();
+
+            // Pool temizlendikten sonra kısa ömürlü bir bağlantıyla checkpoint yap.
+            using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = _databasePath,
+                Mode = SqliteOpenMode.ReadWrite,
+                Pooling = false
+            }.ToString());
             connection.Open();
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
             cmd.ExecuteNonQuery();
         }
         catch { /* Best-effort checkpoint */ }
-        finally
-        {
-            SqliteConnection.ClearAllPools();
-        }
     }
 
     private SqliteConnection CreateConnection()
@@ -200,20 +206,39 @@ public sealed partial class Database :
         using var transaction = connection.BeginTransaction();
         try
         {
-            foreach (int id in idList)
-            {
-                StokHareketi mevcut = GetMovementById(connection, transaction, id) ?? throw new InvalidOperationException(L("movement_not_found"));
-                double projectedStock = GetCurrentStockCore(connection, transaction, mevcut.StokKartId) - MovementImpact(mevcut);
-                if (projectedStock < 0)
-                    throw new InvalidOperationException(L("stock_would_go_negative"));
+            // Tüm hareketleri önce oku
+            var hareketler = idList
+                .Select(id => GetMovementById(connection, transaction, id)
+                              ?? throw new InvalidOperationException(L("movement_not_found")))
+                .ToList();
 
+            // Her kart için net etki hesapla (silince stok nasıl değişir)
+            // Silme = hareketi geri almak → etkinin tersini uygula
+            var kartEtkileri = new Dictionary<int, double>();
+            foreach (var h in hareketler)
+            {
+                kartEtkileri.TryGetValue(h.StokKartId, out double mevcut);
+                kartEtkileri[h.StokKartId] = mevcut - MovementImpact(h); // silince etki tersine döner
+            }
+
+            // Tüm etkilenen kartlar için stok negatife düşer mi kontrol et
+            foreach (var (kartId, toplamEtki) in kartEtkileri)
+            {
+                double mevcutStok = GetCurrentStockCore(connection, transaction, kartId);
+                if (mevcutStok + toplamEtki < 0)
+                    throw new InvalidOperationException(L("stock_would_go_negative"));
+            }
+
+            // Kontrol geçti, sil
+            foreach (var h in hareketler)
+            {
                 using var deleteCommand = CreateCommand(connection, transaction, "DELETE FROM StokHareketleri WHERE Id=$id");
-                deleteCommand.Parameters.AddWithValue("$id", id);
+                deleteCommand.Parameters.AddWithValue("$id", h.Id);
                 if (deleteCommand.ExecuteNonQuery() == 0)
                     throw new InvalidOperationException(L("movement_not_found"));
 
-                InsertAuditLog(connection, transaction, "SIL", "StokHareketleri", id,
-                    $"{mevcut.Tur} | Miktar: {mevcut.Miktar} | Dept: {mevcut.Departman} | KartId: {mevcut.StokKartId}");
+                InsertAuditLog(connection, transaction, "SIL", "StokHareketleri", h.Id,
+                    $"{h.Tur} | Miktar: {h.Miktar} | Dept: {h.Departman} | KartId: {h.StokKartId}");
             }
 
             transaction.Commit();
@@ -582,7 +607,7 @@ public sealed partial class Database :
         };
     }
 
-    private static string BuildMovementQuery(int? stokKartId, DateTime? baslangic, DateTime? bitis, string? departman, string? tur)
+    private static string BuildMovementQuery(int? stokKartId, DateTime? baslangic, DateTime? bitis, string? departman, string? tur, string? kategori = null)
     {
         var conditions = new List<string>();
 
@@ -596,6 +621,8 @@ public sealed partial class Database :
             conditions.Add("h.Departman = $dep");
         if (!string.IsNullOrWhiteSpace(tur))
             conditions.Add("h.Tur = $tur");
+        if (!string.IsNullOrWhiteSpace(kategori))
+            conditions.Add("COALESCE(s.Kategori,'') = $kat");
 
         string whereClause = conditions.Count == 0 ? "" : "WHERE " + string.Join(" AND ", conditions);
 
