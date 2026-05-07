@@ -37,11 +37,13 @@ public class StockCardService : IStockCardService
         return new PagedResult<StokKarti>(items, totalCount, totalPages, page);
     }
 
+    public async Task<List<StokKarti>> GetAllAsync()
+    {
+        return await _stockCardRepository.GetAllAsync();
+    }
+
     public int GetLowStockCount()
     {
-        // Business rule: Low stock is defined as <= 3 (or k.MinStok if defined)
-        // Note: The UI currently has k.MevcutStok <= 3 hardcoded in FilterGrid.
-        // Let's use the model's property if available or keep it consistent.
-        return _stockCardRepository.GetChildCards().Count(k => k.IsLowStock || k.MevcutStok <= 3);
+        return _stockCardRepository.GetChildCards().Count(k => k.MevcutStok <= (k.MinStok > 0 ? k.MinStok : 3));
     }
 }

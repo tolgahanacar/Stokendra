@@ -13,6 +13,11 @@ public interface IStockCardService
     PagedResult<StokKarti> GetPagedStocks(string? searchTerm, int page, int pageSize);
 
     /// <summary>
+    /// Tüm stok kartlarını asenkron olarak getirir.
+    /// </summary>
+    Task<List<StokKarti>> GetAllAsync();
+
+    /// <summary>
     /// Düşük stoklu kart sayısını döndürür.
     /// </summary>
     int GetLowStockCount();

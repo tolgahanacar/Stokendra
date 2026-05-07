@@ -112,7 +112,7 @@ public static class BackupManager
         // Ham dosya kopyası yerine SQLite Online Backup API kullan.
         // Bu yöntem WAL modunda tutarlı bir snapshot alır, -wal/-shm dosyalarına gerek kalmaz.
         string destFile = Path.Combine(tempDir, "stok.db");
-        AppServices.Current.Database.CreateBackup(destFile);
+        AppServices.Current.Config.CreateBackup(destFile);
 
         // Orijinal dosya adı farklıysa onu da ekle (referans için)
         string origName = Path.GetFileName(dbPath);

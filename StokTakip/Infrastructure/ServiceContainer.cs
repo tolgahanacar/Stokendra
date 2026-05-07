@@ -1,12 +1,11 @@
-using StokTakip.Data;
-using StokTakip.Data.Interfaces;
+using System.Reflection;
 
 namespace StokTakip.Infrastructure;
 
 /// <summary>
-/// Uygulama genelinde kullanılan basit, hafif bir IoC (Inversion of Control) container.
-/// Microsoft.Extensions.DependencyInjection bağımlılığı olmadan singleton ve transient
-/// kayıt/çözümleme desteği sağlar.
+/// Uygulama genelinde kullanılan hafif IoC (Inversion of Control) container.
+/// Constructor injection desteği sağlar; böylece sınıflar bağımlılıklarını
+/// açıkça constructor üzerinden talep edebilir.
 /// </summary>
 public sealed class ServiceContainer : IDisposable
 {
@@ -16,13 +15,25 @@ public sealed class ServiceContainer : IDisposable
 
     // ── Kayıt ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Bir türü singleton olarak kaydeder.
-    /// İlk çözümlemede <paramref name="factory"/> çağrılır; sonraki çağrılarda aynı örnek döner.
-    /// Thread-safe: factory yalnızca bir kez çağrılır.
-    /// </summary>
-    public ServiceContainer RegisterSingleton<TInterface, TImplementation>(Func<TImplementation> factory)
+    public ServiceContainer RegisterSingleton<TInterface, TImplementation>()
         where TImplementation : class, TInterface
+    {
+        _factories[typeof(TInterface)] = () =>
+        {
+            lock (_singletons)
+            {
+                if (!_singletons.TryGetValue(typeof(TInterface), out var existing))
+                {
+                    existing = CreateInstance(typeof(TImplementation));
+                    _singletons[typeof(TInterface)] = existing;
+                }
+                return existing;
+            }
+        };
+        return this;
+    }
+
+    public ServiceContainer RegisterSingleton<TInterface>(Func<object> factory)
     {
         _factories[typeof(TInterface)] = () =>
         {
@@ -39,9 +50,6 @@ public sealed class ServiceContainer : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Mevcut bir örneği singleton olarak kaydeder.
-    /// </summary>
     public ServiceContainer RegisterInstance<TInterface>(TInterface instance)
         where TInterface : class
     {
@@ -50,46 +58,51 @@ public sealed class ServiceContainer : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Bir türü transient olarak kaydeder.
-    /// Her çözümlemede <paramref name="factory"/> yeniden çağrılır.
-    /// </summary>
-    public ServiceContainer RegisterTransient<TInterface, TImplementation>(Func<TImplementation> factory)
+    public ServiceContainer RegisterTransient<TInterface, TImplementation>()
         where TImplementation : class, TInterface
     {
-        _factories[typeof(TInterface)] = () => factory();
+        _factories[typeof(TInterface)] = () => CreateInstance(typeof(TImplementation));
         return this;
     }
 
     // ── Çözümleme ─────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Kayıtlı bir servisi çözümler.
-    /// </summary>
-    /// <typeparam name="T">İstenen servis türü.</typeparam>
-    /// <returns>Servis örneği.</returns>
-    /// <exception cref="InvalidOperationException">Tür kayıtlı değilse fırlatılır.</exception>
-    public T Resolve<T>() where T : class
-    {
-        if (_factories.TryGetValue(typeof(T), out var factory))
-            return (T)factory();
+    public T Resolve<T>() where T : class => (T)Resolve(typeof(T));
 
-        throw new InvalidOperationException(
-            $"'{typeof(T).Name}' türü ServiceContainer'a kayıtlı değil. " +
-            $"Program.ConfigureServices() içinde RegisterSingleton veya RegisterInstance ile kaydedin.");
+    public object Resolve(Type type)
+    {
+        if (_factories.TryGetValue(type, out var factory))
+            return factory();
+
+        // Eğer tip kayıtlı değilse ama concrete bir class ise, 
+        // otomatik olarak instantiate etmeyi dene (Formlar için faydalı)
+        if (!type.IsAbstract && !type.IsInterface)
+            return CreateInstance(type);
+
+        throw new InvalidOperationException($"Type '{type.Name}' is not registered.");
     }
 
-    /// <summary>
-    /// Kayıtlı bir servisi çözümlemeye çalışır. Kayıtlı değilse <c>null</c> döner.
-    /// </summary>
-    public T? TryResolve<T>() where T : class
+    private object CreateInstance(Type type)
     {
-        return _factories.TryGetValue(typeof(T), out var factory) ? (T)factory() : null;
+        var constructors = type.GetConstructors();
+        if (constructors.Length == 0)
+            return Activator.CreateInstance(type)!;
+
+        // En çok parametre alan constructor'ı seç (basit bir strateji)
+        var constructor = constructors.OrderByDescending(c => c.GetParameters().Length).First();
+        var parameters = constructor.GetParameters();
+        var parameterInstances = new object[parameters.Length];
+
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            parameterInstances[i] = Resolve(parameters[i].ParameterType);
+        }
+
+        return constructor.Invoke(parameterInstances);
     }
 
     // ── IDisposable ────────────────────────────────────────────────────────
 
-    /// <inheritdoc/>
     public void Dispose()
     {
         if (_disposed) return;
@@ -105,3 +118,4 @@ public sealed class ServiceContainer : IDisposable
         _factories.Clear();
     }
 }
+

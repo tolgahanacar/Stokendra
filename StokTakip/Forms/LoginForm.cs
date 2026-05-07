@@ -1,4 +1,5 @@
 using StokTakip.Infrastructure;
+using StokTakip.Data.Interfaces;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -8,9 +9,11 @@ public sealed class LoginForm : Form
     private TextBox txtUser = new(), txtPass = new();
     private Label lblError = new();
     private int _attempts = 0;
+    private readonly IUserRepository _userRepository;
 
-    public LoginForm()
+    public LoginForm(IUserRepository userRepository)
     {
+        _userRepository = userRepository;
         Text = "Stokendra";
         StartPosition = FormStartPosition.CenterScreen;
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -79,10 +82,10 @@ public sealed class LoginForm : Form
         if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
         { lblError.Text = L("login_failed"); return; }
 
-        if (AppServices.Current.Users.Authenticate(user, pass))
+        if (_userRepository.Authenticate(user, pass))
         {
             AppServices.Current.BeginSession(user);
-            if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && AppServices.Current.Users.IsDefaultAdminPasswordInUse())
+            if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && _userRepository.IsDefaultAdminPasswordInUse())
                 MessageBox.Show(L("default_admin_password_warning"), L("warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.OK;
         }

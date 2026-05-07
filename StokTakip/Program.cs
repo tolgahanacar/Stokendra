@@ -1,5 +1,6 @@
 using StokTakip.Data;
 using StokTakip.Data.Interfaces;
+using StokTakip.Data.Repositories;
 using StokTakip.Forms;
 using StokTakip.Infrastructure;
 using StokTakip.Services;
@@ -20,50 +21,76 @@ static class Program
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         ApplicationConfiguration.Initialize();
 
-        Application.ThreadException += (_, e) => LogError(e.Exception);
-        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-        {
-            if (e.ExceptionObject is Exception ex) LogError(ex);
-        };
-        TaskScheduler.UnobservedTaskException += (_, e) =>
-        {
-            LogError(e.Exception);
-            e.SetObserved();
-        };
+        // Exception handling logic ... (omitted for brevity, keep existing)
+        SetupExceptionHandlers();
 
         var settings = AppSettings.Yukle();
         LocalizationManager.Initialize(settings.Language);
 
-        if (!EnsureDatabasePath(settings))
-            return;
+        if (!EnsureDatabasePath(settings)) return;
 
-        var db = TryInitializeDatabase(settings);
-        if (db == null)
-            return;
-
-        // AppServices başlat — artık tüm global state buradan
+        // DI Container Setup
         var services = new ServiceContainer();
-        services
-            .RegisterInstance<IStockCardRepository>(db)
-            .RegisterInstance<IMovementRepository>(db)
-            .RegisterInstance<IServiceRecordRepository>(db)
-            .RegisterInstance<INoteRepository>(db)
-            .RegisterInstance<IDepartmentRepository>(db)
-            .RegisterInstance<IReportRepository>(db)
-            .RegisterInstance<IUserRepository>(db)
-            .RegisterInstance<IConfigRepository>(db)
-            .RegisterSingleton<IStockCardService, StockCardService>(() => new StockCardService(db))
-            .RegisterSingleton<IMovementService, MovementService>(() => new MovementService(db, db));
+        ConfigureServices(services, settings);
 
+        // Run migrations
+        var migrator = services.Resolve<DatabaseMigrator>();
+        try
+        {
+            migrator.Migrate();
+        }
+        catch (Exception ex)
+        {
+            LogError(ex);
+            return;
+        }
+
+        var db = new Database(settings.DbPath);
         var ctx = AppServices.Initialize(services, settings, db);
-
         Application.ApplicationExit += (_, _) => ctx.Dispose();
 
-        using var login = new LoginForm();
-        if (login.ShowDialog() != DialogResult.OK)
-            return;
+        // Resolve LoginForm via DI
+        using var login = services.Resolve<LoginForm>();
+        if (login.ShowDialog() != DialogResult.OK) return;
 
-        Application.Run(new MainForm());
+        // Resolve MainForm via DI
+        Application.Run(services.Resolve<MainForm>());
+    }
+
+    private static void ConfigureServices(ServiceContainer services, AppSettings settings)
+    {
+        // Infrastructure
+        var dbFactory = new SqliteConnectionFactory(settings.DbPath);
+        services.RegisterInstance<IDbConnectionFactory>(dbFactory);
+        services.RegisterSingleton<DatabaseMigrator, DatabaseMigrator>();
+
+        // Repositories
+        services.RegisterSingleton<IStockCardRepository, StockCardRepository>();
+        services.RegisterSingleton<IMovementRepository, MovementRepository>();
+        services.RegisterSingleton<IUserRepository, UserRepository>();
+        services.RegisterSingleton<INoteRepository, NoteRepository>();
+        services.RegisterSingleton<IReportRepository, ReportRepository>();
+        services.RegisterSingleton<IServiceRecordRepository, ServiceRecordRepository>();
+        services.RegisterSingleton<IDepartmentRepository, DepartmentRepository>();
+        services.RegisterSingleton<IConfigRepository, ConfigRepository>();
+
+        // Forms (Explicitly register to ensure dependencies are injected correctly)
+        services.RegisterTransient<LoginForm, LoginForm>();
+        services.RegisterTransient<MainForm, MainForm>();
+        services.RegisterTransient<DashboardPanel, DashboardPanel>();
+
+        // Business Services
+        services.RegisterSingleton<IStockCardService, StockCardService>();
+        services.RegisterSingleton<IMovementService, MovementService>();
+
+        // Forms (Auto-resolved if concrete, but can be explicit)
+    }
+
+    private static void SetupExceptionHandlers()
+    {
+        Application.ThreadException += (_, e) => LogError(e.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => { if (e.ExceptionObject is Exception ex) LogError(ex); };
+        TaskScheduler.UnobservedTaskException += (_, e) => { LogError(e.Exception); e.SetObserved(); };
     }
 
     private static bool EnsureDatabasePath(AppSettings settings)

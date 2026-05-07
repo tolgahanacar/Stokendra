@@ -1,5 +1,7 @@
 using StokTakip.Models;
 using StokTakip.Infrastructure;
+using StokTakip.Data.Interfaces;
+using StokTakip.Services;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
 using ScottPlot.WinForms;
@@ -164,21 +166,47 @@ internal class AlertCard : Control
 
 public sealed class DashboardPanel : UserControl
 {
-    public DashboardPanel()
+    private readonly IStockCardService _stockCardService;
+    private readonly IMovementRepository _movementRepository;
+    private readonly IReportRepository _reportRepository;
+    private CancellationTokenSource? _cts;
+
+    public DashboardPanel(
+        IStockCardService stockCardService,
+        IMovementRepository movementRepository,
+        IReportRepository reportRepository)
     {
-        BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
-        this.Load += (s, e) => AsyncHelper.RunSafe(InitializeAsync);
+        _stockCardService = stockCardService;
+        _movementRepository = movementRepository;
+        _reportRepository = reportRepository;
+
+        BackColor = UIHelper.BgDark; 
+        Dock = DockStyle.Fill; 
+        DoubleBuffered = true;
+        
+        this.Load += (s, e) => {
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+            AsyncHelper.RunSafe(() => InitializeAsync(_cts.Token));
+        };
+        
+        this.Disposed += (s, e) => {
+            _cts?.Cancel();
+            _cts?.Dispose();
+        };
     }
 
-    private async Task InitializeAsync()
+    private async Task InitializeAsync(CancellationToken token)
     {
+        var stats = await _reportRepository.GetDashboardStatsAsync();
+        var allCards = await _stockCardService.GetAllAsync();
+        var last7Data = await _movementRepository.GetLast7DaysSummaryAsync();
+
+        token.ThrowIfCancellationRequested();
+
         SuspendLayout();
-
-        var ctx = AppServices.Current;
-        var stats     = await ctx.Reports.GetDashboardStatsAsync();
-        var altKartlar = ctx.StockCards.GetChildCards();
-        var last7Data  = await ctx.Movements.GetLast7DaysSummaryAsync();
-
+        Controls.Clear();
+        
         // ═══ HEADER ═══
         var pnlH = UIHelper.MakeHeader(L("dashboard"), L("dashboard_subtitle"));
         var lblDate = new System.Windows.Forms.Label
@@ -191,11 +219,10 @@ public sealed class DashboardPanel : UserControl
         pnlH.Resize += (_, _) => { lblDate.Left = pnlH.Width - lblDate.Width - 32; lblDate.Top = 16; };
 
         // ═══ STAT CARDS ═══
-        // FIX 1 ► Height = 108: kart (96) + margin (4×2) + padding (top 6 + bottom 4) = 106 — tek satır garantili
         var pnlCards = new FlowLayoutPanel
         {
             Dock = DockStyle.Top, Height = 108,
-            WrapContents = false,               // ← Sarma kapalı: taşmayı önler
+            WrapContents = false,
             AutoScroll = false,
             BackColor = UIHelper.BgDark,
             Padding = new Padding(20, 6, 20, 4)
@@ -251,8 +278,8 @@ public sealed class DashboardPanel : UserControl
         plotBar.Plot.Grid.LineColor = ScottPlot.Color.FromColor(System.Drawing.Color.FromArgb(35, 40, 50));
 
         // Pie chart data
-        var catGroups = altKartlar
-            .Where(k => !string.IsNullOrEmpty(k.Kategori) && k.MevcutStok > 0)
+        var catGroups = allCards
+            .Where(k => k.KartTipi == "Alt" && !string.IsNullOrEmpty(k.Kategori))
             .GroupBy(k => k.Kategori)
             .Select(g => new { Name = g.Key, Count = g.Count() })
             .OrderByDescending(x => x.Count).Take(6).ToList();
@@ -320,8 +347,8 @@ public sealed class DashboardPanel : UserControl
 
 
 
-        var dusukKartlar = altKartlar
-            .Where(k => !k.IsParentCard && k.MevcutStok > 0 && k.MevcutStok <= (k.MinStok > 0 ? k.MinStok : 3))
+        var dusukKartlar = allCards
+            .Where(k => k.KartTipi == "Alt" && k.MevcutStok > 0 && k.MevcutStok <= (k.MinStok > 0 ? k.MinStok : 3))
             .OrderBy(k => k.MevcutStok)
             .Take(15).ToList();
 

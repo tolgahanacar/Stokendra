@@ -1,4 +1,5 @@
 using StokTakip.Models;
+using StokTakip.Infrastructure;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -102,10 +103,16 @@ public sealed class MainForm : Form
         }
 
         Control content = key switch {
-            "menu_dashboard" => new DashboardPanel(), "menu_reports" => new RaporlarPanel(),
-            "menu_stock_cards" => new StokKartlariPanel(), "menu_stocks" => new StoklarPanel(),
-            "menu_stock_movements" => new StokHareketPanel(), "menu_services" => new ServislerPanel(), "menu_notes" => new NotlarPanel(), "menu_departments" => new DepartmanlarPanel(),
-            "menu_settings" => new AyarlarPanel(), _ => new DashboardPanel()
+            "menu_dashboard" => AppServices.Current.Services.Resolve<DashboardPanel>(), 
+            "menu_reports" => AppServices.Current.Services.Resolve<RaporlarPanel>(),
+            "menu_stock_cards" => AppServices.Current.Services.Resolve<StokKartlariPanel>(), 
+            "menu_stocks" => AppServices.Current.Services.Resolve<StoklarPanel>(),
+            "menu_stock_movements" => AppServices.Current.Services.Resolve<StokHareketPanel>(), 
+            "menu_services" => AppServices.Current.Services.Resolve<ServislerPanel>(), 
+            "menu_notes" => AppServices.Current.Services.Resolve<NotlarPanel>(), 
+            "menu_departments" => AppServices.Current.Services.Resolve<DepartmanlarPanel>(),
+            "menu_settings" => AppServices.Current.Services.Resolve<AyarlarPanel>(), 
+            _ => AppServices.Current.Services.Resolve<DashboardPanel>()
         };
         content.Dock = DockStyle.Fill; pnlContent.Controls.Add(content); pnlContent.ResumeLayout(true);
     }

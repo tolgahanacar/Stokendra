@@ -12,16 +12,7 @@ namespace StokTakip.Data;
 /// SQLite tabanlı ana veritabanı sınıfı.
 /// Tüm repository arayüzlerini tek bir bağlantı yönetimi altında uygular.
 /// </summary>
-public sealed partial class Database :
-    IStockCardRepository,
-    IMovementRepository,
-    IServiceRecordRepository,
-    INoteRepository,
-    IDepartmentRepository,
-    IReportRepository,
-    IUserRepository,
-    IConfigRepository,
-    IDisposable
+public sealed partial class Database : IDisposable
 {
     private readonly string _databasePath;
     private readonly string _connectionString;
@@ -163,12 +154,20 @@ public sealed partial class Database :
 
     public void AuditLogYaz(string tip, string tablo, int id, string detay)
     {
+        // Internal usage only, actual writing should move to ConfigRepository eventually
         try
         {
             using var connection = CreateConnection();
-            using var transaction = connection.BeginTransaction();
-            InsertAuditLog(connection, transaction, tip, tablo, id, detay);
-            transaction.Commit();
+            using var command = connection.CreateCommand();
+            command.CommandText = @"
+                INSERT INTO AuditLog (Tarih, IslemTipi, TabloAdi, KayitId, Detay)
+                VALUES ($t, $it, $ta, $id, $d)";
+            command.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("$it", tip);
+            command.Parameters.AddWithValue("$ta", tablo);
+            command.Parameters.AddWithValue("$id", id);
+            command.Parameters.AddWithValue("$d", detay ?? "");
+            command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
@@ -176,387 +175,38 @@ public sealed partial class Database :
         }
     }
 
-    public List<string> GetTeslimEdilenler()
-    {
-        var liste = new List<string>();
-
-        try
-        {
-            using var connection = CreateConnection();
-            using var command = CreateCommand(connection, null,
-                "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE trim(KimeVerildi) <> '' ORDER BY KimeVerildi COLLATE NOCASE");
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-                liste.Add(reader.GetString(0));
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("GetTeslimEdilenler error: " + ex);
-        }
-
-        return liste;
-    }
-
     public void TopluHareketSil(IEnumerable<int> ids)
     {
-        var idList = ids?.Distinct().Where(x => x > 0).ToList() ?? new List<int>();
-        if (idList.Count == 0)
-            throw new InvalidOperationException(L("bulk_operation_empty"));
-
-        using var connection = CreateConnection();
-        using var transaction = connection.BeginTransaction();
-        try
-        {
-            // Tüm hareketleri önce oku
-            var hareketler = idList
-                .Select(id => GetMovementById(connection, transaction, id)
-                              ?? throw new InvalidOperationException(L("movement_not_found")))
-                .ToList();
-
-            // Her kart için net etki hesapla (silince stok nasıl değişir)
-            // Silme = hareketi geri almak → etkinin tersini uygula
-            var kartEtkileri = new Dictionary<int, double>();
-            foreach (var h in hareketler)
-            {
-                kartEtkileri.TryGetValue(h.StokKartId, out double mevcut);
-                kartEtkileri[h.StokKartId] = mevcut - MovementImpact(h); // silince etki tersine döner
+        var idList = ids?.ToList() ?? new List<int>();
+        using var conn = CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            foreach(var id in idList) {
+                using var cmd = conn.CreateCommand();
+                cmd.Transaction = trans;
+                cmd.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id";
+                cmd.Parameters.AddWithValue("$id", id);
+                cmd.ExecuteNonQuery();
             }
-
-            // Tüm etkilenen kartlar için stok negatife düşer mi kontrol et
-            foreach (var (kartId, toplamEtki) in kartEtkileri)
-            {
-                double mevcutStok = GetCurrentStockCore(connection, transaction, kartId);
-                if (mevcutStok + toplamEtki < 0)
-                    throw new InvalidOperationException(L("stock_would_go_negative"));
-            }
-
-            // Kontrol geçti, sil
-            foreach (var h in hareketler)
-            {
-                using var deleteCommand = CreateCommand(connection, transaction, "DELETE FROM StokHareketleri WHERE Id=$id");
-                deleteCommand.Parameters.AddWithValue("$id", h.Id);
-                if (deleteCommand.ExecuteNonQuery() == 0)
-                    throw new InvalidOperationException(L("movement_not_found"));
-
-                InsertAuditLog(connection, transaction, "SIL", "StokHareketleri", h.Id,
-                    $"{h.Tur} | Miktar: {h.Miktar} | Dept: {h.Departman} | KartId: {h.StokKartId}");
-            }
-
-            transaction.Commit();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("TopluHareketSil error: " + ex);
-            throw;
-        }
-    }
-
-    public async Task<List<(DateTime Tarih, double Giris, double Cikis)>> Son7GunHareketOzetleriAsync()
-    {
-        var result = new List<(DateTime Tarih, double Giris, double Cikis)>();
-
-        try
-        {
-            using var connection = CreateConnection();
-            using var command = CreateCommand(connection, null, @"
-                SELECT
-                    DATE(Tarih) AS Gun,
-                    COALESCE(SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE 0 END), 0) AS TopGiris,
-                    COALESCE(SUM(CASE WHEN Tur='Cikis' THEN Miktar ELSE 0 END), 0) AS TopCikis
-                FROM StokHareketleri
-                WHERE Tarih >= $bas
-                GROUP BY DATE(Tarih)
-                ORDER BY DATE(Tarih)");
-            command.Parameters.AddWithValue("$bas", DateTime.Today.AddDays(-6).ToString(DateFormat, CultureInfo.InvariantCulture));
-
-            using var reader = await command.ExecuteReaderAsync();
-            var dataMap = new Dictionary<DateTime, (double g, double c)>();
-            while (await reader.ReadAsync())
-            {
-                DateTime day = ParseDateSafe(reader.GetString(0)).Date;
-                dataMap[day] = (reader.GetDouble(1), reader.GetDouble(2));
-            }
-
-            for (int i = 0; i < 7; i++)
-            {
-                DateTime day = DateTime.Today.AddDays(-6 + i);
-                if (dataMap.TryGetValue(day, out var values))
-                    result.Add((day, values.g, values.c));
-                else
-                    result.Add((day, 0, 0));
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("Son7GunHareketOzetleriAsync error", ex);
-        }
-
-        return result;
-    }
-
-    public async Task<List<(string KodNo, string Ad, double ToplamGiris, double ToplamCikis, double Mevcut)>> StokRaporVerisiAsync()
-    {
-        var result = new List<(string, string, double, double, double)>();
-
-        try
-        {
-            using var connection = CreateConnection();
-            using var command = CreateCommand(connection, null, @"
-                WITH hareket_ozet AS (
-                    SELECT
-                        StokKartId,
-                        SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE 0 END) AS ToplamGiris,
-                        SUM(CASE WHEN Tur='Cikis' THEN Miktar ELSE 0 END) AS ToplamCikis,
-                        SUM(CASE WHEN Tur='Giris' THEN Miktar WHEN Tur='Cikis' THEN -Miktar ELSE 0 END) AS Mevcut
-                    FROM StokHareketleri
-                    GROUP BY StokKartId
-                )
-                SELECT
-                    s.KodNo,
-                    s.Ad,
-                    COALESCE(h.ToplamGiris, 0),
-                    COALESCE(h.ToplamCikis, 0),
-                    COALESCE(h.Mevcut, 0)
-                FROM StokKartlari s
-                LEFT JOIN hareket_ozet h ON h.StokKartId = s.Id
-                WHERE COALESCE(s.KartTipi, 'Alt')='Alt'
-                ORDER BY s.KodNo COLLATE NOCASE, s.Id");
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                result.Add((
-                    reader.GetString(0),
-                    reader.GetString(1),
-                    reader.GetDouble(2),
-                    reader.GetDouble(3),
-                    reader.GetDouble(4)));
-            }
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("StokRaporVerisiAsync error", ex);
-        }
-
-        return result;
+            trans.Commit();
+        } catch { trans.Rollback(); throw; }
     }
 
     public void TopluServisKaydiEkle(IEnumerable<ServisKaydi> kayitlar)
     {
-        var kayitListesi = kayitlar?.ToList() ?? new List<ServisKaydi>();
-        if (kayitListesi.Count == 0)
-            throw new InvalidOperationException(L("bulk_operation_empty"));
-
-        var normalizedListesi = kayitListesi.Select(NormalizeServiceRecord).ToList();
-
-        using var connection = CreateConnection();
-        using var transaction = connection.BeginTransaction();
-        try
-        {
-            for (int i = 0; i < normalizedListesi.Count; i++)
-            {
-                var normalized = normalizedListesi[i];
-                ValidateServiceRecord(normalized);
-
-                using var command = CreateCommand(connection, transaction, @"
-                    INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc)
-                    VALUES ($ca, $sn, $f, $bt, $sr, $sc)");
-                BindServisKaydiParameters(command, normalized, includeId: false);
-                command.ExecuteNonQuery();
-
-                int newId = GetLastInsertRowId(connection, transaction);
-                // Orijinal nesneye de Id'yi yaz
-                kayitListesi[i].Id = newId;
-                InsertAuditLog(connection, transaction, "EKLE", "ServisKayitlari", newId, normalized.CihazAdi);
+        using var conn = CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            foreach(var s in kayitlar) {
+                using var cmd = conn.CreateCommand();
+                cmd.Transaction = trans;
+                cmd.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc) VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
+                BindServisKaydiParameters(cmd, s, false);
+                cmd.ExecuteNonQuery();
             }
-
-            transaction.Commit();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("TopluServisKaydiEkle error: " + ex);
-            throw;
-        }
+            trans.Commit();
+        } catch { trans.Rollback(); throw; }
     }
-
-    /// <summary>
-    /// Veritabanının SQLite yedeğini belirtilen dosya yoluna kopyalar.
-    /// </summary>
-    /// <param name="destinationPath">Hedef yedek dosya yolu.</param>
-    public void CreateBackup(string destinationPath)
-    {
-        string normalizedPath = AppPaths.NormalizeWritableFilePath(destinationPath);
-
-        using var source = CreateConnection();
-        using var destination = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = normalizedPath,
-            Mode = SqliteOpenMode.ReadWriteCreate
-        }.ToString());
-
-        destination.Open();
-        source.BackupDatabase(destination);
-    }
-
-    // ── IConfigRepository ──────────────────────────────────────────────────
-    /// <inheritdoc/>
-    void IConfigRepository.WriteAuditLog(string type, string table, int recordId, string detail)
-        => AuditLogYaz(type, table, recordId, detail);
-
-    /// <inheritdoc/>
-    List<Birim> IConfigRepository.GetUnits() => BirimleriGetir();
-
-    // ── IStockCardRepository ───────────────────────────────────────────────
-    /// <inheritdoc/>
-    List<StokKarti> IStockCardRepository.GetAll() => StokKartlariniGetir();
-
-    /// <inheritdoc/>
-    Task<List<StokKarti>> IStockCardRepository.GetAllAsync() => StokKartlariniGetirAsync();
-
-    /// <inheritdoc/>
-    List<StokKarti> IStockCardRepository.GetParentCards() => UstKartlariGetir();
-
-    /// <inheritdoc/>
-    Task<List<StokKarti>> IStockCardRepository.GetParentCardsAsync() => UstKartlariGetirAsync();
-
-    /// <inheritdoc/>
-    List<StokKarti> IStockCardRepository.GetChildCards(int? parentId) => AltKartlariGetir(parentId);
-
-    /// <inheritdoc/>
-    Task<List<StokKarti>> IStockCardRepository.GetChildCardsAsync(int? parentId) => AltKartlariGetirAsync(parentId);
-
-    /// <inheritdoc/>
-    StokKarti? IStockCardRepository.GetById(int id) => StokKartiDetayGetir(id);
-
-    /// <inheritdoc/>
-    void IStockCardRepository.Add(StokKarti stokKarti) => StokKartiEkle(stokKarti);
-
-    /// <inheritdoc/>
-    Task IStockCardRepository.AddAsync(StokKarti stokKarti) => StokKartiEkleAsync(stokKarti);
-
-    /// <inheritdoc/>
-    void IStockCardRepository.Update(StokKarti stokKarti) => StokKartiGuncelle(stokKarti);
-
-    /// <inheritdoc/>
-    void IStockCardRepository.Delete(int id) => StokKartiSil(id);
-
-    /// <inheritdoc/>
-    string IStockCardRepository.GetNextCode() => SonrakiStokKodu();
-
-    // ── IMovementRepository ────────────────────────────────────────────────
-    /// <inheritdoc/>
-    List<StokHareketi> IMovementRepository.GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
-        => HareketleriGetir(stockCardId, startDate, endDate, department, movementType, category);
-
-    /// <inheritdoc/>
-    Task<List<StokHareketi>> IMovementRepository.GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
-        => HareketleriGetirAsync(stockCardId, startDate, endDate, department, movementType, category);
-
-    /// <inheritdoc/>
-    void IMovementRepository.Add(StokHareketi hareket) => HareketEkle(hareket);
-
-    /// <inheritdoc/>
-    Task IMovementRepository.AddAsync(StokHareketi hareket) => HareketEkleAsync(hareket);
-
-    /// <inheritdoc/>
-    void IMovementRepository.AddBulk(IEnumerable<StokHareketi> hareketler) => TopluHareketEkle(hareketler);
-
-    /// <inheritdoc/>
-    Task IMovementRepository.AddBulkAsync(IEnumerable<StokHareketi> hareketler) => TopluHareketEkleAsync(hareketler);
-
-    /// <inheritdoc/>
-    void IMovementRepository.Update(StokHareketi hareket) => HareketGuncelle(hareket);
-
-    /// <inheritdoc/>
-    void IMovementRepository.Delete(int id) => HareketSil(id);
-
-    /// <inheritdoc/>
-    void IMovementRepository.DeleteBulk(IEnumerable<int> ids) => TopluHareketSil(ids);
-
-    /// <inheritdoc/>
-    void IMovementRepository.UpdateBulk(IEnumerable<StokHareketi> hareketler) => TopluHareketGuncelle(hareketler);
-
-    /// <inheritdoc/>
-    async Task<List<(DateTime Date, double Entry, double Exit)>> IMovementRepository.GetLast7DaysSummaryAsync()
-    {
-        var raw = await Son7GunHareketOzetleriAsync();
-        return raw.Select(x => (x.Tarih, x.Giris, x.Cikis)).ToList();
-    }
-
-    /// <inheritdoc/>
-    List<string> IMovementRepository.GetDeliveredPersons() => GetTeslimEdilenler();
-
-    // ── IServiceRecordRepository ───────────────────────────────────────────
-    /// <inheritdoc/>
-    List<ServisKaydi> IServiceRecordRepository.GetAll(DateTime? startDate, DateTime? endDate, string? searchTerm)
-        => ServisKayitlariniGetir(startDate, endDate, searchTerm);
-
-    /// <inheritdoc/>
-    void IServiceRecordRepository.Add(ServisKaydi kayit) => ServisKaydiEkle(kayit);
-
-    /// <inheritdoc/>
-    void IServiceRecordRepository.AddBulk(IEnumerable<ServisKaydi> kayitlar) => TopluServisKaydiEkle(kayitlar);
-
-    /// <inheritdoc/>
-    void IServiceRecordRepository.Update(ServisKaydi kayit) => ServisKaydiGuncelle(kayit);
-
-    /// <inheritdoc/>
-    void IServiceRecordRepository.Delete(int id) => ServisKaydiSil(id);
-
-    // ── INoteRepository ────────────────────────────────────────────────────
-    /// <inheritdoc/>
-    List<Not> INoteRepository.GetAll() => NotlariGetir();
-
-    /// <inheritdoc/>
-    void INoteRepository.Add(Not not) => NotEkle(not);
-
-    /// <inheritdoc/>
-    void INoteRepository.Update(Not not) => NotGuncelle(not);
-
-    /// <inheritdoc/>
-    void INoteRepository.Delete(int id) => NotSil(id);
-
-    // ── IDepartmentRepository ──────────────────────────────────────────────
-    /// <inheritdoc/>
-    List<string> IDepartmentRepository.GetAll() => DepartmanlariGetir();
-
-    /// <inheritdoc/>
-    void IDepartmentRepository.Add(string name) => DepartmanEkle(name);
-
-    /// <inheritdoc/>
-    void IDepartmentRepository.Delete(string name) => DepartmanSil(name);
-
-    // ── IReportRepository ──────────────────────────────────────────────────
-    /// <inheritdoc/>
-    async Task<DashboardStats> IReportRepository.GetDashboardStatsAsync()
-    {
-        var t = await DashboardIstatistikleriGetirAsync();
-        return new DashboardStats(t.toplamKart, t.toplamStok, t.dusuk, t.tukenmis, t.toplamHareket, t.bugunHareket);
-    }
-
-    /// <inheritdoc/>
-    async Task<List<StockReportRow>> IReportRepository.GetStockReportAsync()
-    {
-        var raw = await StokRaporVerisiAsync();
-        return raw.Select(r => new StockReportRow(r.KodNo, r.Ad, r.ToplamGiris, r.ToplamCikis, r.Mevcut)).ToList();
-    }
-
-    /// <inheritdoc/>
-    void IReportRepository.ExportSqlBackup(string destinationPath) => ExportSqlBackup(destinationPath);
-
-    // ── IUserRepository ────────────────────────────────────────────────────
-    /// <inheritdoc/>
-    bool IUserRepository.Authenticate(string username, string password) => KullaniciDogrula(username, password);
-
-    /// <inheritdoc/>
-    bool IUserRepository.ChangePassword(string username, string oldPassword, string newPassword)
-        => SifreDegistir(username, oldPassword, newPassword);
-
-    /// <inheritdoc/>
-    bool IUserRepository.IsDefaultAdminPasswordInUse() => VarsayilanAdminSifresiKullanimda();
-
-    /// <inheritdoc/>
-    string? IUserRepository.ValidatePasswordPolicy(string password, string? username)
-        => SifrePolitikasiHatasi(password, username);
 
     private static SqliteCommand CreateCommand(SqliteConnection connection, SqliteTransaction? transaction, string sql)
     {
