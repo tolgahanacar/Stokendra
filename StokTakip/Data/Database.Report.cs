@@ -18,7 +18,7 @@ public sealed partial class Database
                 WITH hareket_ozet AS (
                     SELECT
                         StokKartId,
-                        SUM(CASE WHEN Tur='Giris' THEN Miktar WHEN Tur='Cikis' THEN -Miktar ELSE 0 END) AS Mevcut
+                        SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar WHEN Tur IN ('Cikis', 'Çıkış') THEN -Miktar ELSE 0 END) AS Mevcut
                     FROM StokHareketleri
                     GROUP BY StokKartId
                 ),
@@ -29,7 +29,7 @@ public sealed partial class Database
                         COALESCE(h.Mevcut, 0) AS Mevcut
                     FROM StokKartlari s
                     LEFT JOIN hareket_ozet h ON h.StokKartId = s.Id
-                    WHERE COALESCE(s.KartTipi, 'Alt')='Alt'
+                    WHERE COALESCE(s.KartTipi, 'Alt') IN ('Alt', 'Alt') -- Burada zaten Alt karakteri aynı ama esneklik için kalsın
                 )
                 SELECT
                     (SELECT COUNT(*) FROM alt_stok),

@@ -1,0 +1,122 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StokTakip.ViewModels"
+        x:Class="StokTakip.Views.AddMovementWindow"
+        Title="{Binding Title}"
+        Width="450" Height="620"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#161B27"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Design.DataContext>
+        <vm:AddMovementViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1C222E" Padding="20,40,20,15">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Hareket detaylarını giriniz" FontSize="12" Foreground="#5A6987"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="24,10,24,24">
+            <StackPanel Spacing="16">
+                <!-- Stok Seçimi -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Stok Kartı" FontSize="12" Foreground="#8A9BBF"/>
+                    <ComboBox ItemsSource="{Binding AllCards}"
+                              SelectedItem="{Binding SelectedCard}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*">
+                    <!-- İşlem Türü -->
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+                        <TextBlock Text="İşlem Türü" FontSize="12" Foreground="#8A9BBF"/>
+                        <ComboBox SelectedIndex="{Binding SelectedTypeIndex}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="📥 Giriş"/>
+                            <ComboBoxItem Content="📤 Çıkış"/>
+                            <ComboBoxItem Content="⚪ Boş"/>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <!-- Miktar -->
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+                        <TextBlock Text="Miktar" FontSize="12" Foreground="#8A9BBF"/>
+                        <NumericUpDown Value="{Binding Quantity}" 
+                                       Minimum="0" 
+                                       FormatString="N2"
+                                       HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Departman -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Departman" FontSize="12" Foreground="#8A9BBF"/>
+                    <ComboBox ItemsSource="{Binding AllDepartments}"
+                              SelectedItem="{Binding Department}"
+                              HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <!-- Teslim Edilen -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Teslim Edilen / Alınan" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding DeliveredTo}" 
+                             Watermark="İsim yazınız..."/>
+                </StackPanel>
+
+                <!-- Tarih -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Tarih" FontSize="12" Foreground="#8A9BBF"/>
+                    <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
+                </StackPanel>
+
+                <!-- Açıklama -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Açıklama" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Description}" 
+                             Watermark="Not ekleyin..."
+                             Height="60" 
+                             AcceptsReturn="True" 
+                             TextWrapping="Wrap"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="#1C222E" Padding="20" BorderBrush="#252D3D" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock Text="{Binding ErrorMessage}" 
+                           Foreground="#FF453A" 
+                           FontSize="12" 
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxWidth="200"
+                           DockPanel.Dock="Left"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+                    <Button Content="İptal" 
+                            Classes="Secondary" 
+                            Command="{Binding CancelCommand}"
+                            Width="100"/>
+                    <Button Content="Kaydet" 
+                            Classes="Primary" 
+                            Command="{Binding SaveCommand}"
+                            IsEnabled="{Binding SelectedCard, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            Width="100"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

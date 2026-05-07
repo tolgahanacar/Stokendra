@@ -135,6 +135,7 @@ public sealed partial class Database : IDisposable
 
             EnsureIndexes(connection, transaction);
             SetSchemaVersion(connection, transaction, CurrentSchemaVersion);
+            NormalizeLegacyData(connection, transaction);
             SeedDefaults(connection, transaction);
             ValidateDatabase(connection, transaction);
 

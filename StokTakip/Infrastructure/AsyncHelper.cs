@@ -35,11 +35,8 @@ public static class AsyncHelper
             }
             else
             {
-                MessageBox.Show(
-                    L("error_with_details", ex.Message),
-                    L("error"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                // In Avalonia, we should use a custom dialog service. 
+                // For now, we just log it (already logged above).
             }
         }
     }
@@ -68,11 +65,8 @@ public static class AsyncHelper
             }
             else
             {
-                MessageBox.Show(
-                    L("error_with_details", ex.Message),
-                    L("error"),
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                // In Avalonia, we should use a custom dialog service. 
+                // For now, we just log it (already logged above).
             }
         }
     }

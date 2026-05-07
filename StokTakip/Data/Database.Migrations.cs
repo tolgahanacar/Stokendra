@@ -200,6 +200,15 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_AppConfig_Key ON AppConfig(Key)");
     }
 
+    private static void NormalizeLegacyData(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        // WinForms'dan gelen verileri yeni standarda dönüştür (ş, ç, ü -> s, c, u)
+        TryAlter(connection, transaction, "UPDATE StokHareketleri SET Tur='Giris' WHERE Tur='Giriş'");
+        TryAlter(connection, transaction, "UPDATE StokHareketleri SET Tur='Cikis' WHERE Tur='Çıkış'");
+        TryAlter(connection, transaction, "UPDATE StokKartlari SET KartTipi='Alt' WHERE KartTipi='Alt'"); // Genelde sorunsuz
+        TryAlter(connection, transaction, "UPDATE StokKartlari SET KartTipi='Ust' WHERE KartTipi='Üst'");
+    }
+
     private static void ValidateDatabase(SqliteConnection connection, SqliteTransaction transaction)
     {
         using var command = CreateCommand(connection, transaction, "PRAGMA quick_check(1);");

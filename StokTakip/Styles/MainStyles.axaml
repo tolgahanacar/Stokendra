@@ -1,0 +1,161 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ═══ SIDEBAR MENU BUTTON ═══ -->
+    <Style Selector="Button.MenuButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="Height" Value="48"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="Padding" Value="20,0,0,0"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <BrushTransition Property="Background" Duration="0:0:0.2"/>
+                <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.MenuButton:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#1E293B"/>
+        <Setter Property="Foreground" Value="#F1F5F9"/>
+    </Style>
+    <Style Selector="Button.MenuButton.Active /template/ ContentPresenter">
+        <Setter Property="Background" Value="#312E81"/>
+        <Setter Property="Foreground" Value="#60A5FA"/>
+    </Style>
+
+    <Style Selector="Button">
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ═══ PRIMARY BUTTON ═══ -->
+    <Style Selector="Button.Primary">
+        <Setter Property="Background" Value="#2563EB"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Transitions">
+            <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1"/>
+            </Transitions>
+        </Setter>
+    </Style>
+    <Style Selector="Button.Primary:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#3B82F6"/>
+    </Style>
+    <Style Selector="Button.Primary:pressed">
+        <Setter Property="RenderTransform" Value="scale(0.96)"/>
+    </Style>
+
+    <!-- ═══ DANGER BUTTON ═══ -->
+    <Style Selector="Button.Danger">
+        <Setter Property="Background" Value="#E74C3C"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- ═══ SUCCESS BUTTON ═══ -->
+    <Style Selector="Button.Success">
+        <Setter Property="Background" Value="#27AE60"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- ═══ SECONDARY BUTTON ═══ -->
+    <Style Selector="Button.Secondary">
+        <Setter Property="Background" Value="#2C3E50"/>
+        <Setter Property="Foreground" Value="#BDC3C7"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- ═══ CARD BORDER ═══ -->
+    <Style Selector="Border.Card">
+        <Setter Property="Background" Value="#1E293B"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Padding" Value="24"/>
+        <Setter Property="BorderBrush" Value="#334155"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+
+    <!-- ═══ STAT CARD ═══ -->
+    <Style Selector="Border.StatCard">
+        <Setter Property="Background" Value="#161B27"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding" Value="20,16"/>
+    </Style>
+
+    <!-- ═══ DATA GRID — sadece renk ve font, property erişim sorunlu olanlar kaldırıldı ═══ -->
+    <Style Selector="DataGridColumnHeader">
+        <Setter Property="Background" Value="#1E293B"/>
+        <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="10,12"/>
+        <Setter Property="MinWidth" Value="60"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="BorderBrush" Value="#334155"/>
+    </Style>
+    <Style Selector="DataGridRow">
+        <Setter Property="Foreground" Value="#D0D8F0"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="DataGridCell">
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="DataGridCell TextBlock">
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- ═══ TEXTBOX ═══ -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="#161B27"/>
+        <Setter Property="Foreground" Value="#D0D8F0"/>
+        <Setter Property="BorderBrush" Value="#2A3550"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CaretBrush" Value="#38AEFF"/>
+    </Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="#38AEFF"/>
+    </Style>
+
+    <!-- ═══ COMBOBOX ═══ -->
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="#161B27"/>
+        <Setter Property="Foreground" Value="#D0D8F0"/>
+        <Setter Property="BorderBrush" Value="#2A3550"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+
+    <!-- ═══ SCROLLBAR ═══ -->
+    <Style Selector="ScrollBar">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+</Styles>

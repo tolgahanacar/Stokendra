@@ -157,8 +157,8 @@ public sealed class MovementRepository : IMovementRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT DATE(Tarih) as Day,
-            SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE 0 END) as Entry,
-            SUM(CASE WHEN Tur='Cikis' THEN Miktar ELSE 0 END) as Exit
+            SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE 0 END) as Entry,
+            SUM(CASE WHEN Tur IN ('Cikis', 'Çıkış') THEN Miktar ELSE 0 END) as Exit
             FROM StokHareketleri
             WHERE Tarih >= $bas
             GROUP BY DATE(Tarih)
@@ -226,6 +226,16 @@ public sealed class MovementRepository : IMovementRepository
 
     private StokHareketi Read(SqliteDataReader reader)
     {
+        DateTime tarih = DateTime.Now;
+        if (!reader.IsDBNull(6))
+        {
+            string dateStr = reader.GetString(6);
+            if (!DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out tarih))
+            {
+                DateTime.TryParse(dateStr, out tarih);
+            }
+        }
+
         return new StokHareketi {
             Id = reader.GetInt32(0),
             StokKartId = reader.GetInt32(1),
@@ -233,7 +243,7 @@ public sealed class MovementRepository : IMovementRepository
             Miktar = reader.GetDouble(3),
             TeslimEdilen = reader.IsDBNull(4) ? "" : reader.GetString(4),
             Departman = reader.IsDBNull(5) ? "" : reader.GetString(5),
-            Tarih = DateTime.Parse(reader.GetString(6), CultureInfo.InvariantCulture),
+            Tarih = tarih,
             Aciklama = reader.IsDBNull(7) ? "" : reader.GetString(7),
             StokKartAd = reader.GetString(8),
             StokKartKodNo = reader.GetString(9)

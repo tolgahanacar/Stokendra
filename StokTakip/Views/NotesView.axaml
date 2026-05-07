@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+             x:Class="StokTakip.Views.NotesView"
+             Background="#0C0E14">
+
+    <Grid ColumnDefinitions="320,*">
+
+        <!-- Sol: Not listesi -->
+        <Grid Grid.Column="0" RowDefinitions="Auto,Auto,*" Background="#0E1119">
+
+            <StackPanel Grid.Row="0" Margin="20,24,20,0" Spacing="4">
+                <TextBlock Text="Notlar" FontSize="22" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#5A6987"/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="20,12,20,0">
+                <Button Content="+ Yeni Not" Classes="Primary"
+                        Command="{Binding NewNoteCommand}"
+                        HorizontalAlignment="Stretch"/>
+                <Button Content="✎ Düzenle" Classes="Secondary"
+                        Command="{Binding EditNoteCommand}"
+                        IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <Button Content="🗑" Classes="Danger"
+                        Command="{Binding DeleteNoteCommand}"
+                        IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+            </StackPanel>
+
+            <ListBox Grid.Row="2"
+                     Margin="12,12,12,12"
+                     ItemsSource="{Binding Notes}"
+                     SelectedItem="{Binding SelectedNote}"
+                     Background="Transparent">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12,10" CornerRadius="8" Margin="0,2">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{Binding Baslik}"
+                                           FontWeight="SemiBold"
+                                           FontSize="13"
+                                           Foreground="#D0D8F0"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}"
+                                           FontSize="11"
+                                           Foreground="#5A6987"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <!-- Sağ: Not içeriği / Düzenleme -->
+        <Grid Grid.Column="1" RowDefinitions="*,Auto" Margin="0">
+
+            <!-- Görüntüleme modu -->
+            <ScrollViewer Grid.Row="0"
+                          IsVisible="{Binding !IsEditing}"
+                          Margin="28,24,28,0">
+                <StackPanel Spacing="12"
+                            IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Text="{Binding SelectedNote.Baslik}"
+                               FontSize="22" FontWeight="Bold" Foreground="#E8EEFF"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SelectedNote.Tarih, StringFormat=dd.MM.yyyy HH:mm}"
+                               FontSize="12" Foreground="#5A6987"/>
+                    <Border Height="1" Background="#1E2535" Margin="0,4"/>
+                    <TextBlock Text="{Binding SelectedNote.Icerik}"
+                               FontSize="14" Foreground="#B0BCDC"
+                               TextWrapping="Wrap" LineHeight="22"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Düzenleme modu -->
+            <StackPanel Grid.Row="0"
+                        IsVisible="{Binding IsEditing}"
+                        Margin="28,24,28,0"
+                        Spacing="12">
+                <TextBlock Text="Başlık" FontSize="12" Foreground="#8A9BBF"/>
+                <TextBox Text="{Binding EditTitle}" Watermark="Not başlığı..."/>
+                <TextBlock Text="İçerik" FontSize="12" Foreground="#8A9BBF"/>
+                <TextBox Text="{Binding EditContent}"
+                         Watermark="Not içeriğini buraya yazın..."
+                         AcceptsReturn="True"
+                         Height="300"
+                         TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- Düzenleme butonları -->
+            <StackPanel Grid.Row="1"
+                        IsVisible="{Binding IsEditing}"
+                        Orientation="Horizontal"
+                        Spacing="10"
+                        Margin="28,12,28,20">
+                <Button Content="✔ Kaydet" Classes="Success"
+                        Command="{Binding SaveNoteCommand}"/>
+                <Button Content="İptal" Classes="Secondary"
+                        Command="{Binding CancelEditCommand}"/>
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</UserControl>

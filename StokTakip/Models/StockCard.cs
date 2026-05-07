@@ -72,6 +72,9 @@ public class StokKarti
     /// <summary>Stok tükenmiş mi?</summary>
     public bool IsDepleted => !IsParentCard && MevcutStok <= 0;
 
+    /// <summary>UI gösterimi için formatlanmış ad.</summary>
+    public string DisplayName => $"{KodNo} - {Ad}";
+
     /// <inheritdoc/>
-    public override string ToString() => $"{Ad} ({KodNo})";
+    public override string ToString() => DisplayName;
 }

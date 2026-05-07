@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+        xmlns:conv="using:StokTakip.Converters"
+             x:Class="StokTakip.Views.StockMovementsView"
+             Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+        <!-- Başlık -->
+        <StackPanel Grid.Row="0" Margin="40,40,40,0" Spacing="8">
+            <TextBlock Text="Stok Hareketleri" FontSize="32" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="Depo giriş ve çıkış kayıtlarını buradan takip edebilirsiniz" FontSize="14" Foreground="#94A3B8"/>
+        </StackPanel>
+
+        <!-- Filtreler -->
+        <Border Grid.Row="1" Background="#1E293B" Margin="40,24,40,0" CornerRadius="12" Padding="20,16" BorderBrush="#334155" BorderThickness="1">
+            <WrapPanel Orientation="Horizontal">
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Başlangıç:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="130"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Bitiş:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="130"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Stok:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding StockItems}"
+                              SelectedIndex="{Binding SelectedStockIndex}"
+                              Width="180"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Tür:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding TypeItems}"
+                              SelectedIndex="{Binding SelectedTypeIndex}"
+                              Width="100"/>
+                </StackPanel>
+
+                <TextBox Text="{Binding SearchText}"
+                         Watermark="🔍 Ara..."
+                         Width="180" Margin="0,0,8,8"/>
+
+                <Button Content="Filtrele" Classes="Primary"
+                        Command="{Binding LoadMovementsCommand}"
+                        Margin="0,0,8,8"/>
+                <Button Content="Temizle" Classes="Secondary"
+                        Command="{Binding ClearFiltersCommand}"
+                        Margin="0,0,0,8"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="28,12,28,0">
+            <Button Content="＋ Ekle" Classes="Primary"
+                    Command="{Binding AddMovementCommand}"/>
+            
+            <Button Content="✎ Düzenle" Classes="Secondary"
+                    Command="{Binding EditMovementCommand}"
+                    IsEnabled="{Binding IsMovementSelected}"/>
+            
+            <Button Content="🗑 Sil" Classes="Danger"
+                    Command="{Binding DeleteMovementCommand}"
+                    IsEnabled="{Binding IsMovementSelected}"/>
+            
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+            
+            <Button Content="🖨 Yazdır" Classes="Secondary"
+                    Command="{Binding PrintCommand}"/>
+            
+            <Button Content="📊 Excel" Classes="Secondary"
+                    Command="{Binding ExportExcelCommand}"/>
+            
+            <Button Content="📥 İçe Aktar" Classes="Secondary"
+                    Command="{Binding ImportCommand}"/>
+        </StackPanel>
+
+        <!-- Grid -->
+        <DataGrid Grid.Row="3"
+                  Margin="40,20,40,20"
+                  ItemsSource="{Binding Movements}"
+                  SelectedItem="{Binding SelectedMovement}"
+                  IsReadOnly="True"
+                  CanUserResizeColumns="True"
+                  DoubleTapped="DataGrid_DoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Kod"         Binding="{Binding StokKartKodNo}"  Width="Auto"/>
+                <DataGridTextColumn Header="Stok Adı"    Binding="{Binding StokKartAd}"     Width="350"/>
+                
+                <!-- Miktar (Renkli ve Kalın) -->
+                <DataGridTemplateColumn Header="Miktar" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Miktar}" 
+                                       FontWeight="Bold"
+                                       Foreground="{Binding Tur, Converter={x:Static conv:MovementConverters.TypeToColor}}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="12,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Tür ([G] veya [Ç]) -->
+                <DataGridTemplateColumn Header="Tür" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Tur, Converter={x:Static conv:MovementConverters.TypeToText}}" 
+                                       FontWeight="Bold"
+                                       Foreground="{Binding Tur, Converter={x:Static conv:MovementConverters.TypeToColor}}"
+                                       VerticalAlignment="Center" HorizontalAlignment="Center"
+                                       Margin="12,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="Departman"   Binding="{Binding Departman}"       Width="180"/>
+                <DataGridTextColumn Header="Teslim Alan" Binding="{Binding TeslimEdilen}"    Width="180"/>
+                <DataGridTextColumn Header="Tarih"       Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}" Width="110"/>
+                <DataGridTextColumn Header="Açıklama"    Binding="{Binding Aciklama}"        Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status -->
+        <Border Grid.Row="4" Background="#161B27" Padding="28,8">
+            <TextBlock Text="{Binding StatusText}" Foreground="#5A6987" FontSize="12"/>
+        </Border>
+
+    </Grid>
+</UserControl>

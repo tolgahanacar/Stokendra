@@ -20,10 +20,10 @@ public sealed class ReportRepository : IReportRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT 
-                (SELECT COUNT(*) FROM StokKartlari WHERE KartTipi='Alt'),
-                (SELECT COALESCE(SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE -Miktar END),0) FROM StokHareketleri),
-                (SELECT COUNT(*) FROM (SELECT StokKartId FROM StokHareketleri GROUP BY StokKartId HAVING SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE -Miktar END) <= (SELECT MinStok FROM StokKartlari WHERE Id=StokKartId))),
-                (SELECT COUNT(*) FROM (SELECT StokKartId FROM StokHareketleri GROUP BY StokKartId HAVING SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE -Miktar END) <= 0)),
+                (SELECT COUNT(*) FROM StokKartlari WHERE KartTipi IN ('Alt', 'Alt')),
+                (SELECT COALESCE(SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END),0) FROM StokHareketleri),
+                (SELECT COUNT(*) FROM (SELECT StokKartId FROM StokHareketleri GROUP BY StokKartId HAVING SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) <= (SELECT MinStok FROM StokKartlari WHERE Id=StokKartId))),
+                (SELECT COUNT(*) FROM (SELECT StokKartId FROM StokHareketleri GROUP BY StokKartId HAVING SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) <= 0)),
                 (SELECT COUNT(*) FROM StokHareketleri),
                 (SELECT COUNT(*) FROM StokHareketleri WHERE DATE(Tarih) = DATE('now'))";
         
@@ -49,12 +49,12 @@ public sealed class ReportRepository : IReportRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT s.KodNo, s.Ad,
-            SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE 0 END) as In,
-            SUM(CASE WHEN h.Tur='Cikis' THEN h.Miktar ELSE 0 END) as Out,
-            SUM(CASE WHEN h.Tur='Giris' THEN h.Miktar ELSE -h.Miktar END) as Balance
+            SUM(CASE WHEN h.Tur IN ('Giris', 'Giriş') THEN h.Miktar ELSE 0 END) as In,
+            SUM(CASE WHEN h.Tur IN ('Cikis', 'Çıkış') THEN h.Miktar ELSE 0 END) as Out,
+            SUM(CASE WHEN h.Tur IN ('Giris', 'Giriş') THEN h.Miktar ELSE -h.Miktar END) as Balance
             FROM StokKartlari s
             LEFT JOIN StokHareketleri h ON s.Id = h.StokKartId
-            WHERE s.KartTipi='Alt'
+            WHERE s.KartTipi IN ('Alt', 'Alt')
             GROUP BY s.Id
             ORDER BY s.KodNo";
         

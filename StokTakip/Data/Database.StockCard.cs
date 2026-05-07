@@ -332,7 +332,10 @@ public sealed partial class Database
             WITH hareket_ozet AS (
                 SELECT
                     StokKartId,
-                    SUM(CASE WHEN Tur='Giris' THEN Miktar WHEN Tur='Cikis' THEN -Miktar ELSE 0 END) AS MevcutStok
+                    SUM(CASE 
+                        WHEN trim(Tur) IN ('Giris', 'Giriş') THEN Miktar 
+                        WHEN trim(Tur) IN ('Cikis', 'Çıkış') THEN -Miktar 
+                        ELSE 0 END) AS MevcutStok
                 FROM StokHareketleri
                 GROUP BY StokKartId
             )

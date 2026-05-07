@@ -39,12 +39,9 @@ public static class MovementFormatter
             nameof(HareketTuru.Cikis) => ExitTag,
             _ => EmptyTag
         };
-        return $"{UIHelper.FormatMiktar(miktar)}{tag}";
+        return $"{(miktar == Math.Floor(miktar) ? ((int)miktar).ToString() : miktar.ToString("N2"))}{tag}";
     }
 
-    /// <summary>
-    /// Görüntüleme formatındaki string'den hareket türünü belirler.
-    /// </summary>
     public static HareketTuru ParseTur(string formatted)
     {
         if (formatted.Contains(ExitTag)) return HareketTuru.Cikis;
@@ -52,25 +49,15 @@ public static class MovementFormatter
         return HareketTuru.Giris;
     }
 
-    // ── Parse ──────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Excel import için hücre değerini parse eder.
-    /// Örnek: "5[G]" → (Giris, 5.0), "3[Ç]" → (Cikis, 3.0), "0[B]" → (Bos, 0.0)
-    /// </summary>
-    /// <param name="cellValue">Excel hücre değeri.</param>
-    /// <returns>Parse sonucu.</returns>
     public static ParseResult ParseCell(string cellValue)
     {
         if (string.IsNullOrWhiteSpace(cellValue))
             return ParseResult.Failure("Boş hücre");
 
         HareketTuru tur = ParseTur(cellValue);
-
         if (tur == HareketTuru.Bos)
             return ParseResult.Success(HareketTuru.Bos, 0);
 
-        // Tag'leri temizle
         string raw = cellValue
             .Replace(EntryTag, "")
             .Replace(ExitTag, "")
@@ -78,32 +65,11 @@ public static class MovementFormatter
             .Replace(',', '.')
             .Trim();
 
-        if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out double miktar)
-            && miktar > 0)
+        if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out double miktar) && miktar > 0)
             return ParseResult.Success(tur, miktar);
 
         return ParseResult.Failure($"Geçersiz miktar: '{cellValue}'");
     }
-
-    /// <summary>
-    /// Hareket türüne göre grid hücre rengini döndürür.
-    /// </summary>
-    public static Color GetColor(string tur) => tur switch
-    {
-        nameof(HareketTuru.Giris) => UIHelper.AccentGreen,
-        nameof(HareketTuru.Cikis) => UIHelper.StokWarning,
-        _ => UIHelper.TextSecondary
-    };
-
-    /// <summary>
-    /// Hareket türüne göre print rengi döndürür.
-    /// </summary>
-    public static Color GetPrintColor(string tur) => tur switch
-    {
-        nameof(HareketTuru.Giris) => Color.DarkGreen,
-        nameof(HareketTuru.Cikis) => Color.DarkRed,
-        _ => Color.Gray
-    };
 
     // ── İç tipler ─────────────────────────────────────────────────────────
 

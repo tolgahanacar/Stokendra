@@ -9,7 +9,9 @@ public interface IUserRepository
     /// Kullanıcı adı ve şifreyi doğrular.
     /// Şifre eski hash formatındaysa otomatik olarak güncel formata yükseltir.
     /// </summary>
-    /// <returns>Kimlik bilgileri geçerliyse <c>true</c>, aksi hâlde <c>false</c>.</returns>
+    /// <returns>Kimlik bilgileri geçerliyse <c>true</c> ve kullanıcı rolünü döndürür.</returns>
+    Task<(bool success, string role)> VerifyPasswordAsync(string username, string password);
+
     bool Authenticate(string username, string password);
 
     /// <summary>

@@ -1,0 +1,119 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StokTakip.ViewModels"
+        x:Class="StokTakip.Views.AddStockCardWindow"
+        Title="{Binding Title}"
+        Width="520" Height="740"
+        MinWidth="500" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#161B27"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Design.DataContext>
+        <vm:AddStockCardViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1C222E" Padding="20,40,20,15">
+            <StackPanel Spacing="4">
+                <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Stok kartı bilgilerini giriniz" FontSize="12" Foreground="#5A6987"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="24">
+            <StackPanel Spacing="16">
+                
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+                        <TextBlock Text="Kart Tipi" FontSize="12" Foreground="#8A9BBF"/>
+                        <ComboBox SelectedIndex="{Binding SelectedTypeIndex}" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="📦 Alt Kart"/>
+                            <ComboBoxItem Content="📁 Üst Kart (Grup)"/>
+                        </ComboBox>
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+                        <TextBlock Text="Stok Kodu" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding KodNo}" Watermark="Örn: 001"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Stok Adı" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Ad}" Watermark="Ürün adı giriniz..."/>
+                </StackPanel>
+
+                <StackPanel Spacing="6" IsVisible="{Binding IsAltCard}">
+                    <TextBlock Text="Bağlı Üst Kart" FontSize="12" Foreground="#8A9BBF"/>
+                    <ComboBox ItemsSource="{Binding ParentCards}"
+                              SelectedItem="{Binding SelectedParent}"
+                              HorizontalAlignment="Stretch"
+                              PlaceholderText="(Yok)">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+                        <TextBlock Text="Kategori" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Kategori}" Watermark="Örn: Toner"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+                        <TextBlock Text="Birim" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Birim}" Watermark="Adet, Kg..."/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+                        <TextBlock Text="Min Stok" FontSize="12" Foreground="#8A9BBF"/>
+                        <NumericUpDown Value="{Binding MinStock}" Minimum="0" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+                        <TextBlock Text="Birim Fiyat" FontSize="12" Foreground="#8A9BBF"/>
+                        <NumericUpDown Value="{Binding UnitPrice}" Minimum="0" FormatString="N2" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Açıklama" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Aciklama}" Watermark="Ek bilgiler..." Height="60" AcceptsReturn="True" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
+                        <TextBlock Text="Konum" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Konum}" Watermark="Raf no vs."/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="6" Margin="8,0,0,0">
+                        <TextBlock Text="Tedarikçi" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Tedarikci}"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Barkod" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Barkod}"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2" Background="#1C222E" Padding="20" BorderBrush="#252D3D" BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
+                <Button Content="İptal" Classes="Secondary" Command="{Binding CancelCommand}" Width="100"/>
+                <Button Content="Kaydet" Classes="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding Ad, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" Width="100"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

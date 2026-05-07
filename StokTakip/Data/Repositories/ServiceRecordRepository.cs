@@ -20,7 +20,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         
-        string sql = "SELECT * FROM ServisKayitlari WHERE 1=1";
+        string sql = "SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc FROM ServisKayitlari WHERE 1=1";
         if (start.HasValue) sql += " AND BakimTarihi >= $s";
         if (end.HasValue) sql += " AND BakimTarihi <= $e";
         if (!string.IsNullOrWhiteSpace(search)) sql += " AND (CihazAdi LIKE $q OR SeriNumarasi LIKE $q OR Firma LIKE $q)";
@@ -35,12 +35,23 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
+            DateTime bakimTarihi = DateTime.Now;
+            if (!reader.IsDBNull(4))
+            {
+                string dateStr = reader.GetString(4);
+                if (!DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out bakimTarihi))
+                {
+                    // Fallback to legacy formats if needed
+                    DateTime.TryParse(dateStr, out bakimTarihi);
+                }
+            }
+
             list.Add(new ServisKaydi {
                 Id = reader.GetInt32(0),
-                CihazAdi = reader.GetString(1),
+                CihazAdi = reader.IsDBNull(1) ? "" : reader.GetString(1),
                 SeriNumarasi = reader.IsDBNull(2) ? "" : reader.GetString(2),
                 Firma = reader.IsDBNull(3) ? "" : reader.GetString(3),
-                BakimTarihi = DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
+                BakimTarihi = bakimTarihi,
                 Sorun = reader.IsDBNull(5) ? "" : reader.GetString(5),
                 Sonuc = reader.IsDBNull(6) ? "" : reader.GetString(6)
             });

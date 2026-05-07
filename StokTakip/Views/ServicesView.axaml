@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+             x:Class="StokTakip.Views.ServicesView"
+             Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+        <!-- Başlık -->
+        <StackPanel Grid.Row="0" Margin="40,40,40,0" Spacing="8">
+            <TextBlock Text="Servis Kayıtları" FontSize="32" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="Cihaz bakım ve onarım geçmişini buradan yönetebilirsiniz" FontSize="14" Foreground="#94A3B8"/>
+        </StackPanel>
+
+        <!-- Filtreler -->
+        <Border Grid.Row="1" Background="#1E293B" Margin="40,24,40,0" CornerRadius="12" Padding="20,16" BorderBrush="#334155" BorderThickness="1">
+            <WrapPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Başlangıç:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="130"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,16,8">
+                    <TextBlock Text="Bitiş:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                    <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="130"/>
+                </StackPanel>
+                <TextBox Text="{Binding SearchText}"
+                         Watermark="🔍 Cihaz, seri no, firma..."
+                         Width="220" Margin="0,0,8,8"/>
+                <Button Content="Ara" Classes="Primary"
+                        Command="{Binding SearchCommand}"
+                        Margin="0,0,8,8"/>
+                <Button Content="Temizle" Classes="Secondary"
+                        Command="{Binding ClearFiltersCommand}"
+                        Margin="0,0,0,8"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="28,12,28,0">
+            <Button Content="＋ Ekle" Classes="Primary"
+                    Command="{Binding AddCommand}"/>
+            
+            <Button Content="✎ Düzenle" Classes="Secondary"
+                    Command="{Binding EditCommand}"
+                    IsEnabled="{Binding IsRecordSelected}"/>
+            
+            <Button Content="🗑 Sil" Classes="Danger"
+                    Command="{Binding DeleteCommand}"
+                    IsEnabled="{Binding IsRecordSelected}"/>
+            
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+
+            <Button Content="📊 Excel" Classes="Secondary"
+                    Command="{Binding ExportExcelCommand}"/>
+            
+            <Button Content="📥 İçe Aktar" Classes="Secondary"
+                    Command="{Binding ImportCommand}"/>
+            
+            <Button Content="↺ Yenile" Classes="Secondary"
+                    Command="{Binding RefreshCommand}"/>
+        </StackPanel>
+
+        <!-- Grid -->
+        <DataGrid Grid.Row="3"
+                  Margin="40,20,40,20"
+                  ItemsSource="{Binding Records}"
+                  SelectedItem="{Binding SelectedRecord}"
+                  IsReadOnly="True"
+                  CanUserResizeColumns="True"
+                  DoubleTapped="DataGrid_DoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Cihaz Adı"    Binding="{Binding CihazAdi}"     Width="180"/>
+                <DataGridTextColumn Header="Seri No"      Binding="{Binding SeriNumarasi}"  Width="120"/>
+                <DataGridTextColumn Header="Firma"        Binding="{Binding Firma}"         Width="130"/>
+                <DataGridTextColumn Header="Sorun"        Binding="{Binding Sorun}"         Width="200"/>
+                <DataGridTextColumn Header="Sonuç"        Binding="{Binding Sonuc}"         Width="*"/>
+                <DataGridTextColumn Header="Tarih"        Binding="{Binding BakimTarihi, StringFormat=dd.MM.yyyy}" Width="110"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status -->
+        <Border Grid.Row="4" Background="#161B27" Padding="28,8">
+            <TextBlock Text="{Binding StatusText}" Foreground="#5A6987" FontSize="12"/>
+        </Border>
+
+    </Grid>
+</UserControl>

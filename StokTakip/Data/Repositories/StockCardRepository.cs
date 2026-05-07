@@ -119,7 +119,7 @@ public sealed class StockCardRepository : IStockCardRepository
     {
         var sql = @"
             SELECT s.*, u.Ad as UstKartAd,
-            (SELECT SUM(CASE WHEN Tur='Giris' THEN Miktar ELSE -Miktar END) FROM StokHareketleri WHERE StokKartId=s.Id) as MevcutStok
+            (SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) FROM StokHareketleri WHERE StokKartId=s.Id) as MevcutStok
             FROM StokKartlari s
             LEFT JOIN StokKartlari u ON s.UstKartId = u.Id
             WHERE 1=1";

@@ -10,6 +10,10 @@ public sealed partial class Database
     private static StokHareketi NormalizeMovement(StokHareketi hareket)
     {
         string tur = TrimTo(hareket.Tur, 10);
+        // WinForms'dan gelen veriler için Türkçe karakter desteği
+        if (tur == "Giriş") tur = "Giris";
+        if (tur == "Çıkış") tur = "Cikis";
+
         if (!ValidMovementTypes.Contains(tur))
             throw new InvalidOperationException(L("movement_type_invalid"));
 
@@ -111,8 +115,8 @@ public sealed partial class Database
     {
         return hareket.Tur switch
         {
-            "Giris" => hareket.Miktar,
-            "Cikis" => -hareket.Miktar,
+            "Giris" or "Giriş" => hareket.Miktar,
+            "Cikis" or "Çıkış" => -hareket.Miktar,
             _ => 0
         };
     }

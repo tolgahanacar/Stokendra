@@ -2,6 +2,7 @@ using ClosedXML.Excel;
 using System.IO.Compression;
 using StokTakip.Infrastructure;
 using StokTakip.Models;
+using StokTakip.Data.Interfaces;
 
 namespace StokTakip;
 
@@ -112,7 +113,7 @@ public static class BackupManager
         // Ham dosya kopyası yerine SQLite Online Backup API kullan.
         // Bu yöntem WAL modunda tutarlı bir snapshot alır, -wal/-shm dosyalarına gerek kalmaz.
         string destFile = Path.Combine(tempDir, "stok.db");
-        AppServices.Current.Config.CreateBackup(destFile);
+        ServiceContainer.GetService<IConfigRepository>().CreateBackup(destFile);
 
         // Orijinal dosya adı farklıysa onu da ekle (referans için)
         string origName = Path.GetFileName(dbPath);
@@ -127,14 +128,14 @@ public static class BackupManager
         try
         {
             string sqlFile = Path.Combine(tempDir, "stokendra_backup.sql");
-            AppServices.Current.Reports.ExportSqlBackup(sqlFile);
+            ServiceContainer.GetService<IReportRepository>().ExportSqlBackup(sqlFile);
         }
         catch { /* SQL export opsiyonel */ }
     }
 
     private static void ExportStokKartlari(string tempDir)
     {
-        var tumKartlar = AppServices.Current.StockCards.GetAll();
+        var tumKartlar = ServiceContainer.GetService<IStockCardRepository>().GetAll();
 
         if (tumKartlar.Count == 0) return;
 
@@ -171,7 +172,7 @@ public static class BackupManager
 
     private static void ExportStokHareketleri(string tempDir)
     {
-        var hareketler = AppServices.Current.Movements.GetAll(null, null, null, null, null);
+        var hareketler = ServiceContainer.GetService<IMovementRepository>().GetAll(null, null, null, null, null);
         if (hareketler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -202,7 +203,7 @@ public static class BackupManager
 
     private static void ExportServisKayitlari(string tempDir)
     {
-        var servisler = AppServices.Current.ServiceRecords.GetAll(null, null, null);
+        var servisler = ServiceContainer.GetService<IServiceRecordRepository>().GetAll(null, null, null);
         if (servisler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -231,7 +232,7 @@ public static class BackupManager
 
     private static void ExportNotlar(string tempDir)
     {
-        var notlar = AppServices.Current.Notes.GetAll();
+        var notlar = ServiceContainer.GetService<INoteRepository>().GetAll();
         if (notlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -257,7 +258,7 @@ public static class BackupManager
 
     private static void ExportDepartmanlar(string tempDir)
     {
-        var deptlar = AppServices.Current.Departments.GetAll();
+        var deptlar = ServiceContainer.GetService<IDepartmentRepository>().GetAll();
         if (deptlar.Count == 0) return;
 
         using var wb = new XLWorkbook();

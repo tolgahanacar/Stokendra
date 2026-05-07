@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+             x:Class="StokTakip.Views.SettingsView"
+             Background="#0C0E14">
+
+    <ScrollViewer>
+        <StackPanel Margin="28,24,28,24" Spacing="24" MaxWidth="600">
+
+            <!-- Başlık -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="Ayarlar" FontSize="26" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Uygulama tercihlerini yönetin" FontSize="13" Foreground="#5A6987"/>
+            </StackPanel>
+
+            <!-- Genel Ayarlar -->
+            <Border Classes="Card">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="⚙ Genel" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Firma / Kuruluş Adı" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding CompanyName}" Watermark="Firma adı (raporlarda görünür)"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Veritabanı Yolu" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding DbPath}" IsReadOnly="True" Foreground="#5A6987"/>
+                    </StackPanel>
+
+                    <Button Content="✔ Ayarları Kaydet" Classes="Primary"
+                            Command="{Binding SaveSettingsCommand}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Şifre Değiştir -->
+            <Border Classes="Card">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="🔐 Şifre Değiştir" FontSize="15" FontWeight="Bold" Foreground="#E67E22"/>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Mevcut Şifre" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding OldPassword}" PasswordChar="●" Watermark="Mevcut şifreniz"/>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Yeni Şifre" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="En az 4 karakter"/>
+                    </StackPanel>
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Yeni Şifre (Tekrar)" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Şifreyi tekrar girin"/>
+                    </StackPanel>
+
+                    <Button Content="Şifreyi Değiştir" Classes="Success"
+                            Command="{Binding ChangePasswordCommand}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Yedekleme -->
+            <Border Classes="Card">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="💾 Yedekleme" FontSize="15" FontWeight="Bold" Foreground="#2ECC71"/>
+                    <TextBlock Text="Tüm verileri (Stoklar, Hareketler, Servisler) tek bir Excel dosyasında yedekleyin." 
+                               FontSize="12" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                    
+                    <Button Content="📁 Full Excel Yedek Al" Classes="Primary"
+                            Command="{Binding FullBackupCommand}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Durum mesajı -->
+            <Border Background="#161B27" CornerRadius="8" Padding="16,12"
+                    IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Text="{Binding StatusMessage}"
+                           FontSize="13"
+                           Foreground="#D0D8F0"
+                           TextWrapping="Wrap"/>
+            </Border>
+
+            <!-- Hakkında -->
+            <Border Classes="Card">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="ℹ Hakkında" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
+                    <TextBlock Text="Stokendra" FontSize="20" FontWeight="Bold" Foreground="#38AEFF"/>
+                    <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>
+                    <TextBlock Text="© 2026 Tolgahan Acar. Tüm hakları saklıdır." FontSize="12" Foreground="#3A4560"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

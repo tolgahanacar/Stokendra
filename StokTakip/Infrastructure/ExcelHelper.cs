@@ -61,35 +61,16 @@ public static class ExcelHelper
         }
     }
 
-    // ── Kaydet ────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Çalışma kitabını belirtilen yola kaydeder.
-    /// Başarı/hata mesajını gösterir.
-    /// </summary>
-    /// <param name="wb">Kaydedilecek çalışma kitabı.</param>
-    /// <param name="filePath">Hedef dosya yolu.</param>
-    /// <returns>Kayıt başarılı ise true.</returns>
-    public static bool SaveWithFeedback(XLWorkbook wb, string filePath)
+    public static bool Save(XLWorkbook wb, string filePath)
     {
         try
         {
             wb.SaveAs(filePath);
-            MessageBox.Show(
-                LocalizationManager.L("export_success", filePath),
-                LocalizationManager.L("info"),
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
             return true;
         }
         catch (Exception ex)
         {
             AppLogger.LogError("Excel save error: " + ex);
-            MessageBox.Show(
-                LocalizationManager.L("export_error") + "\n" + ex.Message,
-                LocalizationManager.L("error"),
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
             return false;
         }
     }
@@ -129,6 +110,6 @@ public static class ExcelHelper
         ApplyTableStyle(ws, dataRows, headers.Length);
         ws.Columns().AdjustToContents();
 
-        return SaveWithFeedback(wb, filePath);
+        return Save(wb, filePath);
     }
 }
