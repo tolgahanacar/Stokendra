@@ -1,5 +1,6 @@
 using System.Drawing.Printing;
 using System.Drawing.Drawing2D;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
@@ -43,15 +44,15 @@ public sealed class RaporlarPanel : UserControl
         dtpEnd.ValueChanged += (_, _) => { if (dtpEnd.Value.Date < dtpStart.Value.Date) dtpStart.Value = dtpEnd.Value.Date; };
 
         cmbUser = MakeCombo(160); cmbUser.Items.Add(L("all"));
-        foreach (var u in Program.DB!.GetTeslimEdilenler()) cmbUser.Items.Add(u);
+        foreach (var u in AppServices.Current.Movements.GetDeliveredPersons()) cmbUser.Items.Add(u);
         cmbUser.SelectedIndex = 0;
 
         cmbDept = MakeCombo(130); cmbDept.Items.Add(L("all"));
-        foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+        foreach (var d in AppServices.Current.Departments.GetAll()) cmbDept.Items.Add(d);
         cmbDept.SelectedIndex = 0;
 
         cmbCategory = MakeCombo(130); cmbCategory.Items.Add(L("all"));
-        foreach (var c in Program.DB!.AltKartlariGetir().Where(k => !string.IsNullOrEmpty(k.Kategori)).Select(k => k.Kategori).Distinct().OrderBy(k => k)) cmbCategory.Items.Add(c);
+        foreach (var c in AppServices.Current.StockCards.GetChildCards().Where(k => !string.IsNullOrEmpty(k.Kategori)).Select(k => k.Kategori).Distinct().OrderBy(k => k)) cmbCategory.Items.Add(c);
         cmbCategory.SelectedIndex = 0;
 
         btnGen = UIHelper.MakeFlowButton(L("generate_report"), UIHelper.AccentBlue, 100, 30);
@@ -326,12 +327,13 @@ public sealed class RaporlarPanel : UserControl
         token.ThrowIfCancellationRequested();
 
         // Kategori filtresi artık DB sorgusunda — tüm kartları çekmeye gerek yok
-        var filtered = Program.DB!.HareketleriGetir(
-            baslangic: start,
-            bitis: end,
-            departman: dept,
-            tur: nameof(HareketTuru.Cikis),
-            kategori: cat);
+        var filtered = AppServices.Current.Movements.GetAll(
+            null,
+            start,
+            end,
+            dept,
+            nameof(HareketTuru.Cikis),
+            cat);
 
         token.ThrowIfCancellationRequested();
 
@@ -532,7 +534,7 @@ public sealed class RaporlarPanel : UserControl
             return;
         }
 
-        string firma = Program.Settings.CompanyName;
+        string firma = AppServices.Current.Settings.CompanyName;
         var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape  = true;
         pd.DefaultPageSettings.PaperSize  = new PaperSize("A4", 1169, 827);

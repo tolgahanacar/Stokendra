@@ -1,4 +1,5 @@
 using System.Drawing.Printing;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -86,7 +87,7 @@ public sealed class StokKartiDetayForm : Form
 
     private void YukleVeri()
     {
-        _kart = Program.DB!.StokKartiDetayGetir(_stokKartId);
+        _kart = AppServices.Current.StockCards.GetById(_stokKartId);
         if (_kart == null) { MessageBox.Show(L("card_not_found")); Close(); return; }
 
         Text = L("stock_card_detail") + " – " + _kart.Ad;
@@ -98,7 +99,7 @@ public sealed class StokKartiDetayForm : Form
         lblMevcut.Text = UIHelper.FormatMiktar(_kart.MevcutStok);
         lblMevcut.ForeColor = UIHelper.StokRengi(_kart.MevcutStok);
 
-        _hareketler = Program.DB!.HareketleriGetir(_stokKartId);
+        _hareketler = AppServices.Current.Movements.GetAll(_stokKartId, null, null, null, null);
         var son30 = _hareketler.Where(h => h.Tarih >= DateTime.Now.AddDays(-30)).ToList();
         lblGirisOzet.Text = $"▲ {L("total_entry")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == nameof(HareketTuru.Giris)).Sum(h => h.Miktar))}";
         lblCikisOzet.Text = $"▼ {L("total_exit")}: {UIHelper.FormatMiktar(son30.Where(h => h.Tur == nameof(HareketTuru.Cikis)).Sum(h => h.Miktar))}";
@@ -114,7 +115,7 @@ public sealed class StokKartiDetayForm : Form
     private void Yazdir()
     {
         if (_kart == null) return;
-        string firma = Program.Settings.CompanyName;
+        string firma = AppServices.Current.Settings.CompanyName;
         var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape = true;
         pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827);

@@ -2,6 +2,7 @@ using StokTakip.Data;
 using StokTakip.Data.Interfaces;
 using StokTakip.Forms;
 using StokTakip.Infrastructure;
+using StokTakip.Services;
 
 namespace StokTakip;
 
@@ -11,18 +12,6 @@ namespace StokTakip;
 /// </summary>
 static class Program
 {
-    // ── Geriye dönük uyumluluk kısayolları ───────────────────────────────
-    // Formların kademeli geçişi sırasında kullanılır.
-    // Yeni kod doğrudan AppServices.Current kullanmalıdır.
-
-    /// <summary>Aktif veritabanı bağlantısı (geriye dönük uyumluluk).</summary>
-    public static Database DB => AppServices.Current.Database;
-
-    /// <summary>Yüklü uygulama ayarları (geriye dönük uyumluluk).</summary>
-    public static AppSettings Settings => AppServices.Current.Settings;
-
-    /// <summary>Oturum açmış kullanıcı adı (geriye dönük uyumluluk).</summary>
-    public static string CurrentUser => AppServices.Current.Session?.Username ?? "admin";
 
     [STAThread]
     static void Main()
@@ -62,7 +51,9 @@ static class Program
             .RegisterInstance<IDepartmentRepository>(db)
             .RegisterInstance<IReportRepository>(db)
             .RegisterInstance<IUserRepository>(db)
-            .RegisterInstance<IConfigRepository>(db);
+            .RegisterInstance<IConfigRepository>(db)
+            .RegisterSingleton<IStockCardService, StockCardService>(() => new StockCardService(db))
+            .RegisterSingleton<IMovementService, MovementService>(() => new MovementService(db, db));
 
         var ctx = AppServices.Initialize(services, settings, db);
 

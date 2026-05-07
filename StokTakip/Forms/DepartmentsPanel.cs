@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -26,13 +27,13 @@ public sealed class DepartmanlarPanel : UserControl
         Yukle();
     }
 
-    private void Yukle() { grid.Rows.Clear(); foreach (var d in Program.DB!.DepartmanlariGetir()) grid.Rows.Add(d); }
-    private void Ekle() { if (string.IsNullOrWhiteSpace(txtYeni.Text)) return; Program.DB!.DepartmanEkle(txtYeni.Text.Trim()); txtYeni.Clear(); Yukle(); }
+    private void Yukle() { grid.Rows.Clear(); foreach (var d in AppServices.Current.Departments.GetAll()) grid.Rows.Add(d); }
+    private void Ekle() { if (string.IsNullOrWhiteSpace(txtYeni.Text)) return; AppServices.Current.Departments.Add(txtYeni.Text.Trim()); txtYeni.Clear(); Yukle(); }
     private void Sil()
     {
         if (grid.SelectedRows.Count == 0) { MessageBox.Show(L("select_row_first")); return; }
         var ad = grid.SelectedRows[0].Cells["Ad"].Value?.ToString() ?? "";
         if (MessageBox.Show(L("confirm_dept_delete", ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
-        { Program.DB!.DepartmanSil(ad); Yukle(); }
+        { AppServices.Current.Departments.Delete(ad); Yukle(); }
     }
 }

@@ -30,6 +30,7 @@ public sealed partial class Database :
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
     private const int PasswordIterationsV2 = 20000;
     private const int PasswordIterationsV3 = 120000;
+    private const int PasswordIterationsV4 = 600000;
     private const int PasswordHashSize = 32;
 
     private static readonly string[] ValidMovementTypes = { nameof(HareketTuru.Giris), nameof(HareketTuru.Cikis), nameof(HareketTuru.Bos) };
@@ -443,12 +444,12 @@ public sealed partial class Database :
 
     // ── IMovementRepository ────────────────────────────────────────────────
     /// <inheritdoc/>
-    List<StokHareketi> IMovementRepository.GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType)
-        => HareketleriGetir(stockCardId, startDate, endDate, department, movementType);
+    List<StokHareketi> IMovementRepository.GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
+        => HareketleriGetir(stockCardId, startDate, endDate, department, movementType, category);
 
     /// <inheritdoc/>
-    Task<List<StokHareketi>> IMovementRepository.GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType)
-        => HareketleriGetirAsync(stockCardId, startDate, endDate, department, movementType);
+    Task<List<StokHareketi>> IMovementRepository.GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
+        => HareketleriGetirAsync(stockCardId, startDate, endDate, department, movementType, category);
 
     /// <inheritdoc/>
     void IMovementRepository.Add(StokHareketi hareket) => HareketEkle(hareket);

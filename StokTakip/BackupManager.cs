@@ -1,5 +1,6 @@
 using ClosedXML.Excel;
 using System.IO.Compression;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 
 namespace StokTakip;
@@ -10,16 +11,16 @@ public static class BackupManager
     {
         try
         {
-            var path = Program.Settings.AutoBackupPath;
+            var path = AppServices.Current.Settings.AutoBackupPath;
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
 
-            var lastBackup = Program.Settings.LastBackupDate;
+            var lastBackup = AppServices.Current.Settings.LastBackupDate;
             if (lastBackup.HasValue && (DateTime.Now - lastBackup.Value).TotalDays < 7) return;
 
             await Task.Run(() => PerformBackup(path));
 
-            Program.Settings.LastBackupDate = DateTime.Now;
-            Program.Settings.Kaydet();
+            AppServices.Current.Settings.LastBackupDate = DateTime.Now;
+            AppServices.Current.Settings.Kaydet();
         }
         catch { } // Fail silently
     }
@@ -102,16 +103,16 @@ public static class BackupManager
 
     private static void CopyDatabase(string tempDir)
     {
-        string dbPath = string.IsNullOrWhiteSpace(Program.Settings.DbPath)
+        string dbPath = string.IsNullOrWhiteSpace(AppServices.Current.Settings.DbPath)
             ? AppPaths.DefaultDatabasePath
-            : Program.Settings.DbPath;
+            : AppServices.Current.Settings.DbPath;
 
         if (!File.Exists(dbPath)) return;
 
         // Ham dosya kopyası yerine SQLite Online Backup API kullan.
         // Bu yöntem WAL modunda tutarlı bir snapshot alır, -wal/-shm dosyalarına gerek kalmaz.
         string destFile = Path.Combine(tempDir, "stok.db");
-        Program.DB!.CreateBackup(destFile);
+        AppServices.Current.Database.CreateBackup(destFile);
 
         // Orijinal dosya adı farklıysa onu da ekle (referans için)
         string origName = Path.GetFileName(dbPath);
@@ -126,14 +127,14 @@ public static class BackupManager
         try
         {
             string sqlFile = Path.Combine(tempDir, "stokendra_backup.sql");
-            Program.DB!.ExportSqlBackup(sqlFile);
+            AppServices.Current.Reports.ExportSqlBackup(sqlFile);
         }
         catch { /* SQL export opsiyonel */ }
     }
 
     private static void ExportStokKartlari(string tempDir)
     {
-        var tumKartlar = Program.DB!.StokKartlariniGetir();
+        var tumKartlar = AppServices.Current.StockCards.GetAll();
 
         if (tumKartlar.Count == 0) return;
 
@@ -170,7 +171,7 @@ public static class BackupManager
 
     private static void ExportStokHareketleri(string tempDir)
     {
-        var hareketler = Program.DB!.HareketleriGetir();
+        var hareketler = AppServices.Current.Movements.GetAll(null, null, null, null, null);
         if (hareketler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -201,7 +202,7 @@ public static class BackupManager
 
     private static void ExportServisKayitlari(string tempDir)
     {
-        var servisler = Program.DB!.ServisKayitlariniGetir();
+        var servisler = AppServices.Current.ServiceRecords.GetAll(null, null, null);
         if (servisler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -230,7 +231,7 @@ public static class BackupManager
 
     private static void ExportNotlar(string tempDir)
     {
-        var notlar = Program.DB!.NotlariGetir();
+        var notlar = AppServices.Current.Notes.GetAll();
         if (notlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -256,7 +257,7 @@ public static class BackupManager
 
     private static void ExportDepartmanlar(string tempDir)
     {
-        var deptlar = Program.DB!.DepartmanlariGetir();
+        var deptlar = AppServices.Current.Departments.GetAll();
         if (deptlar.Count == 0) return;
 
         using var wb = new XLWorkbook();

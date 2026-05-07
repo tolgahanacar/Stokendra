@@ -79,10 +79,10 @@ public sealed class LoginForm : Form
         if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
         { lblError.Text = L("login_failed"); return; }
 
-        if (Program.DB!.KullaniciDogrula(user, pass))
+        if (AppServices.Current.Users.Authenticate(user, pass))
         {
             AppServices.Current.BeginSession(user);
-            if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && Program.DB.VarsayilanAdminSifresiKullanimda())
+            if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && AppServices.Current.Users.IsDefaultAdminPasswordInUse())
                 MessageBox.Show(L("default_admin_password_warning"), L("warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.OK;
         }

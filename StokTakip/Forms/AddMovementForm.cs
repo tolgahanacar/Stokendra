@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -69,7 +70,7 @@ public sealed class HareketEkleForm : Form
         // Departman
         tbl.Controls.Add(ML(L("department_required")), 0, row);
         cmbDept = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(cmbDept);
-        foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+        foreach (var d in AppServices.Current.Departments.GetAll()) cmbDept.Items.Add(d);
         if (cmbDept.Items.Count > 0) cmbDept.SelectedIndex = 0;
         tbl.Controls.Add(cmbDept, 1, row); row++;
 
@@ -98,7 +99,7 @@ public sealed class HareketEkleForm : Form
         tbl.Controls.Add(pnlBtn, 1, row);
 
         // Alt kartları yükle
-        _altKartlar = Program.DB!.AltKartlariGetir();
+        _altKartlar = AppServices.Current.StockCards.GetChildCards();
         foreach (var k in _altKartlar) cmbStok.Items.Add(k);
 
         // Mevcut düzenleme verileri
@@ -163,8 +164,8 @@ public sealed class HareketEkleForm : Form
 
         try
         {
-            if (_mevcut != null) Program.DB!.HareketGuncelle(h);
-            else Program.DB!.HareketEkle(h);
+            if (_mevcut != null) AppServices.Current.Movements.Update(h);
+            else AppServices.Current.Movements.Add(h);
             DialogResult = DialogResult.OK;
         }
         catch (Exception ex)

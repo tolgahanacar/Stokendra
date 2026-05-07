@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -102,7 +103,7 @@ public sealed class NotlarPanel : UserControl
 
     private void YukleGrid()
     {
-        _notlar = Program.DB!.NotlariGetir();
+        _notlar = AppServices.Current.Notes.GetAll();
         grid.Rows.Clear();
         foreach (var n in _notlar)
         {
@@ -118,7 +119,7 @@ public sealed class NotlarPanel : UserControl
         using var f = new NotDuzenleForm();
         if (f.ShowDialog() == DialogResult.OK)
         {
-            Program.DB!.NotEkle(f.Sonuc);
+            AppServices.Current.Notes.Add(f.Sonuc);
             YukleGrid();
         }
     }
@@ -135,7 +136,7 @@ public sealed class NotlarPanel : UserControl
         using var f = new NotDuzenleForm(not);
         if (f.ShowDialog() == DialogResult.OK)
         {
-            Program.DB!.NotGuncelle(f.Sonuc);
+            AppServices.Current.Notes.Update(f.Sonuc);
             YukleGrid();
         }
     }
@@ -148,7 +149,7 @@ public sealed class NotlarPanel : UserControl
         int id = Convert.ToInt32(cell.Value);
         if (MessageBox.Show(L("confirm_note_delete"), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
         {
-            Program.DB!.NotSil(id);
+            AppServices.Current.Notes.Delete(id);
             YukleGrid();
         }
     }
@@ -175,7 +176,7 @@ public sealed class NotlarPanel : UserControl
                 };
                 if (!string.IsNullOrEmpty(n.Baslik))
                 {
-                    Program.DB?.NotEkle(n);
+                    AppServices.Current.Notes.Add(n);
                     eklenen++;
                 }
             }

@@ -15,7 +15,6 @@ public sealed class StokHareketPanel : UserControl
     private DateTimePicker dtpBas = new(), dtpBit = new();
     private Label lblInfo = new();
     private TextBox txtSearch = new();
-    private List<StokHareketi> _liste = new();
     private int _currentPage = 1;
     private int _pageSize = 50;
     private Button btnPrev = new(), btnNext = new();
@@ -165,44 +164,43 @@ public sealed class StokHareketPanel : UserControl
 
     void Filtrele()
     {
-        int? kartId = null; string? dept = null, tur = null;
-        if (cmbStok.SelectedIndex > 0 && cmbStok.SelectedItem is StokKarti sk) kartId = sk.Id;
-        if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
-        if (cmbTur.SelectedIndex == 1) tur = nameof(HareketTuru.Giris); else if (cmbTur.SelectedIndex == 2) tur = nameof(HareketTuru.Cikis); else if (cmbTur.SelectedIndex == 3) tur = nameof(HareketTuru.Bos);
-        _liste = AppServices.Current.Movements.GetAll(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
         ApplyLiveSearch();
     }
     
     void ApplyLiveSearch()
     {
-        string term = txtSearch.Text.Trim().ToLowerInvariant();
-        var data = _liste;
-        
-        if (!string.IsNullOrEmpty(term))
-        {
-            data = data.Where(h =>
-                (h.StokKartKodNo != null && h.StokKartKodNo.ToLowerInvariant().Contains(term)) ||
-                (h.StokKartAd != null && h.StokKartAd.ToLowerInvariant().Contains(term)) ||
-                (h.TeslimEdilen != null && h.TeslimEdilen.ToLowerInvariant().Contains(term)) ||
-                (h.Departman != null && h.Departman.ToLowerInvariant().Contains(term)) ||
-                (h.Aciklama != null && h.Aciklama.ToLowerInvariant().Contains(term))
-            ).ToList();
-        }
+        int? kartId = null; string? dept = null, tur = null;
+        if (cmbStok.SelectedIndex > 0 && cmbStok.SelectedItem is StokKarti sk) kartId = sk.Id;
+        if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
+        if (cmbTur.SelectedIndex == 1) tur = nameof(HareketTuru.Giris); 
+        else if (cmbTur.SelectedIndex == 2) tur = nameof(HareketTuru.Cikis); 
+        else if (cmbTur.SelectedIndex == 3) tur = nameof(HareketTuru.Bos);
 
+        string? term = string.IsNullOrWhiteSpace(txtSearch.Text) ? null : txtSearch.Text.Trim();
+
+        var result = AppServices.Current.MovementService.GetPagedMovements(
+            dtpBas.Value.Date,
+            dtpBit.Value.Date.AddDays(1),
+            kartId,
+            dept,
+            tur,
+            term,
+            _currentPage,
+            _pageSize);
+
+        _currentPage = result.CurrentPage;
         grid.Rows.Clear();
-        int totalPages = (int)Math.Ceiling(data.Count / (double)_pageSize);
-        if (totalPages == 0) totalPages = 1;
-        if (_currentPage > totalPages) _currentPage = totalPages;
+        
         btnPrev.Enabled = _currentPage > 1;
-        btnNext.Enabled = _currentPage < totalPages;
-        var paged = data.Skip((_currentPage - 1) * _pageSize).Take(_pageSize);
-        foreach (var h in paged)
+        btnNext.Enabled = _currentPage < result.TotalPages;
+
+        foreach (var h in result.Items)
         {
             string gc = MovementFormatter.Format(h);
             grid.Rows.Add(h.Id, h.StokKartId, h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih, h.Aciklama,
                 h.Tur, h.Miktar.ToString(CultureInfo.InvariantCulture), h.Tarih.ToString("o"));
         }
-        lblInfo.Text = L("movements_count", data.Count) + $"  |  Sayfa: {_currentPage} / {totalPages}";
+        lblInfo.Text = L("movements_count", result.TotalCount) + $"  |  Sayfa: {_currentPage} / {result.TotalPages}";
     }
 
     void Temizle() { dtpBas.Value = DateTime.Now.AddMonths(-1); dtpBit.Value = DateTime.Now; cmbStok.SelectedIndex = 0; cmbDept.SelectedIndex = 0; cmbTur.SelectedIndex = 0; txtSearch.Clear(); Filtrele(); }
@@ -296,84 +294,26 @@ public sealed class StokHareketPanel : UserControl
     }
 
     // ═══ XLSX IMPORT (ClosedXML) ═══
-    void XlsxImport()
+    async void XlsxImport()
     {
         using var dlg = new OpenFileDialog { Title = L("import_csv"), Filter = "Excel (*.xlsx)|*.xlsx|Eski Excel (*.xls)|*.xls" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
+        
         try
         {
-            using var wb = new ClosedXML.Excel.XLWorkbook(dlg.FileName);
-            var ws = wb.Worksheets.First();
-            int lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
-            if (lastRow < 2) { MessageBox.Show(L("import_no_data")); return; }
-
-            // Header validation — check first 7 columns
-            string[] expected = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
-            var fileHeaders = new List<string>();
-            for (int c = 1; c <= Math.Min(7, ws.LastColumnUsed()?.ColumnNumber() ?? 0); c++)
-                fileHeaders.Add(ws.Cell(1, c).GetString().Trim());
-
-            bool match = fileHeaders.Count >= 6;
-            for (int i = 0; i < Math.Min(expected.Length, fileHeaders.Count) && match; i++)
-                if (!expected[i].Equals(fileHeaders[i], StringComparison.OrdinalIgnoreCase)) match = false;
-
-            if (!match)
-            {
-                MessageBox.Show(L("import_header_mismatch", string.Join(" | ", expected), string.Join(" | ", fileHeaders)), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var altKartlar = AppServices.Current.StockCards.GetChildCards();
-            int imported = 0, skipped = 0;
-            var warnings = new List<string>();
-            var hareketler = new List<StokHareketi>();
-
-            for (int r = 2; r <= lastRow; r++)
-            {
-                string kodNo = ws.Cell(r, 1).GetString().Trim();
-                if (string.IsNullOrEmpty(kodNo)) continue;
-
-                var kart = altKartlar.Find(k => k.KodNo.Equals(kodNo, StringComparison.OrdinalIgnoreCase));
-                if (kart == null) { warnings.Add(L("import_stock_not_found", r, kodNo)); skipped++; continue; }
-
-                string gcStr = ws.Cell(r, 4).GetString().Trim();
-                var parsed = MovementFormatter.ParseCell(gcStr);
-                if (!parsed.IsSuccess) { skipped++; continue; }
-
-                string teslim = ws.Cell(r, 3).GetString().Trim();
-                string dept = ws.Cell(r, 5).GetString().Trim();
-                string aciklama = ws.Cell(r, 7).GetString().Trim();
-
-                DateTime tarih = DateTime.Now;
-                string tarihStr = ws.Cell(r, 6).GetString().Trim();
-                string[] fmt = { "dd.MM.yyyy HH:mm", "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd" };
-                if (!DateTime.TryParseExact(tarihStr, fmt, CultureInfo.InvariantCulture, DateTimeStyles.None, out tarih))
-                    if (ws.Cell(r, 6).TryGetValue(out DateTime dtVal)) tarih = dtVal;
-
-                hareketler.Add(new StokHareketi
-                {
-                    StokKartId = kart.Id,
-                    Tur = parsed.Tur.ToDbString(),
-                    Miktar = parsed.Miktar,
-                    TeslimEdilen = teslim,
-                    Departman = dept,
-                    Tarih = tarih,
-                    Aciklama = aciklama
-                });
-            }
-
-            if (hareketler.Count > 0)
-            {
-                AppServices.Current.Movements.AddBulk(hareketler);
-                imported = hareketler.Count;
-            }
-
+            var result = await AppServices.Current.MovementService.ImportMovementsFromXlsxAsync(dlg.FileName);
+            
             Filtrele();
-            string msg = skipped > 0 ? L("import_skipped", imported, skipped) + (warnings.Count > 0 ? "\n\n" + string.Join("\n", warnings.Take(10)) : "")
-                                      : L("import_success", imported);
-            MessageBox.Show(msg, L("info"), MessageBoxButtons.OK, skipped > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            string msg = result.Skipped > 0 
+                ? L("import_skipped", result.Imported, result.Skipped) + (result.Warnings.Count > 0 ? "\n\n" + string.Join("\n", result.Warnings.Take(10)) : "")
+                : L("import_success", result.Imported);
+                
+            MessageBox.Show(msg, L("info"), MessageBoxButtons.OK, result.Skipped > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
         }
-        catch (Exception ex) { MessageBox.Show(L("import_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
+        catch (Exception ex) 
+        { 
+            MessageBox.Show(L("import_error", ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); 
+        }
     }
 
     // ═══ ÖRNEK DOSYA (XLSX) ═══
@@ -405,11 +345,29 @@ public sealed class StokHareketPanel : UserControl
     // ═══ XLSX EXPORT (ClosedXML) ═══
     void ExcelExport()
     {
+        int? kartId = null; string? dept = null, tur = null;
+        if (cmbStok.SelectedIndex > 0 && cmbStok.SelectedItem is StokKarti sk) kartId = sk.Id;
+        if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
+        if (cmbTur.SelectedIndex == 1) tur = nameof(HareketTuru.Giris); else if (cmbTur.SelectedIndex == 2) tur = nameof(HareketTuru.Cikis); else if (cmbTur.SelectedIndex == 3) tur = nameof(HareketTuru.Bos);
+        
+        var currentData = AppServices.Current.Movements.GetAll(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
+        string term = txtSearch.Text.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(term))
+        {
+            currentData = currentData.Where(h =>
+                (h.StokKartKodNo != null && h.StokKartKodNo.ToLowerInvariant().Contains(term)) ||
+                (h.StokKartAd != null && h.StokKartAd.ToLowerInvariant().Contains(term)) ||
+                (h.TeslimEdilen != null && h.TeslimEdilen.ToLowerInvariant().Contains(term)) ||
+                (h.Departman != null && h.Departman.ToLowerInvariant().Contains(term)) ||
+                (h.Aciklama != null && h.Aciklama.ToLowerInvariant().Contains(term))
+            ).ToList();
+        }
+
         using var dlg = new SaveFileDialog { Title = L("export_excel"), Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"StokHareketleri_{DateTime.Now:yyyyMMdd_HHmm}.xlsx" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
 
         string[] headers = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
-        var rows = _liste.Select(h =>
+        var rows = currentData.Select(h =>
         {
             string gc = MovementFormatter.Format(h);
             return new object?[]
@@ -424,8 +382,26 @@ public sealed class StokHareketPanel : UserControl
     // ═══ PRINT — tarihe göre sıralı ═══
     void Yazdir()
     {
+        int? kartId = null; string? dept = null, tur = null;
+        if (cmbStok.SelectedIndex > 0 && cmbStok.SelectedItem is StokKarti sk) kartId = sk.Id;
+        if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
+        if (cmbTur.SelectedIndex == 1) tur = nameof(HareketTuru.Giris); else if (cmbTur.SelectedIndex == 2) tur = nameof(HareketTuru.Cikis); else if (cmbTur.SelectedIndex == 3) tur = nameof(HareketTuru.Bos);
+        
+        var currentData = AppServices.Current.Movements.GetAll(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
+        string term = txtSearch.Text.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(term))
+        {
+            currentData = currentData.Where(h =>
+                (h.StokKartKodNo != null && h.StokKartKodNo.ToLowerInvariant().Contains(term)) ||
+                (h.StokKartAd != null && h.StokKartAd.ToLowerInvariant().Contains(term)) ||
+                (h.TeslimEdilen != null && h.TeslimEdilen.ToLowerInvariant().Contains(term)) ||
+                (h.Departman != null && h.Departman.ToLowerInvariant().Contains(term)) ||
+                (h.Aciklama != null && h.Aciklama.ToLowerInvariant().Contains(term))
+            ).ToList();
+        }
+
         // Tarihe göre sırala (ASC)
-        var sorted = _liste.OrderBy(h => h.Tarih).ThenBy(h => h.Id).ToList();
+        var sorted = currentData.OrderBy(h => h.Tarih).ThenBy(h => h.Id).ToList();
 
         string firma = AppServices.Current.Settings.CompanyName; var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape = true; pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827); pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);

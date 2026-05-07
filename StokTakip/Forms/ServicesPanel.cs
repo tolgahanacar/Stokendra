@@ -105,7 +105,7 @@ public sealed class ServislerPanel : UserControl
 
     private void Filtrele()
     {
-        if (Program.DB == null) return;
+        if (AppServices.Current.Database == null) return;
         string? aramaKelimesi = string.IsNullOrWhiteSpace(txtArama.Text) ? null : txtArama.Text.Trim();
         _kayitlar = AppServices.Current.ServiceRecords.GetAll(dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), aramaKelimesi);
         
@@ -188,7 +188,7 @@ public sealed class ServislerPanel : UserControl
         {
             try
             {
-                Program.DB?.ServisKaydiSil(secili.Id);
+                AppServices.Current.ServiceRecords.Delete(secili.Id);
                 Filtrele();
             }
             catch (Exception ex)
@@ -231,7 +231,7 @@ public sealed class ServislerPanel : UserControl
                 }
             }
             if (kayitlar.Count > 0)
-                Program.DB?.TopluServisKaydiEkle(kayitlar);
+                AppServices.Current.ServiceRecords.AddBulk(kayitlar);
             Filtrele();
             MessageBox.Show(L("import_success", kayitlar.Count));
         }
@@ -295,7 +295,7 @@ public sealed class ServislerPanel : UserControl
     {
         var sorted = _kayitlar.OrderByDescending(h => h.BakimTarihi).ThenByDescending(h => h.Id).ToList();
 
-        string firma = Program.Settings.CompanyName; 
+        string firma = AppServices.Current.Settings.CompanyName; 
         var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape = true; 
         pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827); 

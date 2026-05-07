@@ -57,8 +57,8 @@ public sealed partial class Database
             throw new InvalidOperationException(L("qty_too_large"));
         if (double.IsNaN(hareket.Miktar) || double.IsInfinity(hareket.Miktar))
             throw new InvalidOperationException(L("enter_valid_qty"));
-        if (hareket.Tur == "Bos")
-            hareket.Miktar = 0;
+            // Miktar=0 for "Bos" is already enforced by NormalizeMovement.
+        // Validation only checks, does not mutate.
 
         using var cardCommand = CreateCommand(connection, transaction,
             "SELECT COALESCE(KartTipi,'Alt') FROM StokKartlari WHERE Id=$id");

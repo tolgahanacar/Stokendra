@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -54,7 +55,7 @@ public sealed class StokKartiDuzenleForm : Form
         tbl.Controls.Add(lblUstKart, 0, row);
         cmbUstKart = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
         UIHelper.StyleComboBox(cmbUstKart);
-        _ustKartlar = Program.DB!.UstKartlariGetir();
+        _ustKartlar = AppServices.Current.StockCards.GetParentCards();
         cmbUstKart.Items.Add(L("no_parent"));
         foreach (var uk in _ustKartlar) cmbUstKart.Items.Add(uk);
         cmbUstKart.SelectedIndex = 0;
@@ -67,7 +68,7 @@ public sealed class StokKartiDuzenleForm : Form
         // Stok Kodu (oto)
         tbl.Controls.Add(MakeLabel(L("code_no_auto")), 0, row);
         txtKodNo = MakeTextBox(); txtKodNo.ForeColor = UIHelper.AccentCyan; txtKodNo.Width = 120;
-        if (kart == null) txtKodNo.Text = Program.DB!.SonrakiStokKodu();
+        if (kart == null) txtKodNo.Text = AppServices.Current.StockCards.GetNextCode();
         tbl.Controls.Add(txtKodNo, 1, row); row++;
 
         // Kategori
@@ -170,7 +171,7 @@ public sealed class StokKartiDuzenleForm : Form
     private void Kaydet(object? s, EventArgs e)
     {
         if (string.IsNullOrWhiteSpace(txtAd.Text)) { MessageBox.Show(L("name_required")); return; }
-        if (string.IsNullOrWhiteSpace(txtKodNo.Text)) txtKodNo.Text = Program.DB!.SonrakiStokKodu();
+        if (string.IsNullOrWhiteSpace(txtKodNo.Text)) txtKodNo.Text = AppServices.Current.StockCards.GetNextCode();
         int minStok = 0;
         if (txtMinStok.Visible && !string.IsNullOrWhiteSpace(txtMinStok.Text) && !int.TryParse(txtMinStok.Text, out minStok))
         { MessageBox.Show(L("min_stock_invalid")); return; }
@@ -197,7 +198,8 @@ public sealed class StokKartiDuzenleForm : Form
         };
         try
         {
-            if (_mevcut == null) Program.DB!.StokKartiEkle(k); else Program.DB!.StokKartiGuncelle(k);
+            var repo = AppServices.Current.StockCards;
+            if (_mevcut == null) repo.Add(k); else repo.Update(k);
             DialogResult = DialogResult.OK;
         }
         catch (Exception ex)

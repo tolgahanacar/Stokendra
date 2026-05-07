@@ -1,5 +1,6 @@
 using StokTakip.Data;
 using StokTakip.Data.Interfaces;
+using StokTakip.Services;
 
 namespace StokTakip.Infrastructure;
 
@@ -57,6 +58,14 @@ public sealed class AppServices : IDisposable
 
     /// <summary>Yapılandırma repository'si.</summary>
     public IConfigRepository Config => Services.Resolve<IConfigRepository>();
+
+    // ── İş Mantığı Servisleri ─────────────────────────────────────────────
+
+    /// <summary>Stok kartı iş mantığı servisi.</summary>
+    public IStockCardService StockCardService => Services.Resolve<IStockCardService>();
+
+    /// <summary>Stok hareketi iş mantığı servisi.</summary>
+    public IMovementService MovementService => Services.Resolve<IMovementService>();
 
     private AppServices(ServiceContainer services, AppSettings settings, Database database)
     {

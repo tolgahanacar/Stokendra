@@ -21,7 +21,8 @@ public interface IMovementRepository
         DateTime? startDate = null,
         DateTime? endDate = null,
         string? department = null,
-        string? movementType = null);
+        string? movementType = null,
+        string? category = null);
 
     /// <summary>Stok hareketlerini asenkron olarak getirir.</summary>
     Task<List<StokHareketi>> GetAllAsync(
@@ -29,7 +30,8 @@ public interface IMovementRepository
         DateTime? startDate = null,
         DateTime? endDate = null,
         string? department = null,
-        string? movementType = null);
+        string? movementType = null,
+        string? category = null);
 
     /// <summary>Tek bir stok hareketi ekler.</summary>
     void Add(StokHareketi hareket);

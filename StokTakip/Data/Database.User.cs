@@ -104,7 +104,7 @@ public sealed partial class Database
         try
         {
             string newSalt = GenerateSalt();
-            string newHash = HashPasswordV3(yeniSifre, newSalt);
+            string newHash = HashPasswordV4(yeniSifre, newSalt);
 
             using var connection = CreateConnection();
             using var transaction = connection.BeginTransaction();
@@ -153,12 +153,28 @@ public sealed partial class Database
     }
 
 
+    private static string HashPasswordV4(string password, string salt)
+    {
+        byte[] saltBytes = Convert.FromBase64String(salt);
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, PasswordIterationsV4, HashAlgorithmName.SHA512);
+        byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
+        return "v4:" + Convert.ToBase64String(hash);
+    }
+
+
     private static bool VerifyPassword(string password, string salt, string storedHash, out bool needsUpgrade)
     {
         needsUpgrade = false;
 
+        if (storedHash.StartsWith("v4:", StringComparison.Ordinal))
+            return FixedTimeEquals(storedHash, HashPasswordV4(password, salt));
+
         if (storedHash.StartsWith("v3:", StringComparison.Ordinal))
-            return FixedTimeEquals(storedHash, HashPasswordV3(password, salt));
+        {
+            bool match = FixedTimeEquals(storedHash, HashPasswordV3(password, salt));
+            needsUpgrade = match;
+            return match;
+        }
 
         if (storedHash.StartsWith("v2:", StringComparison.Ordinal))
         {
@@ -187,7 +203,7 @@ public sealed partial class Database
     private static void UpgradePasswordHash(string kullaniciAdi, string sifre, SqliteConnection connection)
     {
         string newSalt = GenerateSalt();
-        string newHash = HashPasswordV3(sifre, newSalt);
+        string newHash = HashPasswordV4(sifre, newSalt);
 
         using var transaction = connection.BeginTransaction();
         using var command = CreateCommand(connection, transaction,

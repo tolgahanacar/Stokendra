@@ -26,18 +26,15 @@ public sealed class ServiceContainer : IDisposable
     {
         _factories[typeof(TInterface)] = () =>
         {
-            if (!_singletons.TryGetValue(typeof(TInterface), out var existing))
+            lock (_singletons)
             {
-                lock (_singletons)
+                if (!_singletons.TryGetValue(typeof(TInterface), out var existing))
                 {
-                    if (!_singletons.TryGetValue(typeof(TInterface), out existing))
-                    {
-                        existing = factory();
-                        _singletons[typeof(TInterface)] = existing;
-                    }
+                    existing = factory();
+                    _singletons[typeof(TInterface)] = existing;
                 }
+                return existing;
             }
-            return existing;
         };
         return this;
     }

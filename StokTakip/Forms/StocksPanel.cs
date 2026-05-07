@@ -11,7 +11,6 @@ public sealed class StoklarPanel : UserControl
     private DataGridView grid = new();
     private TextBox txtAra = new();
     private Label lblInfo = new();
-    private List<StokKarti> _altKartlar = new();
     private int _currentPage = 1;
     private int _pageSize = 50;
     private Button btnPrev = new(), btnNext = new();
@@ -81,46 +80,41 @@ public sealed class StoklarPanel : UserControl
         YukleGrid();
     }
 
-    void YukleGrid() { _altKartlar = AppServices.Current.StockCards.GetChildCards(); FilterGrid(); }
+    void YukleGrid() => FilterGrid();
 
     void FilterGrid()
     {
-        grid.Rows.Clear(); var a = txtAra.Text.Trim().ToLowerInvariant(); int dusuk = 0;
-        var filtered = new List<StokKarti>();
-        foreach (var k in _altKartlar)
-        {
-            if (!string.IsNullOrEmpty(a) && !k.Ad.ToLowerInvariant().Contains(a) && !k.KodNo.ToLowerInvariant().Contains(a) && !k.UstKartAd.ToLowerInvariant().Contains(a)) continue;
-            filtered.Add(k);
-            if (k.MevcutStok <= 3) dusuk++;
-        }
+        grid.Rows.Clear();
+        string? searchTerm = string.IsNullOrWhiteSpace(txtAra.Text) ? null : txtAra.Text.Trim();
         
-        int totalPages = (int)Math.Ceiling(filtered.Count / (double)_pageSize);
-        if (totalPages == 0) totalPages = 1;
-        if (_currentPage > totalPages) _currentPage = totalPages;
+        var result = AppServices.Current.StockCardService.GetPagedStocks(searchTerm, _currentPage, _pageSize);
+        _currentPage = result.CurrentPage; 
         
         btnPrev.Enabled = _currentPage > 1;
-        btnNext.Enabled = _currentPage < totalPages;
+        btnNext.Enabled = _currentPage < result.TotalPages;
 
-        var paged = filtered.Skip((_currentPage - 1) * _pageSize).Take(_pageSize);
-        foreach (var k in paged)
+        foreach (var k in result.Items)
         {
             grid.Rows.Add(k.Id, k.KodNo, k.Ad, string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd, k.Kategori, UIHelper.FormatMiktar(k.MevcutStok), k.MinStok);
         }
-        lblInfo.Text = L("stocks_subtitle") + $"  •  {filtered.Count} {L("child_card").ToLower()}  •  ⚠ {dusuk} {L("low_stock").ToLower()}  |  Sayfa: {_currentPage} / {totalPages}";
+
+        int lowStockCount = AppServices.Current.StockCardService.GetLowStockCount();
+        lblInfo.Text = L("stocks_subtitle") + $"  •  {result.TotalCount} {L("child_card").ToLower()}  •  ⚠ {lowStockCount} {L("low_stock").ToLower()}  |  Sayfa: {_currentPage} / {result.TotalPages}";
     }
 
     private void ExcelExport()
     {
-        if (_altKartlar.Count == 0) return;
+        var stocks = AppServices.Current.StockCards.GetChildCards();
+        if (stocks.Count == 0) return;
         using var dlg = new SaveFileDialog { Filter = "Excel|*.xlsx", FileName = $"Stoklar_{DateTime.Now:yyyyMMdd}.xlsx" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
         using var wb = new ClosedXML.Excel.XLWorkbook();
         var ws = wb.AddWorksheet(L("stocks"));
         string[] headers = { L("code_no"), L("stock_name"), L("parent_card_col"), L("category"), L("current_stock"), L("min_stock") };
         for (int i = 0; i < headers.Length; i++) { ws.Cell(1, i + 1).Value = headers[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 60, 110); ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White; }
-        for (int i = 0; i < _altKartlar.Count; i++)
+        for (int i = 0; i < stocks.Count; i++)
         {
-            var k = _altKartlar[i];
+            var k = stocks[i];
             ws.Cell(i + 2, 1).Value = k.KodNo; ws.Cell(i + 2, 2).Value = k.Ad;
             ws.Cell(i + 2, 3).Value = string.IsNullOrEmpty(k.UstKartAd) ? "-" : k.UstKartAd;
             ws.Cell(i + 2, 4).Value = k.Kategori; ws.Cell(i + 2, 5).Value = k.MevcutStok; ws.Cell(i + 2, 6).Value = k.MinStok;
@@ -132,7 +126,9 @@ public sealed class StoklarPanel : UserControl
 
     private async void RaporAl()
     {
-        if (_altKartlar.Count == 0) { MessageBox.Show(L("report_no_data"), L("info")); return; }
+        // We fetch report data specifically for reporting anyway in the next step
+        // but let's check if there are any stocks at all first.
+        if (AppServices.Current.StockCardService.GetPagedStocks(null, 1, 1).TotalCount == 0) { MessageBox.Show(L("report_no_data"), L("info")); return; }
         
         string firma = AppServices.Current.Settings.CompanyName;
         var pd = new PrintDocument();

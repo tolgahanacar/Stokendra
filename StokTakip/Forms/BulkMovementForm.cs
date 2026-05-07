@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -37,7 +38,7 @@ public sealed class TopluHareketForm : Form
 
         pnlS.Controls.Add(new Label { Text = L("dept_filter"), ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 65;
         cmbDept = new ComboBox { Left = fx, Top = 10, Width = 130, DropDownStyle = ComboBoxStyle.DropDownList }; UIHelper.StyleComboBox(cmbDept);
-        foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+        foreach (var d in AppServices.Current.Departments.GetAll()) cmbDept.Items.Add(d);
         if (cmbDept.Items.Count > 0) cmbDept.SelectedIndex = 0; fx += 140;
 
         pnlS.Controls.Add(new Label { Text = L("delivered_to_label") + ":", ForeColor = UIHelper.TextSecondary, Left = fx, Top = 14, AutoSize = true, Font = new Font("Segoe UI", 8.5f) }); fx += 115;
@@ -67,7 +68,7 @@ public sealed class TopluHareketForm : Form
         grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Mevcut", HeaderText = L("current_stock"), FillWeight = 60, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Miktar", HeaderText = L("quantity"), FillWeight = 60 });
 
-        _kartlar = Program.DB!.AltKartlariGetir();
+        _kartlar = AppServices.Current.StockCards.GetChildCards();
         foreach (var k in _kartlar)
             grid.Rows.Add(false, k.Id, k.KodNo, k.Ad, UIHelper.FormatMiktar(k.MevcutStok), "");
 
@@ -116,7 +117,7 @@ public sealed class TopluHareketForm : Form
         {
             if (hareketler.Count > 0)
             {
-                Program.DB!.TopluHareketEkle(hareketler);
+                AppServices.Current.Movements.AddBulk(hareketler);
                 saved = hareketler.Count;
             }
         }
