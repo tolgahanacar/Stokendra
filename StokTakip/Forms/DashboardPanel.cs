@@ -1,4 +1,5 @@
 using StokTakip.Models;
+using StokTakip.Infrastructure;
 using static StokTakip.LocalizationManager;
 using ScottPlot;
 using ScottPlot.WinForms;
@@ -166,16 +167,17 @@ public sealed class DashboardPanel : UserControl
     public DashboardPanel()
     {
         BackColor = UIHelper.BgDark; Dock = DockStyle.Fill; DoubleBuffered = true;
-        this.Load += async (s, e) => await InitializeAsync();
+        this.Load += (s, e) => AsyncHelper.RunSafe(InitializeAsync);
     }
 
     private async Task InitializeAsync()
     {
         SuspendLayout();
 
-        var stats     = await Program.DB!.DashboardIstatistikleriGetirAsync();
-        var altKartlar = Program.DB!.AltKartlariGetir();
-        var last7Data  = await Program.DB!.Son7GunHareketOzetleriAsync();
+        var ctx = AppServices.Current;
+        var stats     = await ctx.Reports.GetDashboardStatsAsync();
+        var altKartlar = ctx.StockCards.GetChildCards();
+        var last7Data  = await ctx.Movements.GetLast7DaysSummaryAsync();
 
         // ═══ HEADER ═══
         var pnlH = UIHelper.MakeHeader(L("dashboard"), L("dashboard_subtitle"));
@@ -201,12 +203,12 @@ public sealed class DashboardPanel : UserControl
 
         var cardsData = new (string title, string value, string sub, System.Drawing.Color accent, string icon)[]
         {
-            (L("total_stock_cards"), stats.toplamKart.ToString(),              L("total_stock_cards_sub"),  UIHelper.AccentBlue,   "\uE8D4"),
-            (L("total_stock_qty"),   UIHelper.FormatMiktar(stats.toplamStok),  L("total_stock_qty_sub"),    UIHelper.AccentCyan,   "\uE7B8"),
-            (L("low_stock"),         stats.dusuk.ToString(),                   L("low_stock_sub"),          UIHelper.StokLow,      "\uE7BA"),
-            (L("depleted_stock"),    stats.tukenmis.ToString(),                L("depleted_stock_sub"),     UIHelper.StokWarning,  "\uEA39"),
-            (L("total_movements"),   stats.toplamHareket.ToString(),           L("total_movements_sub"),    UIHelper.AccentPurple, "\uE8CA"),
-            (L("today_movements"),   stats.bugunHareket.ToString(),            "",                          UIHelper.AccentOrange, "\uE787")
+            (L("total_stock_cards"), stats.TotalCards.ToString(),              L("total_stock_cards_sub"),  UIHelper.AccentBlue,   "\uE8D4"),
+            (L("total_stock_qty"),   UIHelper.FormatMiktar(stats.TotalStock),  L("total_stock_qty_sub"),    UIHelper.AccentCyan,   "\uE7B8"),
+            (L("low_stock"),         stats.LowStock.ToString(),                L("low_stock_sub"),          UIHelper.StokLow,      "\uE7BA"),
+            (L("depleted_stock"),    stats.DepletedStock.ToString(),           L("depleted_stock_sub"),     UIHelper.StokWarning,  "\uEA39"),
+            (L("total_movements"),   stats.TotalMovements.ToString(),          L("total_movements_sub"),    UIHelper.AccentPurple, "\uE8CA"),
+            (L("today_movements"),   stats.TodayMovements.ToString(),          "",                          UIHelper.AccentOrange, "\uE787")
         };
 
         foreach (var c in cardsData)
@@ -277,9 +279,9 @@ public sealed class DashboardPanel : UserControl
         }
 
         // Bar chart — optimized: uses pre-aggregated query data
-        var dates  = last7Data.Select(d => d.Tarih).ToList();
-        double[] ent = last7Data.Select(d => d.Giris).ToArray();
-        double[] ext = last7Data.Select(d => d.Cikis).ToArray();
+        var dates  = last7Data.Select(d => d.Date).ToList();
+        double[] ent = last7Data.Select(d => d.Entry).ToArray();
+        double[] ext = last7Data.Select(d => d.Exit).ToArray();
         var pos = Enumerable.Range(0, 7).Select(x => (double)x).ToArray();
         var be  = plotBar.Plot.Add.Bars(pos, ent); be.Color = ScottPlot.Color.FromColor(System.Drawing.Color.FromArgb(46, 204, 113)); be.LegendText = L("entry");
         var bx  = plotBar.Plot.Add.Bars(pos, ext); bx.Color = ScottPlot.Color.FromColor(System.Drawing.Color.FromArgb(231, 76, 60));  bx.LegendText = L("exit");

@@ -1,4 +1,5 @@
 using StokTakip.Models;
+using StokTakip.Infrastructure;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -57,7 +58,7 @@ public sealed class TopluHareketDuzenleForm : Form
         UIHelper.StyleComboBox(cmbDept);
         chkDept.CheckedChanged += (_, _) => cmbDept.Enabled = chkDept.Checked;
         cmbDept.Items.Add("");
-        foreach (var d in Program.DB!.DepartmanlariGetir())
+        foreach (var d in AppServices.Current.Departments.GetAll())
             cmbDept.Items.Add(d);
         pnlM.Controls.Add(chkDept);
         pnlM.Controls.Add(cmbDept);
@@ -120,33 +121,44 @@ public sealed class TopluHareketDuzenleForm : Form
             return;
         }
 
-        int updated = 0;
+        // Değiştirilecek hareketleri hazırla
+        var guncellenecekler = new List<StokHareketi>();
+        foreach (var h in _hareketler)
+        {
+            // Orijinal nesneyi değiştirmeden kopya üzerinde çalış
+            var kopya = new StokHareketi
+            {
+                Id = h.Id,
+                StokKartId = h.StokKartId,
+                Tur = h.Tur,
+                Miktar = h.Miktar,
+                TeslimEdilen = chkTeslim.Checked ? txtTeslim.Text.Trim() : h.TeslimEdilen,
+                Departman = chkDept.Checked ? (cmbDept.SelectedItem?.ToString() ?? h.Departman) : h.Departman,
+                Tarih = chkTarih.Checked ? dtpTarih.Value : h.Tarih,
+                Aciklama = chkAcik.Checked ? txtAciklama.Text.Trim() : h.Aciklama
+            };
+            guncellenecekler.Add(kopya);
+        }
+
         try
         {
-            foreach (var h in _hareketler)
-            {
-                bool modified = false;
+            // Tek atomik transaction — ya hepsi ya hiçbiri
+            AppServices.Current.Movements.UpdateBulk(guncellenecekler);
 
-                if (chkTeslim.Checked) { h.TeslimEdilen = txtTeslim.Text.Trim(); modified = true; }
-                if (chkDept.Checked) { h.Departman = cmbDept.SelectedItem?.ToString() ?? ""; modified = true; }
-                if (chkTarih.Checked) { h.Tarih = dtpTarih.Value; modified = true; }
-                if (chkAcik.Checked) { h.Aciklama = txtAciklama.Text.Trim(); modified = true; }
-
-                if (modified)
-                {
-                    Program.DB!.HareketGuncelle(h);
-                    updated++;
-                }
-            }
-
-            MessageBox.Show(L("bulk_edit_success", updated), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(
+                L("bulk_edit_success", guncellenecekler.Count),
+                L("info"),
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
             DialogResult = DialogResult.OK;
         }
         catch (Exception ex)
         {
-            MessageBox.Show(L("bulk_edit_partial_error", updated, ex.Message), L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            if (updated > 0)
-                DialogResult = DialogResult.OK;
+            MessageBox.Show(
+                L("error_with_details", ex.Message),
+                L("error"),
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
         }
     }
 }

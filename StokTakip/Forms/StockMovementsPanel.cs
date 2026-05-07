@@ -1,6 +1,7 @@
 using System.Drawing.Printing;
 using System.Text;
 using System.Globalization;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -33,14 +34,14 @@ public sealed class StokHareketPanel : UserControl
         cmbStok = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 120 };
         UIHelper.StyleComboBox(cmbStok);
         cmbStok.Items.Add(L("all"));
-        foreach (var k in Program.DB!.AltKartlariGetir()) cmbStok.Items.Add(k);
+        foreach (var k in AppServices.Current.StockCards.GetChildCards()) cmbStok.Items.Add(k);
         cmbStok.SelectedIndex = 0;
 
         // Departman
         cmbDept = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110 };
         UIHelper.StyleComboBox(cmbDept);
         cmbDept.Items.Add(L("all"));
-        foreach (var d in Program.DB!.DepartmanlariGetir()) cmbDept.Items.Add(d);
+        foreach (var d in AppServices.Current.Departments.GetAll()) cmbDept.Items.Add(d);
         cmbDept.SelectedIndex = 0;
 
         // Tür
@@ -168,7 +169,7 @@ public sealed class StokHareketPanel : UserControl
         if (cmbStok.SelectedIndex > 0 && cmbStok.SelectedItem is StokKarti sk) kartId = sk.Id;
         if (cmbDept.SelectedIndex > 0) dept = cmbDept.SelectedItem!.ToString();
         if (cmbTur.SelectedIndex == 1) tur = nameof(HareketTuru.Giris); else if (cmbTur.SelectedIndex == 2) tur = nameof(HareketTuru.Cikis); else if (cmbTur.SelectedIndex == 3) tur = nameof(HareketTuru.Bos);
-        _liste = Program.DB!.HareketleriGetir(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
+        _liste = AppServices.Current.Movements.GetAll(kartId, dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), dept, tur);
         ApplyLiveSearch();
     }
     
@@ -197,7 +198,7 @@ public sealed class StokHareketPanel : UserControl
         var paged = data.Skip((_currentPage - 1) * _pageSize).Take(_pageSize);
         foreach (var h in paged)
         {
-            string gc = h.Tur == nameof(HareketTuru.Giris) ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == nameof(HareketTuru.Cikis) ? $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
+            string gc = MovementFormatter.Format(h);
             grid.Rows.Add(h.Id, h.StokKartId, h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih, h.Aciklama,
                 h.Tur, h.Miktar.ToString(CultureInfo.InvariantCulture), h.Tarih.ToString("o"));
         }
@@ -214,7 +215,7 @@ public sealed class StokHareketPanel : UserControl
         {
             try
             {
-                Program.DB!.HareketSil(Convert.ToInt32(cell.Value)); Filtrele();
+                AppServices.Current.Movements.Delete(Convert.ToInt32(cell.Value)); Filtrele();
             }
             catch (Exception ex)
             {
@@ -236,7 +237,7 @@ public sealed class StokHareketPanel : UserControl
                 if (cell?.Value == null) continue;
                 ids.Add(Convert.ToInt32(cell.Value));
             }
-            Program.DB!.TopluHareketSil(ids);
+            AppServices.Current.Movements.DeleteBulk(ids);
             Filtrele(); MessageBox.Show(L("bulk_movement_delete_success", c));
         }
         catch (Exception ex)
@@ -322,7 +323,7 @@ public sealed class StokHareketPanel : UserControl
                 return;
             }
 
-            var altKartlar = Program.DB!.AltKartlariGetir();
+            var altKartlar = AppServices.Current.StockCards.GetChildCards();
             int imported = 0, skipped = 0;
             var warnings = new List<string>();
             var hareketler = new List<StokHareketi>();
@@ -336,10 +337,8 @@ public sealed class StokHareketPanel : UserControl
                 if (kart == null) { warnings.Add(L("import_stock_not_found", r, kodNo)); skipped++; continue; }
 
                 string gcStr = ws.Cell(r, 4).GetString().Trim();
-                string tur = gcStr.Contains("[\u00c7]") ? nameof(HareketTuru.Cikis) : (gcStr.Contains("[B]") ? nameof(HareketTuru.Bos) : nameof(HareketTuru.Giris));
-                string mStr = gcStr.Replace("[G]", "").Replace("[\u00c7]", "").Replace("[B]", "").Trim();
-                if (!double.TryParse(mStr.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out double miktar) || (tur != nameof(HareketTuru.Bos) && miktar <= 0))
-                { if (!double.TryParse(mStr, out miktar) || (tur != nameof(HareketTuru.Bos) && miktar <= 0)) { if (tur == nameof(HareketTuru.Bos)) miktar = 0; else { skipped++; continue; } } }
+                var parsed = MovementFormatter.ParseCell(gcStr);
+                if (!parsed.IsSuccess) { skipped++; continue; }
 
                 string teslim = ws.Cell(r, 3).GetString().Trim();
                 string dept = ws.Cell(r, 5).GetString().Trim();
@@ -353,14 +352,19 @@ public sealed class StokHareketPanel : UserControl
 
                 hareketler.Add(new StokHareketi
                 {
-                    StokKartId = kart.Id, Tur = tur, Miktar = miktar,
-                    TeslimEdilen = teslim, Departman = dept, Tarih = tarih, Aciklama = aciklama
+                    StokKartId = kart.Id,
+                    Tur = parsed.Tur.ToDbString(),
+                    Miktar = parsed.Miktar,
+                    TeslimEdilen = teslim,
+                    Departman = dept,
+                    Tarih = tarih,
+                    Aciklama = aciklama
                 });
             }
 
             if (hareketler.Count > 0)
             {
-                Program.DB!.TopluHareketEkle(hareketler);
+                AppServices.Current.Movements.AddBulk(hareketler);
                 imported = hareketler.Count;
             }
 
@@ -382,19 +386,13 @@ public sealed class StokHareketPanel : UserControl
             var ws = wb.AddWorksheet("Stok Hareketleri");
 
             string[] headers = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
-            for (int i = 0; i < headers.Length; i++)
-            {
-                ws.Cell(1, i + 1).Value = headers[i];
-                ws.Cell(1, i + 1).Style.Font.Bold = true;
-                ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 60, 110);
-                ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
-            }
+            ExcelHelper.WriteHeaders(ws, headers);
 
-            // Sample data
-            ws.Cell(2, 1).Value = "001"; ws.Cell(2, 2).Value = "\u00d6rnek \u00dcr\u00fcn"; ws.Cell(2, 3).Value = "Ahmet Y\u0131lmaz";
-            ws.Cell(2, 4).Value = "2[G]"; ws.Cell(2, 5).Value = "Bilgi \u0130\u015flem"; ws.Cell(2, 6).Value = "04.03.2026 10:00"; ws.Cell(2, 7).Value = "Giri\u015f \u00f6rne\u011fi";
-            ws.Cell(3, 1).Value = "002"; ws.Cell(3, 2).Value = "\u00d6rnek Toner"; ws.Cell(3, 3).Value = "Mehmet Demir";
-            ws.Cell(3, 4).Value = "1[\u00c7]"; ws.Cell(3, 5).Value = "Muhasebe"; ws.Cell(3, 6).Value = "04.03.2026 11:00"; ws.Cell(3, 7).Value = "\u00c7\u0131k\u0131\u015f \u00f6rne\u011fi";
+            // Örnek veri — MovementFormatter sabitleri kullanılıyor
+            ws.Cell(2, 1).Value = "001"; ws.Cell(2, 2).Value = "Örnek Ürün"; ws.Cell(2, 3).Value = "Ahmet Yılmaz";
+            ws.Cell(2, 4).Value = $"2{MovementFormatter.EntryTag}"; ws.Cell(2, 5).Value = "Bilgi İşlem"; ws.Cell(2, 6).Value = "04.03.2026 10:00"; ws.Cell(2, 7).Value = "Giriş örneği";
+            ws.Cell(3, 1).Value = "002"; ws.Cell(3, 2).Value = "Örnek Toner"; ws.Cell(3, 3).Value = "Mehmet Demir";
+            ws.Cell(3, 4).Value = $"1{MovementFormatter.ExitTag}"; ws.Cell(3, 5).Value = "Muhasebe"; ws.Cell(3, 6).Value = "04.03.2026 11:00"; ws.Cell(3, 7).Value = "Çıkış örneği";
 
             ws.Columns().AdjustToContents();
             wb.SaveAs(dest);
@@ -409,39 +407,18 @@ public sealed class StokHareketPanel : UserControl
     {
         using var dlg = new SaveFileDialog { Title = L("export_excel"), Filter = "Excel (*.xlsx)|*.xlsx", FileName = $"StokHareketleri_{DateTime.Now:yyyyMMdd_HHmm}.xlsx" };
         if (dlg.ShowDialog() != DialogResult.OK) return;
-        try
+
+        string[] headers = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
+        var rows = _liste.Select(h =>
         {
-            using var wb = new ClosedXML.Excel.XLWorkbook();
-            var ws = wb.AddWorksheet("Stok Hareketleri");
-
-            string[] headers = { L("code_no"), L("stock_name"), L("delivered_to"), L("operation_type"), L("department"), L("date"), L("description") };
-            for (int i = 0; i < headers.Length; i++)
+            string gc = MovementFormatter.Format(h);
+            return new object?[]
             {
-                ws.Cell(1, i + 1).Value = headers[i];
-                ws.Cell(1, i + 1).Style.Font.Bold = true;
-                ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 60, 110);
-                ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
-            }
-
-            int row = 2;
-            foreach (var h in _liste)
-            {
-                string gc = h.Tur == nameof(HareketTuru.Giris) ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (h.Tur == nameof(HareketTuru.Cikis) ? $"{UIHelper.FormatMiktar(h.Miktar)}[\u00c7]" : $"{UIHelper.FormatMiktar(h.Miktar)}[B]");
-                ws.Cell(row, 1).Value = h.StokKartKodNo; ws.Cell(row, 2).Value = h.StokKartAd;
-                ws.Cell(row, 3).Value = h.TeslimEdilen; ws.Cell(row, 4).Value = gc;
-                ws.Cell(row, 5).Value = h.Departman; ws.Cell(row, 6).Value = h.Tarih.ToString("dd.MM.yyyy HH:mm");
-                ws.Cell(row, 7).Value = h.Aciklama;
-                // Color entry/exit/empty
-                ws.Cell(row, 4).Style.Font.FontColor = h.Tur == nameof(HareketTuru.Giris) ? ClosedXML.Excel.XLColor.DarkGreen : (h.Tur == nameof(HareketTuru.Cikis) ? ClosedXML.Excel.XLColor.DarkRed : ClosedXML.Excel.XLColor.Gray);
-                ws.Cell(row, 4).Style.Font.Bold = true;
-                row++;
-            }
-
-            ws.Columns().AdjustToContents();
-            wb.SaveAs(dlg.FileName);
-            MessageBox.Show(L("export_success", dlg.FileName), L("info"), MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        catch (Exception ex) { MessageBox.Show(L("export_error") + "\n" + ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Error); }
+                h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc,
+                h.Departman, h.Tarih.ToString("dd.MM.yyyy HH:mm"), h.Aciklama
+            };
+        });
+        ExcelHelper.ExportTable("Stok Hareketleri", headers, rows, dlg.FileName);
     }
 
     // ═══ PRINT — tarihe göre sıralı ═══
@@ -450,7 +427,7 @@ public sealed class StokHareketPanel : UserControl
         // Tarihe göre sırala (ASC)
         var sorted = _liste.OrderBy(h => h.Tarih).ThenBy(h => h.Id).ToList();
 
-        string firma = Program.Settings.CompanyName; var pd = new PrintDocument();
+        string firma = AppServices.Current.Settings.CompanyName; var pd = new PrintDocument();
         pd.DefaultPageSettings.Landscape = true; pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 1169, 827); pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
 
         using (var psd = new PageSetupDialog { Document = pd })
@@ -473,10 +450,11 @@ public sealed class StokHareketPanel : UserControl
             for (int i = 0; i < hdr.Length; i++) { g.DrawString(hdr[i], fH, br, x + 2, y + 2); x += w[i]; } y += 18;
             int end = Math.Min(ps + rpp, sorted.Count); using var brAlt = new SolidBrush(Color.FromArgb(245, 247, 252));
             for (int i = ps; i < end; i++) {
-                var h = sorted[i]; if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 15); x = lm; bool giris = h.Tur == nameof(HareketTuru.Giris); bool bos = h.Tur == nameof(HareketTuru.Bos);
-                string gc = giris ? $"{UIHelper.FormatMiktar(h.Miktar)}[G]" : (bos ? $"{UIHelper.FormatMiktar(h.Miktar)}[B]" : $"{UIHelper.FormatMiktar(h.Miktar)}[Ç]");
+                var h = sorted[i]; if (i % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 15); x = lm;
+                string gc = MovementFormatter.Format(h);
+                Color gcClr = MovementFormatter.GetPrintColor(h.Tur);
                 string[] cells = { h.StokKartKodNo, h.StokKartAd, h.TeslimEdilen, gc, h.Departman, h.Tarih.ToString("dd.MM.yyyy HH:mm"), h.Aciklama };
-                for (int c = 0; c < cells.Length; c++) { Color clr = c == 3 ? (giris ? Color.DarkGreen : (bos ? Color.Gray : Color.DarkRed)) : Color.Black; using var brC = new SolidBrush(clr); g.DrawString(cells[c], c == 3 ? fH : fC, brC, new RectangleF(x + 2, y + 1, w[c] - 4, 14), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); x += w[c]; }
+                for (int c = 0; c < cells.Length; c++) { Color clr = c == 3 ? gcClr : Color.Black; using var brC = new SolidBrush(clr); g.DrawString(cells[c], c == 3 ? fH : fC, brC, new RectangleF(x + 2, y + 1, w[c] - 4, 14), new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap }); x += w[c]; }
                 g.DrawLine(pen, lm, y + 15, lm + pw, y + 15); y += 16;
             }
             g.DrawString(L("total_records_page", sorted.Count, ps / rpp + 1, tp), fS, brG, lm, e.MarginBounds.Bottom - 8); ps += rpp; e.HasMorePages = ps < sorted.Count;

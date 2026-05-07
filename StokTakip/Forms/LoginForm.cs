@@ -1,3 +1,4 @@
+using StokTakip.Infrastructure;
 using static StokTakip.LocalizationManager;
 
 namespace StokTakip.Forms;
@@ -80,7 +81,7 @@ public sealed class LoginForm : Form
 
         if (Program.DB!.KullaniciDogrula(user, pass))
         {
-            Program.CurrentUser = user;
+            AppServices.Current.BeginSession(user);
             if (string.Equals(user, "admin", StringComparison.OrdinalIgnoreCase) && Program.DB.VarsayilanAdminSifresiKullanimda())
                 MessageBox.Show(L("default_admin_password_warning"), L("warning"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
             DialogResult = DialogResult.OK;

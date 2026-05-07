@@ -7,20 +7,22 @@ namespace StokTakip;
 
 /// <summary>
 /// Uygulama giriş noktası. Servis kaydı, veritabanı başlatma ve form akışını yönetir.
+/// Tüm global state <see cref="AppServices.Current"/> üzerinden erişilir.
 /// </summary>
 static class Program
 {
-    /// <summary>Uygulama genelinde kullanılan IoC container.</summary>
-    public static ServiceContainer Services { get; } = new();
+    // ── Geriye dönük uyumluluk kısayolları ───────────────────────────────
+    // Formların kademeli geçişi sırasında kullanılır.
+    // Yeni kod doğrudan AppServices.Current kullanmalıdır.
 
-    /// <summary>Aktif veritabanı bağlantısı. Login öncesinde <c>null</c> olabilir.</summary>
-    public static Database? DB { get; private set; }
+    /// <summary>Aktif veritabanı bağlantısı (geriye dönük uyumluluk).</summary>
+    public static Database DB => AppServices.Current.Database;
 
-    /// <summary>Yüklü uygulama ayarları.</summary>
-    public static AppSettings Settings { get; private set; } = new();
+    /// <summary>Yüklü uygulama ayarları (geriye dönük uyumluluk).</summary>
+    public static AppSettings Settings => AppServices.Current.Settings;
 
-    /// <summary>Oturum açmış kullanıcı adı.</summary>
-    public static string CurrentUser { get; set; } = "admin";
+    /// <summary>Oturum açmış kullanıcı adı (geriye dönük uyumluluk).</summary>
+    public static string CurrentUser => AppServices.Current.Session?.Username ?? "admin";
 
     [STAThread]
     static void Main()
@@ -40,14 +42,31 @@ static class Program
             e.SetObserved();
         };
 
-        Settings = AppSettings.Yukle();
-        LocalizationManager.Initialize(Settings.Language);
+        var settings = AppSettings.Yukle();
+        LocalizationManager.Initialize(settings.Language);
 
-        if (!EnsureDatabasePath())
+        if (!EnsureDatabasePath(settings))
             return;
 
-        if (!InitializeDatabase())
+        var db = TryInitializeDatabase(settings);
+        if (db == null)
             return;
+
+        // AppServices başlat — artık tüm global state buradan
+        var services = new ServiceContainer();
+        services
+            .RegisterInstance<IStockCardRepository>(db)
+            .RegisterInstance<IMovementRepository>(db)
+            .RegisterInstance<IServiceRecordRepository>(db)
+            .RegisterInstance<INoteRepository>(db)
+            .RegisterInstance<IDepartmentRepository>(db)
+            .RegisterInstance<IReportRepository>(db)
+            .RegisterInstance<IUserRepository>(db)
+            .RegisterInstance<IConfigRepository>(db);
+
+        var ctx = AppServices.Initialize(services, settings, db);
+
+        Application.ApplicationExit += (_, _) => ctx.Dispose();
 
         using var login = new LoginForm();
         if (login.ShowDialog() != DialogResult.OK)
@@ -56,33 +75,14 @@ static class Program
         Application.Run(new MainForm());
     }
 
-    /// <summary>
-    /// Tüm servisleri IoC container'a kaydeder.
-    /// Veritabanı başlatıldıktan sonra çağrılmalıdır.
-    /// </summary>
-    private static void ConfigureServices()
+    private static bool EnsureDatabasePath(AppSettings settings)
     {
-        if (DB == null) return;
-
-        Services
-            .RegisterInstance<IStockCardRepository>(DB)
-            .RegisterInstance<IMovementRepository>(DB)
-            .RegisterInstance<IServiceRecordRepository>(DB)
-            .RegisterInstance<INoteRepository>(DB)
-            .RegisterInstance<IDepartmentRepository>(DB)
-            .RegisterInstance<IReportRepository>(DB)
-            .RegisterInstance<IUserRepository>(DB)
-            .RegisterInstance<IConfigRepository>(DB);
-    }
-
-    private static bool EnsureDatabasePath()
-    {
-        if (!string.IsNullOrWhiteSpace(Settings.DbPath))
+        if (!string.IsNullOrWhiteSpace(settings.DbPath))
         {
             try
             {
-                Settings.DbPath = AppPaths.NormalizeDatabasePath(Settings.DbPath);
-                Settings.Kaydet();
+                settings.DbPath = AppPaths.NormalizeDatabasePath(settings.DbPath);
+                settings.Kaydet();
                 return true;
             }
             catch (Exception ex)
@@ -95,23 +95,16 @@ static class Program
         if (setup.ShowDialog() != DialogResult.OK)
             return false;
 
-        Settings.DbPath = setup.SecilenYol;
-        Settings.Kaydet();
+        settings.DbPath = setup.SecilenYol;
+        settings.Kaydet();
         return true;
     }
 
-    private static bool InitializeDatabase()
+    private static Database? TryInitializeDatabase(AppSettings settings)
     {
         try
         {
-            DB = new Database(Settings.DbPath);
-            ConfigureServices();
-            Application.ApplicationExit += (_, _) =>
-            {
-                DB?.Dispose();
-                Services.Dispose();
-            };
-            return true;
+            return new Database(settings.DbPath);
         }
         catch (Exception ex)
         {
@@ -121,43 +114,35 @@ static class Program
                 "Hata",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
+        }
 
-            using var setup = new DbPathForm();
-            if (setup.ShowDialog() != DialogResult.OK)
-                return false;
+        using var setup = new DbPathForm();
+        if (setup.ShowDialog() != DialogResult.OK)
+            return null;
 
-            Settings.DbPath = setup.SecilenYol;
-            Settings.Kaydet();
+        settings.DbPath = setup.SecilenYol;
+        settings.Kaydet();
 
-            try
-            {
-                DB = new Database(Settings.DbPath);
-                ConfigureServices();
-                Application.ApplicationExit += (_, _) =>
-                {
-                    DB?.Dispose();
-                    Services.Dispose();
-                };
-                return true;
-            }
-            catch (Exception retryEx)
-            {
-                LogError(retryEx);
-                MessageBox.Show(
-                    "Yeni konum da açılamadı.\n" + retryEx.Message,
-                    "Kritik Hata",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
-                return false;
-            }
+        try
+        {
+            return new Database(settings.DbPath);
+        }
+        catch (Exception retryEx)
+        {
+            LogError(retryEx);
+            MessageBox.Show(
+                "Yeni konum da açılamadı.\n" + retryEx.Message,
+                "Kritik Hata",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+            return null;
         }
     }
 
-    private static void LogError(Exception ex)
+    internal static void LogError(Exception ex)
     {
         try
         {
-            // Crash log'a yaz (AppLogger'dan ayrı — uygulama başlamadan önce de çalışmalı)
             _ = AppPaths.ApplicationDataDirectory;
             File.AppendAllText(
                 AppPaths.CrashLogPath,
@@ -165,8 +150,6 @@ static class Program
         }
         catch { }
 
-        // MessageBox sadece ana thread'den (UI thread) gelen kritik hatalarda göster.
-        // Arka plan thread'lerinden gelen hatalar (TaskScheduler, AppDomain) sessizce loglanır.
         try
         {
             if (Application.MessageLoop)

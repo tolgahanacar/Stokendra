@@ -472,6 +472,9 @@ public sealed partial class Database :
     void IMovementRepository.DeleteBulk(IEnumerable<int> ids) => TopluHareketSil(ids);
 
     /// <inheritdoc/>
+    void IMovementRepository.UpdateBulk(IEnumerable<StokHareketi> hareketler) => TopluHareketGuncelle(hareketler);
+
+    /// <inheritdoc/>
     async Task<List<(DateTime Date, double Entry, double Exit)>> IMovementRepository.GetLast7DaysSummaryAsync()
     {
         var raw = await Son7GunHareketOzetleriAsync();

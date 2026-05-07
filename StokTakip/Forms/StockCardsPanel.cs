@@ -1,5 +1,6 @@
 using StokTakip.Models;
 using StokTakip.Data;
+using StokTakip.Infrastructure;
 using ClosedXML.Excel;
 using static StokTakip.LocalizationManager;
 
@@ -33,14 +34,12 @@ public sealed class StokKartlariPanel : UserControl
         var btnOrnek = UIHelper.MakeFlowButton(L("sample_file"), UIHelper.BtnDark, 110);
 
         btnE.Click += (_, _) => { using var f = new StokKartiDuzenleForm(null); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
-        btnD.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDuzenleForm(k); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); } };
-        btnS.Click += (_, _) => SilKart(); btnTS.Click += (_, _) => TopluSil();
+        btnD.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDuzenleForm(k); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); } };        btnS.Click += (_, _) => SilKart(); btnTS.Click += (_, _) => TopluSil();
         btnDet.Click += (_, _) => { var k = Sec(); if (k != null) { using var f = new StokKartiDetayForm(k.Id); f.ShowDialog(); YukleGrid(); } };
         btnTG.Click += (_, _) => { using var f = new TopluHareketForm(); if (f.ShowDialog() == DialogResult.OK) YukleGrid(); };
         btnExcel.Click += (_, _) => ExcelExport();
         btnImport.Click += (_, _) => ExcelImport();
         btnOrnek.Click += (_, _) => OrnekDosya();
-        
         pnlT.Controls.AddRange(new Control[] { txtAra, btnE, btnD, btnS, btnTS, btnDet, btnTG, btnExcel, btnImport, btnOrnek });
 
         // Grid
@@ -80,7 +79,7 @@ public sealed class StokKartlariPanel : UserControl
     }
 
     void Info() { int s = grid.SelectedRows.Count; lblInfo.Text = L("records_info", _tumListe.Count, s); lblStatus.Text = s > 1 ? L("rows_selected", s) : ""; }
-    void YukleGrid() { _tumListe = Program.DB!.StokKartlariniGetir(); FilterGrid(); }
+    void YukleGrid() { _tumListe = AppServices.Current.StockCards.GetAll(); FilterGrid(); }
     void FilterGrid()
     {
         grid.Rows.Clear(); var a = txtAra.Text.ToLowerInvariant();
@@ -98,7 +97,7 @@ public sealed class StokKartlariPanel : UserControl
         if (cell?.Value == null) { MessageBox.Show(L("select_row_first")); return null; }
         return _tumListe.Find(k => k.Id == Convert.ToInt32(cell.Value));
     }
-    void SilKart() { var k = Sec(); if (k == null) return; if (MessageBox.Show(L("confirm_delete", k.Ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { try { Program.DB!.StokKartiSil(k.Id); YukleGrid(); } catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); } } }
+    void SilKart() { var k = Sec(); if (k == null) return; if (MessageBox.Show(L("confirm_delete", k.Ad), L("confirm_delete_title"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) { try { AppServices.Current.StockCards.Delete(k.Id); YukleGrid(); } catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); } } }
     void TopluSil()
     {
         if (grid.SelectedRows.Count < 2) { MessageBox.Show(L("bulk_delete_min")); return; }
@@ -108,7 +107,7 @@ public sealed class StokKartlariPanel : UserControl
         {
             var cell = r.Cells["Id"];
             if (cell?.Value == null) continue;
-            try { Program.DB!.StokKartiSil(Convert.ToInt32(cell.Value)); }
+            try { AppServices.Current.StockCards.Delete(Convert.ToInt32(cell.Value)); }
             catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
         }
         YukleGrid(); MessageBox.Show(L("bulk_delete_success", c));
@@ -188,7 +187,7 @@ public sealed class StokKartlariPanel : UserControl
 
                 if (!string.IsNullOrEmpty(k.KodNo) && !string.IsNullOrEmpty(k.Ad))
                 {
-                    try { Program.DB!.StokKartiEkle(k); eklenen++; }
+                    try { AppServices.Current.StockCards.Add(k); eklenen++; }
                     catch (Exception ex) { MessageBox.Show(ex.Message, L("error"), MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
                 }
             }

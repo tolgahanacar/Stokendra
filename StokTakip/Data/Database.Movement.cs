@@ -241,4 +241,63 @@ public sealed partial class Database
     {
         TopluHareketSil(new[] { id });
     }
+
+    /// <summary>
+    /// Birden fazla stok hareketini tek bir atomik transaction içinde toplu günceller.
+    /// Kısmi başarı yoktur: ya hepsi güncellenir ya da hiçbiri.
+    /// </summary>
+    public void TopluHareketGuncelle(IEnumerable<StokHareketi> hareketler)
+    {
+        var liste = hareketler?.ToList() ?? new List<StokHareketi>();
+        if (liste.Count == 0)
+            throw new InvalidOperationException(L("bulk_operation_empty"));
+
+        using var connection = CreateConnection();
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            foreach (var hareket in liste)
+            {
+                StokHareketi normalized = NormalizeMovement(hareket);
+                StokHareketi mevcut = GetMovementById(connection, transaction, normalized.Id)
+                    ?? throw new InvalidOperationException(L("movement_not_found"));
+
+                ValidateMovement(connection, transaction, normalized);
+
+                double oldCardProjected = GetCurrentStockCore(connection, transaction, mevcut.StokKartId)
+                    - MovementImpact(mevcut);
+                bool sameCard = mevcut.StokKartId == normalized.StokKartId;
+
+                if (!sameCard && oldCardProjected < 0)
+                    throw new InvalidOperationException(L("stock_would_go_negative"));
+
+                double newCardProjected = sameCard
+                    ? oldCardProjected + MovementImpact(normalized)
+                    : GetCurrentStockCore(connection, transaction, normalized.StokKartId) + MovementImpact(normalized);
+
+                if (newCardProjected < 0)
+                    throw new InvalidOperationException(L("stock_would_go_negative"));
+
+                using var command = CreateCommand(connection, transaction, @"
+                    UPDATE StokHareketleri
+                    SET StokKartId=$sk, Tur=$t, Miktar=$m, KimeVerildi=$kv,
+                        Departman=$d, Tarih=$ta, Aciklama=$ac
+                    WHERE Id=$id");
+                BindMovementParameters(command, normalized, includeId: true);
+
+                if (command.ExecuteNonQuery() == 0)
+                    throw new InvalidOperationException(L("movement_not_found"));
+
+                InsertAuditLog(connection, transaction, "GUNCELLE", "StokHareketleri", normalized.Id,
+                    $"{normalized.Tur} | Miktar: {normalized.Miktar} | Dept: {normalized.Departman} | KartId: {normalized.StokKartId}");
+            }
+
+            transaction.Commit();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("TopluHareketGuncelle error: " + ex);
+            throw;
+        }
+    }
 }

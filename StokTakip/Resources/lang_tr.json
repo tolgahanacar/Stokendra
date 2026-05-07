@@ -263,7 +263,7 @@
   "confirm_service_delete": "Bu servis kaydı silinsin mi?",
   "auto_backup_folder": "Otomatik Yedekleme Klasörü",
   "auto_backup_folder_select": "Otomatik Yedekleme Klasörü Seçin",
-  "password_policy_hint": "Şifre en az 8 karakter olmalı, büyük/küçük harf ve rakam içermelidir.",
+  "password_policy_hint": "Şifre en az 10 karakter olmalı, büyük/küçük harf, rakam ve özel karakter içermelidir.",
   "type_empty": "Boş",
   "developer": "Geliştirici:",
   "software_licensed": "Bu yazılım lisanslıdır. Tüm hakları saklıdır.",

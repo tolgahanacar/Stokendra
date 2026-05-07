@@ -52,6 +52,12 @@ public interface IMovementRepository
     /// <summary>Birden fazla stok hareketini toplu siler.</summary>
     void DeleteBulk(IEnumerable<int> ids);
 
+    /// <summary>
+    /// Birden fazla stok hareketini tek bir atomik transaction içinde toplu günceller.
+    /// Kısmi başarı yoktur: ya hepsi güncellenir ya da hiçbiri.
+    /// </summary>
+    void UpdateBulk(IEnumerable<StokHareketi> hareketler);
+
     /// <summary>Son 7 güne ait günlük giriş/çıkış özetlerini asenkron olarak getirir.</summary>
     Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync();
 

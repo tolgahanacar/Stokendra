@@ -1,4 +1,5 @@
 using System.Drawing.Printing;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -80,7 +81,7 @@ public sealed class StoklarPanel : UserControl
         YukleGrid();
     }
 
-    void YukleGrid() { _altKartlar = Program.DB!.AltKartlariGetir(); FilterGrid(); }
+    void YukleGrid() { _altKartlar = AppServices.Current.StockCards.GetChildCards(); FilterGrid(); }
 
     void FilterGrid()
     {
@@ -133,22 +134,22 @@ public sealed class StoklarPanel : UserControl
     {
         if (_altKartlar.Count == 0) { MessageBox.Show(L("report_no_data"), L("info")); return; }
         
-        string firma = Program.Settings.CompanyName;
+        string firma = AppServices.Current.Settings.CompanyName;
         var pd = new PrintDocument();
         pd.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169); // Portrait
         pd.DefaultPageSettings.Margins = new Margins(40, 40, 50, 50);
 
         // Optimized: Single query instead of N+1
-        var raporVerisi = await Program.DB!.StokRaporVerisiAsync();
+        var raporVerisi = await AppServices.Current.Reports.GetStockReportAsync();
 
         // Use filtered data if search is active
         var filter = txtAra.Text.Trim().ToLowerInvariant();
         if (!string.IsNullOrEmpty(filter))
-            raporVerisi = raporVerisi.Where(x => x.KodNo.ToLowerInvariant().Contains(filter) || x.Ad.ToLowerInvariant().Contains(filter)).ToList();
+            raporVerisi = raporVerisi.Where(x => x.Code.ToLowerInvariant().Contains(filter) || x.Name.ToLowerInvariant().Contains(filter)).ToList();
 
-        double grandGiris = raporVerisi.Sum(x => x.ToplamGiris);
-        double grandCikis = raporVerisi.Sum(x => x.ToplamCikis);
-        double grandMevcut = raporVerisi.Sum(x => x.Mevcut);
+        double grandGiris = raporVerisi.Sum(x => x.TotalEntry);
+        double grandCikis = raporVerisi.Sum(x => x.TotalExit);
+        double grandMevcut = raporVerisi.Sum(x => x.Current);
 
         int ps = 0;
         int pageNum = 0;
@@ -223,14 +224,14 @@ public sealed class StoklarPanel : UserControl
                 if (ps % 2 == 0) g.FillRectangle(brAlt, lm, y, pw, 20);
                 
                 float x = lm;
-                g.DrawString(item.KodNo, fRow, br, new RectangleF(x, y + 2, w[0], 20)); x += w[0];
+                g.DrawString(item.Code, fRow, br, new RectangleF(x, y + 2, w[0], 20)); x += w[0];
                 using var sfEllipsis = new StringFormat { Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap };
-                g.DrawString(item.Ad, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), sfEllipsis); x += w[1];
+                g.DrawString(item.Name, fRow, br, new RectangleF(x, y + 2, w[1]-5, 20), sfEllipsis); x += w[1];
                 
                 using var sfRight = new StringFormat{ Alignment = StringAlignment.Far };
-                g.DrawString(UIHelper.FormatMiktar(item.ToplamGiris), fRow, brGreen, new RectangleF(x, y + 2, w[2]-5, 20), sfRight); x += w[2];
-                g.DrawString(UIHelper.FormatMiktar(item.ToplamCikis), fRow, brRed, new RectangleF(x, y + 2, w[3]-5, 20), sfRight); x += w[3];
-                g.DrawString(UIHelper.FormatMiktar(item.Mevcut), fRow, br, new RectangleF(x, y + 2, w[4]-5, 20), sfRight);
+                g.DrawString(UIHelper.FormatMiktar(item.TotalEntry), fRow, brGreen, new RectangleF(x, y + 2, w[2]-5, 20), sfRight); x += w[2];
+                g.DrawString(UIHelper.FormatMiktar(item.TotalExit), fRow, brRed, new RectangleF(x, y + 2, w[3]-5, 20), sfRight); x += w[3];
+                g.DrawString(UIHelper.FormatMiktar(item.Current), fRow, br, new RectangleF(x, y + 2, w[4]-5, 20), sfRight);
                 
                 g.DrawLine(pen, lm, y + 20, lm + pw, y + 20); 
                 y += 20;

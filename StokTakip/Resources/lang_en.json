@@ -254,7 +254,7 @@
     "default_admin_password_warning": "Default Admin Password in use, please update.",
     "auto_backup_folder": "Auto Backup Folder",
     "auto_backup_folder_select": "Select Auto Backup Folder",
-    "password_policy_hint": "Password must be at least 10 characters, with uppercase, lowercase and numbers.",
+    "password_policy_hint": "Password must be at least 10 characters, with uppercase, lowercase, numbers and special characters.",
     "type_empty": "Empty",
     "report_al": "Generate Report",
     "arama_label": "Search:",

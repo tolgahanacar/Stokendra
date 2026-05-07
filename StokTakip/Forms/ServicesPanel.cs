@@ -1,4 +1,5 @@
 using System.Drawing.Printing;
+using StokTakip.Infrastructure;
 using StokTakip.Models;
 using static StokTakip.LocalizationManager;
 
@@ -106,8 +107,7 @@ public sealed class ServislerPanel : UserControl
     {
         if (Program.DB == null) return;
         string? aramaKelimesi = string.IsNullOrWhiteSpace(txtArama.Text) ? null : txtArama.Text.Trim();
-        
-        _kayitlar = Program.DB.ServisKayitlariniGetir(dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), aramaKelimesi);
+        _kayitlar = AppServices.Current.ServiceRecords.GetAll(dtpBas.Value.Date, dtpBit.Value.Date.AddDays(1), aramaKelimesi);
         
         dgv.Rows.Clear();
         foreach (var s in _kayitlar)
@@ -141,7 +141,7 @@ public sealed class ServislerPanel : UserControl
         {
             try
             {
-                Program.DB?.ServisKaydiEkle(frm.Kayit);
+                AppServices.Current.ServiceRecords.Add(frm.Kayit);
                 Filtrele();
             }
             catch (Exception ex)
@@ -165,7 +165,7 @@ public sealed class ServislerPanel : UserControl
         {
             try
             {
-                Program.DB?.ServisKaydiGuncelle(frm.Kayit);
+                AppServices.Current.ServiceRecords.Update(frm.Kayit);
                 Filtrele();
             }
             catch (Exception ex)
