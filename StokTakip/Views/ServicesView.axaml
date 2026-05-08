@@ -23,7 +23,8 @@
                         Command="{Binding SearchCommand}"
                         Margin="0,0,8,8"/>
                 <Button Content="↺ Temizle" Classes="Secondary"
-                        Command="{Binding ClearFiltersCommand}"/>
+                        Command="{Binding ClearFiltersCommand}"
+                        Margin="0,0,8,8"/>
             </WrapPanel>
         </Border>
 

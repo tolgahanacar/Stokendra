@@ -40,3 +40,6 @@ Installer/
 StokTakip.png
 StokTakip.ico
 
+# Logs
+*.log
+auth_debug.log
