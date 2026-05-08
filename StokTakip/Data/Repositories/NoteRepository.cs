@@ -36,6 +36,7 @@ public sealed class NoteRepository : INoteRepository
 
     public void Add(Not note)
     {
+        if (string.IsNullOrWhiteSpace(note.Baslik)) throw new InvalidOperationException("Başlık boş olamaz.");
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "INSERT INTO Notlar (Tarih, Baslik, Icerik) VALUES ($t, $b, $i)";
@@ -43,6 +44,14 @@ public sealed class NoteRepository : INoteRepository
         cmd.Parameters.AddWithValue("$b", note.Baslik);
         cmd.Parameters.AddWithValue("$i", note.Icerik ?? "");
         cmd.ExecuteNonQuery();
+        note.Id = GetLastId(conn);
+    }
+
+    private int GetLastId(SqliteConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT last_insert_rowid()";
+        return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
     public void Update(Not note)

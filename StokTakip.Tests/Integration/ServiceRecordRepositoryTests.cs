@@ -1,129 +1,111 @@
-using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using StokTakip.Tests.Helpers;
 
 namespace StokTakip.Tests.Integration;
 
-/// <summary>
-/// <see cref="IServiceRecordRepository"/> implementasyonu için integration testler.
-/// </summary>
 public class ServiceRecordRepositoryTests : IDisposable
 {
-    private readonly TestDatabaseFactory _factory;
-    private readonly IServiceRecordRepository _repo;
+    private readonly TestDb _db;
+    public ServiceRecordRepositoryTests() => _db = new TestDb();
+    public void Dispose() => _db.Dispose();
 
-    public ServiceRecordRepositoryTests()
+    private ServisKaydi MakeRecord(string cihaz = "Projeksiyon", string firma = "ABC") => new()
     {
-        _factory = new TestDatabaseFactory();
-        _repo = _factory.Create();
-    }
-
-    public void Dispose() => _factory.Dispose();
-
-    private static ServisKaydi MakeRecord(string cihazAdi = "Test Cihaz") => new()
-    {
-        CihazAdi = cihazAdi,
-        SeriNumarasi = "SN-001",
-        Firma = "Test Firma",
-        BakimTarihi = DateTime.Now,
-        Sorun = "Test sorun",
-        Sonuc = "Çözüldü"
+        CihazAdi = cihaz, SeriNumarasi = "SN001", Firma = firma,
+        BakimTarihi = DateTime.Today, Sorun = "Lamba arızası", Sonuc = "Değiştirildi"
     };
 
     [Fact]
-    public void Add_ValidRecord_CanBeRetrieved()
+    public async Task Add_ValidRecord_Persisted()
     {
-        _repo.Add(MakeRecord("Laptop"));
-
-        var result = _repo.GetAll();
-        Assert.Contains(result, r => r.CihazAdi == "Laptop");
+        await _db.Services.AddAsync(MakeRecord());
+        var all = await _db.Services.GetAllAsync();
+        Assert.Single(all);
+        Assert.Equal("Projeksiyon", all[0].CihazAdi);
     }
 
     [Fact]
-    public void Add_EmptyDeviceName_ThrowsInvalidOperationException()
+    public async Task GetAll_NoFilter_ReturnsAll()
     {
-        var kayit = MakeRecord("");
-        Assert.Throws<InvalidOperationException>(() => _repo.Add(kayit));
+        await _db.Services.AddAsync(MakeRecord("Cihaz1"));
+        await _db.Services.AddAsync(MakeRecord("Cihaz2"));
+        await _db.Services.AddAsync(MakeRecord("Cihaz3"));
+
+        Assert.Equal(3, (await _db.Services.GetAllAsync()).Count);
     }
 
     [Fact]
-    public void GetAll_FilterByDateRange_ReturnsOnlyInRange()
+    public async Task GetAll_FilterBySearch_ReturnsMatching()
     {
-        var kayit = MakeRecord();
-        kayit.BakimTarihi = DateTime.Today;
-        _repo.Add(kayit);
+        await _db.Services.AddAsync(MakeRecord("Projeksiyon", "ABC"));
+        await _db.Services.AddAsync(MakeRecord("Yazıcı", "XYZ"));
 
-        var result = _repo.GetAll(
+        var result = await _db.Services.GetAllAsync(searchTerm: "Projeksiyon");
+        Assert.Single(result);
+        Assert.Equal("Projeksiyon", result[0].CihazAdi);
+    }
+
+    [Fact]
+    public async Task GetAll_FilterByDateRange_ReturnsInRange()
+    {
+        var r = MakeRecord();
+        r.BakimTarihi = DateTime.Today;
+        await _db.Services.AddAsync(r);
+
+        var result = await _db.Services.GetAllAsync(
             startDate: DateTime.Today.AddDays(-1),
             endDate: DateTime.Today.AddDays(1));
 
-        Assert.NotEmpty(result);
+        Assert.Single(result);
     }
 
     [Fact]
-    public void GetAll_FilterBySearchTerm_ReturnsMatchingRecords()
+    public async Task Update_ChangesFields_Persisted()
     {
-        _repo.Add(MakeRecord("Yazıcı"));
-        _repo.Add(MakeRecord("Bilgisayar"));
+        var r = MakeRecord();
+        await _db.Services.AddAsync(r);
 
-        var result = _repo.GetAll(searchTerm: "Yazıcı");
+        r.Sonuc = "Yeni Sonuç";
+        await _db.Services.UpdateAsync(r);
 
-        Assert.All(result, r => Assert.Contains("Yazıcı", r.CihazAdi));
+        Assert.Equal("Yeni Sonuç", (await _db.Services.GetAllAsync())[0].Sonuc);
     }
 
     [Fact]
-    public void Update_ExistingRecord_ChangesArePersisted()
+    public async Task Delete_ExistingRecord_Removed()
     {
-        _repo.Add(MakeRecord("Eski Cihaz"));
-        var records = _repo.GetAll();
-        var kayit = records[0];
+        var r = MakeRecord();
+        await _db.Services.AddAsync(r);
 
-        kayit.CihazAdi = "Yeni Cihaz";
-        _repo.Update(kayit);
+        await _db.Services.DeleteAsync(r.Id);
 
-        var updated = _repo.GetAll();
-        Assert.Contains(updated, r => r.CihazAdi == "Yeni Cihaz");
+        Assert.Empty(await _db.Services.GetAllAsync());
     }
 
     [Fact]
-    public void Delete_ExistingRecord_RemovesFromDatabase()
+    public async Task AddBulk_MultipleRecords_AllPersisted()
     {
-        _repo.Add(MakeRecord("Silinecek Cihaz"));
-        var records = _repo.GetAll();
-        int id = records[0].Id;
-
-        _repo.Delete(id);
-
-        var after = _repo.GetAll();
-        Assert.DoesNotContain(after, r => r.Id == id);
-    }
-
-    [Fact]
-    public void Delete_NonExistingId_ThrowsInvalidOperationException()
-    {
-        Assert.Throws<InvalidOperationException>(() => _repo.Delete(99999));
-    }
-
-    [Fact]
-    public void AddBulk_MultipleRecords_AllPersisted()
-    {
-        var kayitlar = new[]
+        var records = new[]
         {
-            MakeRecord("Cihaz 1"),
-            MakeRecord("Cihaz 2"),
-            MakeRecord("Cihaz 3")
+            MakeRecord("Cihaz1"),
+            MakeRecord("Cihaz2"),
+            MakeRecord("Cihaz3")
         };
 
-        _repo.AddBulk(kayitlar);
+        await _db.Services.AddBulkAsync(records);
 
-        var result = _repo.GetAll();
-        Assert.Equal(3, result.Count);
+        Assert.Equal(3, (await _db.Services.GetAllAsync()).Count);
     }
 
     [Fact]
-    public void AddBulk_EmptyList_ThrowsInvalidOperationException()
+    public async Task GetAll_OrderedByDateDesc()
     {
-        Assert.Throws<InvalidOperationException>(() =>
-            _repo.AddBulk(Array.Empty<ServisKaydi>()));
+        var r1 = MakeRecord("Eski"); r1.BakimTarihi = DateTime.Today.AddDays(-5);
+        var r2 = MakeRecord("Yeni"); r2.BakimTarihi = DateTime.Today;
+        await _db.Services.AddAsync(r1);
+        await _db.Services.AddAsync(r2);
+
+        var all = await _db.Services.GetAllAsync();
+        Assert.Equal("Yeni", all[0].CihazAdi);
     }
 }

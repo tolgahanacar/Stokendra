@@ -2,16 +2,22 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
+using StokTakip.Infrastructure;
+using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace StokTakip.ViewModels;
 
 public partial class ServicesViewModel : ViewModelBase
 {
     private readonly IServiceRecordRepository _services;
+    private readonly IDialogService _dialogService;
+    private readonly ILogger _logger;
 
     [ObservableProperty] private string      _searchText  = "";
-    [ObservableProperty] private DateTime    _startDate   = new DateTime(2010, 1, 1);
+    [ObservableProperty] private DateTime    _startDate   = new DateTime(2000, 1, 1);
     [ObservableProperty] private DateTime    _endDate     = DateTime.Today;
     [ObservableProperty] private bool        _isLoading;
     [ObservableProperty] private string      _statusText  = "";
@@ -20,15 +26,13 @@ public partial class ServicesViewModel : ViewModelBase
     public bool IsRecordSelected => SelectedRecord != null;
     partial void OnSelectedRecordChanged(ServisKaydi? value) => OnPropertyChanged(nameof(IsRecordSelected));
 
-    public Func<AddServiceViewModel, Task<bool>>? ShowDialogAction { get; set; }
-    public Func<string, string, Task<string?>>? SaveFileAction { get; set; }
-    public Func<string, Task<string?>>? OpenFileAction { get; set; }
-
     public ObservableCollection<ServisKaydi> Records { get; } = new();
 
-    public ServicesViewModel(IServiceRecordRepository services)
+    public ServicesViewModel(IServiceRecordRepository services, IDialogService dialogService, ILogger logger)
     {
         _services = services;
+        _dialogService = dialogService;
+        _logger = logger;
         _ = LoadAsync();
     }
 
@@ -38,14 +42,17 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var data = await Task.Run(() =>
-                _services.GetAll(StartDate, EndDate.AddDays(1), term));
+            var data = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
 
             Records.Clear();
             foreach (var r in data) Records.Add(r);
-            StatusText = $"{data.Count} kayıt";
+            StatusText = $"{data.Count} kayıt listeleniyor";
         }
-        catch (Exception ex) { Console.WriteLine($"Services load error: {ex.Message}"); }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Services load error", ex);
+            StatusText = "Yükleme hatası.";
+        }
         finally { IsLoading = false; }
     }
 
@@ -56,7 +63,7 @@ public partial class ServicesViewModel : ViewModelBase
     public void ClearFilters()
     {
         SearchText = "";
-        StartDate  = new DateTime(2020, 1, 1);
+        StartDate  = new DateTime(2000, 1, 1);
         EndDate    = DateTime.Today;
         _ = LoadAsync();
     }
@@ -65,22 +72,28 @@ public partial class ServicesViewModel : ViewModelBase
     public async Task DeleteAsync()
     {
         if (SelectedRecord == null) return;
+        
+        bool confirm = await _dialogService.ShowConfirmAsync("Silme Onayı", 
+            $"{SelectedRecord.CihazAdi} kaydını silmek istediğinize emin misiniz?");
+            
+        if (!confirm) return;
+
         try
         {
-            await Task.Run(() => _services.Delete(SelectedRecord.Id));
+            await _services.DeleteAsync(SelectedRecord.Id);
             await LoadAsync();
+            StatusText = "Kayıt silindi.";
         }
-        catch (Exception ex) { Console.WriteLine($"Delete service error: {ex.Message}"); }
+        catch (Exception ex) { await _dialogService.ShowMessageAsync("Hata", $"Silme hatası: {ex.Message}"); }
     }
 
     [RelayCommand]
     public async Task AddAsync()
     {
-        if (ShowDialogAction == null) return;
         var vm = new AddServiceViewModel();
-        if (await ShowDialogAction(vm) && vm.Result != null)
+        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await Task.Run(() => _services.Add(vm.Result));
+            await _services.AddAsync(vm.Result);
             await LoadAsync();
             StatusText = "Servis kaydı eklendi.";
         }
@@ -89,11 +102,11 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditAsync()
     {
-        if (SelectedRecord == null || ShowDialogAction == null) return;
+        if (SelectedRecord == null) return;
         var vm = new AddServiceViewModel(SelectedRecord);
-        if (await ShowDialogAction(vm) && vm.Result != null)
+        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await Task.Run(() => _services.Update(vm.Result));
+            await _services.UpdateAsync(vm.Result);
             await LoadAsync();
             StatusText = "Servis kaydı güncellendi.";
         }
@@ -102,9 +115,8 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        if (SaveFileAction == null) return;
         string fileName = $"Servis_Kayitlari_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-        string? path = await SaveFileAction(fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.SaveFileAsync("Excel Kaydet", fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try
@@ -117,21 +129,25 @@ public partial class ServicesViewModel : ViewModelBase
                 });
             });
             StatusText = "Excel başarıyla kaydedildi.";
+            await _dialogService.ShowMessageAsync("Başarılı", "Excel dosyası başarıyla kaydedildi.");
         }
-        catch (Exception ex) { StatusText = $"Hata: {ex.Message}"; }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Excel export error", ex);
+            StatusText = $"Hata: {ex.Message}"; 
+        }
     }
 
     [RelayCommand]
     public async Task ImportAsync()
     {
-        if (OpenFileAction == null) return;
-        string? path = await OpenFileAction("Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.OpenFileAsync("Excel Seç", "Excel Dosyası (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
             StatusText = "Excel okunuyor...";
-            await Task.Run(() => {
+            await Task.Run(async () => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
                 var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
@@ -147,7 +163,7 @@ public partial class ServicesViewModel : ViewModelBase
                         Sonuc = row.Cell(6).GetValue<string>()
                     });
                 }
-                if (toImport.Count > 0) _services.AddBulk(toImport);
+                if (toImport.Count > 0) await _services.AddBulkAsync(toImport);
             });
             await LoadAsync();
             StatusText = "İçeri aktarım tamamlandı.";

@@ -8,15 +8,15 @@ public sealed partial class Database
 {
     private static void EnsureSchema(SqliteConnection connection, SqliteTransaction transaction)
     {
-        using var command = CreateCommand(connection, transaction, @"
-            CREATE TABLE IF NOT EXISTS StokKartlari (
+        string[] tables = {
+            @"CREATE TABLE IF NOT EXISTS StokKartlari (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Ad TEXT NOT NULL CHECK (trim(Ad) <> ''),
-                KodNo TEXT NOT NULL COLLATE NOCASE CHECK (trim(KodNo) <> ''),
+                Ad TEXT NOT NULL,
+                KodNo TEXT NOT NULL COLLATE NOCASE,
                 Aciklama TEXT DEFAULT '',
-                MinStok INTEGER DEFAULT 0 CHECK (MinStok >= 0),
+                MinStok INTEGER DEFAULT 0,
                 Kategori TEXT DEFAULT '',
-                KartTipi TEXT NOT NULL DEFAULT 'Alt' CHECK (KartTipi IN ('Alt','Ust')),
+                KartTipi TEXT NOT NULL DEFAULT 'Alt',
                 UstKartId INTEGER DEFAULT NULL,
                 OlusturmaTarihi TEXT DEFAULT '',
                 GuncellenmeTarihi TEXT DEFAULT '',
@@ -24,71 +24,41 @@ public sealed partial class Database
                 Konum TEXT DEFAULT '',
                 Tedarikci TEXT DEFAULT '',
                 Barkod TEXT DEFAULT '',
-                BirimFiyat REAL DEFAULT 0 CHECK (BirimFiyat >= 0)
-            );
-
-            CREATE TABLE IF NOT EXISTS StokHareketleri (
+                BirimFiyat REAL DEFAULT 0
+            )",
+            @"CREATE TABLE IF NOT EXISTS StokHareketleri (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 StokKartId INTEGER NOT NULL REFERENCES StokKartlari(Id) ON DELETE CASCADE,
-                Tur TEXT NOT NULL CHECK (Tur IN ('Giris','Cikis','Bos')),
-                Miktar REAL NOT NULL CHECK (Miktar >= 0),
+                Tur TEXT NOT NULL,
+                Miktar REAL NOT NULL,
                 KimeVerildi TEXT DEFAULT '',
                 Departman TEXT DEFAULT '',
                 Tarih TEXT NOT NULL,
                 Aciklama TEXT DEFAULT ''
-            );
-
-            CREATE TABLE IF NOT EXISTS Notlar (
+            )",
+            "CREATE TABLE IF NOT EXISTS Notlar (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tarih TEXT NOT NULL, Baslik TEXT NOT NULL, Icerik TEXT DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS Birimler (Id INTEGER PRIMARY KEY AUTOINCREMENT, Ad TEXT NOT NULL UNIQUE)",
+            "CREATE TABLE IF NOT EXISTS Departmanlar (Id INTEGER PRIMARY KEY AUTOINCREMENT, Ad TEXT NOT NULL UNIQUE)",
+            "CREATE TABLE IF NOT EXISTS AuditLog (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tarih TEXT NOT NULL, IslemTipi TEXT NOT NULL, TabloAdi TEXT NOT NULL, KayitId INTEGER DEFAULT 0, Detay TEXT DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS AppConfig (Key TEXT PRIMARY KEY, Value TEXT DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS Kullanicilar (Id INTEGER PRIMARY KEY AUTOINCREMENT, KullaniciAdi TEXT NOT NULL UNIQUE, SifreHash TEXT NOT NULL, Tuz TEXT NOT NULL, Rol TEXT DEFAULT 'admin')",
+            @"CREATE TABLE IF NOT EXISTS ServisKayitlari (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Tarih TEXT NOT NULL,
-                Baslik TEXT NOT NULL CHECK (trim(Baslik) <> ''),
-                Icerik TEXT DEFAULT ''
-            );
-
-            CREATE TABLE IF NOT EXISTS Birimler (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Ad TEXT NOT NULL UNIQUE CHECK (trim(Ad) <> '')
-            );
-
-            CREATE TABLE IF NOT EXISTS Departmanlar (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Ad TEXT NOT NULL UNIQUE CHECK (trim(Ad) <> '')
-            );
-
-            CREATE TABLE IF NOT EXISTS AuditLog (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Tarih TEXT NOT NULL,
-                IslemTipi TEXT NOT NULL,
-                TabloAdi TEXT NOT NULL,
-                KayitId INTEGER DEFAULT 0,
-                Detay TEXT DEFAULT ''
-            );
-
-            CREATE TABLE IF NOT EXISTS AppConfig (
-                Key TEXT PRIMARY KEY,
-                Value TEXT DEFAULT ''
-            );
-
-            CREATE TABLE IF NOT EXISTS Kullanicilar (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                KullaniciAdi TEXT NOT NULL UNIQUE CHECK (trim(KullaniciAdi) <> ''),
-                SifreHash TEXT NOT NULL,
-                Tuz TEXT NOT NULL,
-                Rol TEXT DEFAULT 'admin'
-            );
-
-            CREATE TABLE IF NOT EXISTS ServisKayitlari (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                CihazAdi TEXT NOT NULL CHECK (trim(CihazAdi) <> ''),
+                CihazAdi TEXT NOT NULL,
                 SeriNumarasi TEXT DEFAULT '',
                 Firma TEXT DEFAULT '',
                 BakimTarihi TEXT NOT NULL,
                 Aciklama TEXT DEFAULT '',
                 Sorun TEXT DEFAULT '',
                 Sonuc TEXT DEFAULT ''
-            );
-        ");
-        command.ExecuteNonQuery();
+            )"
+        };
+
+        foreach (var sql in tables)
+        {
+            using var cmd = CreateCommand(connection, transaction, sql);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     private static int GetSchemaVersion(SqliteConnection connection, SqliteTransaction? transaction)

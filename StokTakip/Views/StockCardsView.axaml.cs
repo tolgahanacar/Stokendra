@@ -1,6 +1,6 @@
 using Avalonia.Controls;
-using System;
 using StokTakip.ViewModels;
+using StokTakip.Models;
 
 namespace StokTakip.Views;
 
@@ -8,31 +8,16 @@ public partial class StockCardsView : UserControl
 {
     public StockCardsView() => InitializeComponent();
 
-    protected override void OnDataContextChanged(EventArgs e)
+    private void CardsGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        base.OnDataContextChanged(e);
         if (DataContext is StockCardsViewModel vm)
         {
-            vm.ShowDialogAction = async (dialogVm) =>
-            {
-                var dialog = new AddStockCardWindow { DataContext = dialogVm };
-                var mainWindow = (VisualRoot as Window);
-                return await dialog.ShowDialog<bool>(mainWindow!);
-            };
-
-            vm.SaveFileAction = async (fileName, filter) =>
-            {
-                var topLevel = TopLevel.GetTopLevel(this);
-                if (topLevel == null) return null;
-
-                var file = await topLevel.StorageProvider.SaveFilePickerAsync(new Avalonia.Platform.Storage.FilePickerSaveOptions
-                {
-                    Title = "Excel Kaydet",
-                    SuggestedFileName = fileName
-                });
-
-                return file?.Path.LocalPath;
-            };
+            foreach (var item in e.RemovedItems)
+                if (item is StokKarti k) vm.SelectedCards.Remove(k);
+            
+            foreach (var item in e.AddedItems)
+                if (item is StokKarti k && !vm.SelectedCards.Contains(k))
+                    vm.SelectedCards.Add(k);
         }
     }
 }

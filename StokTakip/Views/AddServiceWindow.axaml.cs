@@ -4,9 +4,9 @@ using System;
 
 namespace StokTakip.Views;
 
-public partial class AddServiceRecordWindow : Window
+public partial class AddServiceWindow : Window
 {
-    public AddServiceRecordWindow()
+    public AddServiceWindow()
     {
         InitializeComponent();
     }

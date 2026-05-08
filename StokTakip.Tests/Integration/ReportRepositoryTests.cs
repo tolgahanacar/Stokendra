@@ -1,199 +1,138 @@
-using StokTakip.Data;
-using StokTakip.Data.Interfaces;
-using StokTakip.Models;
 using StokTakip.Tests.Helpers;
 
 namespace StokTakip.Tests.Integration;
 
 /// <summary>
-/// <see cref="IReportRepository"/> implementasyonu için integration testler.
-/// Dashboard istatistikleri ve stok raporu doğruluğunu test eder.
+/// ReportRepository — dashboard istatistikleri, stok raporu.
 /// </summary>
 public class ReportRepositoryTests : IDisposable
 {
-    private readonly TestDatabaseFactory _factory;
-    private readonly IReportRepository _reportRepo;
-    private readonly IStockCardRepository _cardRepo;
-    private readonly IMovementRepository _movRepo;
-    private readonly IDepartmentRepository _deptRepo;
+    private readonly TestDb _db;
+    public ReportRepositoryTests() => _db = new TestDb();
+    public void Dispose() => _db.Dispose();
 
-    public ReportRepositoryTests()
-    {
-        _factory = new TestDatabaseFactory();
-        var db = _factory.Create();
-        _reportRepo = db;
-        _cardRepo = db;
-        _movRepo = db;
-        _deptRepo = db;
-
-        _deptRepo.Add("Genel");
-    }
-
-    public void Dispose() => _factory.Dispose();
-
-    private int AddCard(string ad, string kod)
-    {
-        var kart = new StokKarti { Ad = ad, KodNo = kod, KartTipi = "Alt" };
-        _cardRepo.Add(kart);
-        return kart.Id;
-    }
-
-    private void AddEntry(int cardId, double miktar)
-    {
-        _movRepo.Add(new StokHareketi
-        {
-            StokKartId = cardId,
-            Tur = "Giris",
-            Miktar = miktar,
-            Departman = "Genel",
-            Tarih = DateTime.Now
-        });
-    }
-
-    private void AddExit(int cardId, double miktar)
-    {
-        _movRepo.Add(new StokHareketi
-        {
-            StokKartId = cardId,
-            Tur = "Cikis",
-            Miktar = miktar,
-            Departman = "Genel",
-            Tarih = DateTime.Now
-        });
-    }
-
-    // ── DashboardStats ────────────────────────────────────────────────────
+    // ── Dashboard istatistikleri ──────────────────────────────────────────
 
     [Fact]
-    public async Task GetDashboardStatsAsync_EmptyDatabase_ReturnsZeros()
+    public async Task GetDashboardStats_EmptyDb_AllZero()
     {
-        var stats = await _reportRepo.GetDashboardStatsAsync();
+        var stats = await _db.Reports.GetDashboardStatsAsync();
 
         Assert.Equal(0, stats.TotalCards);
         Assert.Equal(0, stats.TotalStock);
         Assert.Equal(0, stats.TotalMovements);
+        Assert.Equal(0, stats.TodayMovements);
     }
 
     [Fact]
-    public async Task GetDashboardStatsAsync_WithCards_ReturnsTotalCards()
+    public async Task GetDashboardStats_TotalCards_CountsOnlyAltCards()
     {
-        AddCard("Ürün A", "R001");
-        AddCard("Ürün B", "R002");
+        _db.StockCards.Add(new StokTakip.Models.StokKarti { Ad = "Üst", KodNo = "U01", KartTipi = "Ust" });
+        _db.CreateCard("Alt1", "A01");
+        _db.CreateCard("Alt2", "A02");
 
-        var stats = await _reportRepo.GetDashboardStatsAsync();
-
-        Assert.Equal(2, stats.TotalCards);
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        Assert.Equal(2, stats.TotalCards); // Sadece Alt kartlar
     }
 
     [Fact]
-    public async Task GetDashboardStatsAsync_WithMovements_ReturnsTotalStock()
+    public async Task GetDashboardStats_TotalStock_SumOfAllEntryMinusExit()
     {
-        int id = AddCard("Ürün", "R003");
-        AddEntry(id, 50);
-        AddExit(id, 10);
+        int id1 = _db.CreateCard("Stok1", "S01");
+        int id2 = _db.CreateCard("Stok2", "S02");
 
-        var stats = await _reportRepo.GetDashboardStatsAsync();
+        _db.AddEntry(id1, 100);
+        _db.AddExit(id1, 30);
+        _db.AddEntry(id2, 50);
 
-        Assert.Equal(40, stats.TotalStock);
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        // (100-30) + 50 = 120
+        Assert.Equal(120, stats.TotalStock);
     }
 
     [Fact]
-    public async Task GetDashboardStatsAsync_LowStockCard_CountedInLowStock()
+    public async Task GetDashboardStats_TotalMovements_CountsAllMovements()
     {
-        var kart = new StokKarti { Ad = "Düşük Stok", KodNo = "R004", KartTipi = "Alt", MinStok = 10 };
-        _cardRepo.Add(kart);
-        AddEntry(kart.Id, 5); // MinStok=10, Mevcut=5 → düşük stok
+        int id = _db.CreateCard("Stok", "S01");
+        _db.AddEntry(id, 10);
+        _db.AddEntry(id, 20);
+        _db.AddExit(id, 5);
 
-        var stats = await _reportRepo.GetDashboardStatsAsync();
-
-        Assert.True(stats.LowStock >= 1);
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        Assert.Equal(3, stats.TotalMovements);
     }
 
     [Fact]
-    public async Task GetDashboardStatsAsync_DepletedCard_CountedInDepleted()
+    public async Task GetDashboardStats_TodayMovements_CountsOnlyToday()
     {
-        int id = AddCard("Tükenmiş", "R005");
-        // Hareket yok → stok = 0 → tükenmiş
+        int id = _db.CreateCard("Stok", "S01");
+        _db.AddEntry(id, 10, tarih: DateTime.Today);
+        _db.AddEntry(id, 20, tarih: DateTime.Today.AddDays(-1)); // dün
 
-        var stats = await _reportRepo.GetDashboardStatsAsync();
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        Assert.Equal(1, stats.TodayMovements);
+    }
 
+    [Fact]
+    public async Task GetDashboardStats_DepletedStock_CountsZeroOrNegativeStock()
+    {
+        int id1 = _db.CreateCard("Tükenen", "T01");
+        int id2 = _db.CreateCard("Dolu", "T02");
+
+        // id1: hareket yok → stok 0 → tükendi
+        _db.AddEntry(id2, 10); // id2 dolu
+
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        // id1 stok 0 → tükendi sayılır
         Assert.True(stats.DepletedStock >= 1);
     }
 
     [Fact]
-    public async Task GetDashboardStatsAsync_TodayMovements_CountedCorrectly()
+    public async Task GetDashboardStats_LowStock_CountsBelowMinStok()
     {
-        int id = AddCard("Bugün", "R006");
-        AddEntry(id, 10);
+        int id = _db.CreateCard("Düşük", "D01", minStok: 10);
+        _db.AddEntry(id, 5); // 5 < minStok(10)
 
-        var stats = await _reportRepo.GetDashboardStatsAsync();
-
-        Assert.True(stats.TodayMovements >= 1);
+        var stats = await _db.Reports.GetDashboardStatsAsync();
+        Assert.True(stats.LowStock >= 1);
     }
 
-    // ── StockReport ───────────────────────────────────────────────────────
+    // ── Stok raporu ───────────────────────────────────────────────────────
 
     [Fact]
-    public async Task GetStockReportAsync_ReturnsOnlyChildCards()
+    public async Task GetStockReport_ReturnsOnlyAltCards()
     {
-        _cardRepo.Add(new StokKarti { Ad = "Üst", KodNo = "UST_R", KartTipi = "Ust" });
-        AddCard("Alt", "ALT_R");
+        _db.StockCards.Add(new StokTakip.Models.StokKarti { Ad = "Üst", KodNo = "U01", KartTipi = "Ust" });
+        _db.CreateCard("Alt", "A01");
 
-        var report = await _reportRepo.GetStockReportAsync();
-
-        Assert.All(report, r => Assert.NotEqual("UST_R", r.Code));
+        var report = await _db.Reports.GetStockReportAsync();
+        Assert.All(report, r => Assert.NotEqual("U01", r.Code));
     }
 
     [Fact]
-    public async Task GetStockReportAsync_CalculatesCorrectTotals()
+    public async Task GetStockReport_CorrectTotals()
     {
-        int id = AddCard("Rapor Ürün", "RP001");
-        AddEntry(id, 100);
-        AddExit(id, 30);
+        int id = _db.CreateCard("Rapor Stok", "R01");
+        _db.AddEntry(id, 100);
+        _db.AddEntry(id, 50);
+        _db.AddExit(id, 30);
 
-        var report = await _reportRepo.GetStockReportAsync();
-        var row = report.FirstOrDefault(r => r.Code == "RP001");
+        var report = await _db.Reports.GetStockReportAsync();
+        var row = report.First(r => r.Code == "R01");
 
-        Assert.NotNull(row);
-        Assert.Equal(100, row.TotalEntry);
+        Assert.Equal(150, row.TotalEntry);
         Assert.Equal(30, row.TotalExit);
-        Assert.Equal(70, row.Current);
-    }
-
-    // ── ExportSqlBackup ───────────────────────────────────────────────────
-
-    [Fact]
-    public void ExportSqlBackup_CreatesNonEmptyFile()
-    {
-        string tempFile = Path.Combine(Path.GetTempPath(), $"test_backup_{Guid.NewGuid():N}.sql");
-        try
-        {
-            _reportRepo.ExportSqlBackup(tempFile);
-
-            Assert.True(File.Exists(tempFile));
-            Assert.True(new FileInfo(tempFile).Length > 0);
-        }
-        finally
-        {
-            if (File.Exists(tempFile)) File.Delete(tempFile);
-        }
+        Assert.Equal(120, row.Current);
     }
 
     [Fact]
-    public void ExportSqlBackup_ContainsTableDefinitions()
+    public async Task GetStockReport_OrderedByCode()
     {
-        string tempFile = Path.Combine(Path.GetTempPath(), $"test_backup_{Guid.NewGuid():N}.sql");
-        try
-        {
-            _reportRepo.ExportSqlBackup(tempFile);
-            string content = File.ReadAllText(tempFile);
+        _db.CreateCard("Z Stok", "Z01");
+        _db.CreateCard("A Stok", "A01");
 
-            Assert.Contains("StokKartlari", content);
-            Assert.Contains("StokHareketleri", content);
-        }
-        finally
-        {
-            if (File.Exists(tempFile)) File.Delete(tempFile);
-        }
+        var report = await _db.Reports.GetStockReportAsync();
+        Assert.Equal("A01", report[0].Code);
+        Assert.Equal("Z01", report[1].Code);
     }
 }

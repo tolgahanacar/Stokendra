@@ -13,12 +13,14 @@ namespace StokTakip;
 class Program
 {
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args) 
+    {
+        SetupDI();
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     public static AppBuilder BuildAvaloniaApp()
     {
-        SetupDI();
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
@@ -62,7 +64,14 @@ class Program
         services.AddSingleton<NotesViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<StocksViewModel>();
+        services.AddSingleton<DepartmentsViewModel>();
+        services.AddSingleton<ReportsViewModel>();
+        services.AddSingleton<BulkMovementViewModel>();
         services.AddSingleton<MainViewModel>();
+
+        // ── Infrastructure ────────────────────────────────────────────────
+        services.AddSingleton<IDialogService, DialogService>();
+        services.AddSingleton<ILogger, Logger>();
 
         var container = services.BuildServiceProvider();
         ServiceContainer.Initialize(container);

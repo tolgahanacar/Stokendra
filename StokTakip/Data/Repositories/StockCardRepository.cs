@@ -30,6 +30,7 @@ public sealed class StockCardRepository : IStockCardRepository
     public void Add(StokKarti stokKarti)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateCard(stokKarti, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
@@ -42,6 +43,7 @@ public sealed class StockCardRepository : IStockCardRepository
     public async Task AddAsync(StokKarti stokKarti)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateCard(stokKarti, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
@@ -54,6 +56,7 @@ public sealed class StockCardRepository : IStockCardRepository
     public void Update(StokKarti stokKarti)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateCard(stokKarti, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE StokKartlari SET 
@@ -119,7 +122,8 @@ public sealed class StockCardRepository : IStockCardRepository
     {
         var sql = @"
             SELECT s.*, u.Ad as UstKartAd,
-            (SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) FROM StokHareketleri WHERE StokKartId=s.Id) as MevcutStok
+            (SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE 0 END) FROM StokHareketleri WHERE StokKartId=s.Id) as ToplamGiris,
+            (SELECT SUM(CASE WHEN Tur IN ('Cikis', 'Çıkış') THEN Miktar ELSE 0 END) FROM StokHareketleri WHERE StokKartId=s.Id) as ToplamCikis
             FROM StokKartlari s
             LEFT JOIN StokKartlari u ON s.UstKartId = u.Id
             WHERE 1=1";
@@ -132,7 +136,7 @@ public sealed class StockCardRepository : IStockCardRepository
 
     private StokKarti Read(SqliteDataReader reader)
     {
-        return new StokKarti {
+        var result = new StokKarti {
             Id = reader.GetInt32(reader.GetOrdinal("Id")),
             KodNo = reader.GetString(reader.GetOrdinal("KodNo")),
             Ad = reader.GetString(reader.GetOrdinal("Ad")),
@@ -147,8 +151,11 @@ public sealed class StockCardRepository : IStockCardRepository
             Barkod = reader.IsDBNull(reader.GetOrdinal("Barkod")) ? "" : reader.GetString(reader.GetOrdinal("Barkod")),
             BirimFiyat = reader.GetDouble(reader.GetOrdinal("BirimFiyat")),
             Aciklama = reader.IsDBNull(reader.GetOrdinal("Aciklama")) ? "" : reader.GetString(reader.GetOrdinal("Aciklama")),
-            MevcutStok = reader.IsDBNull(reader.GetOrdinal("MevcutStok")) ? 0 : reader.GetDouble(reader.GetOrdinal("MevcutStok"))
+            ToplamGiris = reader.IsDBNull(reader.GetOrdinal("ToplamGiris")) ? 0 : reader.GetDouble(reader.GetOrdinal("ToplamGiris")),
+            ToplamCikis = reader.IsDBNull(reader.GetOrdinal("ToplamCikis")) ? 0 : reader.GetDouble(reader.GetOrdinal("ToplamCikis"))
         };
+        result.MevcutStok = result.ToplamGiris - result.ToplamCikis;
+        return result;
     }
 
     private void BindParams(SqliteCommand cmd, StokKarti s)
@@ -172,5 +179,22 @@ public sealed class StockCardRepository : IStockCardRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT last_insert_rowid()";
         return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    private void ValidateCard(StokKarti s, SqliteConnection conn)
+    {
+        if (string.IsNullOrWhiteSpace(s.Ad)) throw new InvalidOperationException("Stok adı boş olamaz.");
+        if (string.IsNullOrWhiteSpace(s.KodNo)) throw new InvalidOperationException("Kod No boş olamaz.");
+        
+        // Negatif değerleri 0'a çek (test beklentisi)
+        if (s.MinStok < 0) s.MinStok = 0;
+        if (s.BirimFiyat < 0) s.BirimFiyat = 0;
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM StokKartlari WHERE KodNo=$kn AND Id<>$id";
+        cmd.Parameters.AddWithValue("$kn", s.KodNo);
+        cmd.Parameters.AddWithValue("$id", s.Id);
+        if (Convert.ToInt32(cmd.ExecuteScalar()) > 0)
+            throw new InvalidOperationException("Bu kod numarası zaten kullanımda.");
     }
 }

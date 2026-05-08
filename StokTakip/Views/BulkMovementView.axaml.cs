@@ -4,9 +4,9 @@ using System;
 
 namespace StokTakip.Views;
 
-public partial class AddMovementWindow : Window
+public partial class BulkMovementView : Window
 {
-    public AddMovementWindow()
+    public BulkMovementView()
     {
         InitializeComponent();
     }
@@ -14,7 +14,7 @@ public partial class AddMovementWindow : Window
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        if (DataContext is AddMovementViewModel vm)
+        if (DataContext is BulkMovementViewModel vm)
         {
             vm.CloseAction = (result) => Close(result);
         }

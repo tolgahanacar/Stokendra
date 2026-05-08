@@ -24,6 +24,8 @@
                          Width="350"/>
                 <Button Content="Temizle" Classes="Secondary" Command="{Binding ClearSearchCommand}"/>
                 <Button Content="↺ Yenile" Classes="Secondary" Command="{Binding RefreshCommand}"/>
+                <Button Content="⎙ Yazdır" Classes="Success" Command="{Binding PrintCommand}"/>
+                <Button Content="📊 Excel" Classes="Secondary" Command="{Binding ExportCommand}"/>
             </StackPanel>
         </Border>
 
@@ -35,7 +37,7 @@
                   CanUserResizeColumns="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Kod"       Binding="{Binding KodNo}"      Width="100"/>
-                <DataGridTextColumn Header="Stok Adı"  Binding="{Binding Ad}"         Width="*"/>
+                <DataGridTextColumn Header="Stok Adı"  Binding="{Binding Ad}"         Width="250"/>
                 <DataGridTextColumn Header="Kategori"  Binding="{Binding Kategori}"   Width="150"/>
                 <DataGridTemplateColumn Header="Durum" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
@@ -52,18 +54,18 @@
                                         <Style Selector="TextBlock">
                                             <Setter Property="Foreground" Value="#A0AEC0"/>
                                         </Style>
-                                        <!-- Note: Complex conditional styling is harder in pure XAML without converters, 
-                                             but we can use simple bindings for now or just standard text -->
                                     </TextBlock.Styles>
                                 </TextBlock>
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Mevcut"    Binding="{Binding MevcutStok}" Width="100"/>
-                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"    Width="100"/>
+                <DataGridTextColumn Header="Giriş (Y)" Binding="{Binding ToplamGiris}" Width="90"/>
+                <DataGridTextColumn Header="Çıkış (G)" Binding="{Binding ToplamCikis}" Width="90"/>
+                <DataGridTextColumn Header="Sonuç"    Binding="{Binding MevcutStok}" Width="90"/>
+                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"    Width="80"/>
                 <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"      Width="80"/>
-                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"      Width="120"/>
+                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"      Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

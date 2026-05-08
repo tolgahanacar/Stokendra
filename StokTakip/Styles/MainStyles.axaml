@@ -38,7 +38,7 @@
     <Style Selector="Button.Primary">
         <Setter Property="Background" Value="#2563EB"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="20,10"/>
+        <Setter Property="Padding" Value="18,8"/>
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -60,7 +60,7 @@
     <Style Selector="Button.Danger">
         <Setter Property="Background" Value="#E74C3C"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Padding" Value="18,8"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -71,7 +71,7 @@
     <Style Selector="Button.Success">
         <Setter Property="Background" Value="#27AE60"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Padding" Value="18,8"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -82,7 +82,7 @@
     <Style Selector="Button.Secondary">
         <Setter Property="Background" Value="#2C3E50"/>
         <Setter Property="Foreground" Value="#BDC3C7"/>
-        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="Padding" Value="18,8"/>
         <Setter Property="CornerRadius" Value="6"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -108,9 +108,10 @@
     <Style Selector="DataGridColumnHeader">
         <Setter Property="Background" Value="#1E293B"/>
         <Setter Property="Foreground" Value="#94A3B8"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Padding" Value="10,12"/>
+        <Setter Property="Padding" Value="4,12"/>
         <Setter Property="MinWidth" Value="60"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
         <Setter Property="BorderBrush" Value="#334155"/>

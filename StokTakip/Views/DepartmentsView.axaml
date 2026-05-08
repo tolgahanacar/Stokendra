@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+             x:Class="StokTakip.Views.DepartmentsView"
+             Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,*" Margin="40,32,40,40">
+        
+        <!-- Başlık -->
+        <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,24">
+            <TextBlock Text="Departman Yönetimi" FontSize="28" FontWeight="Bold" Foreground="#F1F5F9"/>
+            <TextBlock Text="Sistemde kayıtlı departmanları ve birimleri yönetin" FontSize="13" Foreground="#64748B"/>
+        </StackPanel>
+
+        <!-- Ekleme Alanı -->
+        <Border Grid.Row="1" Background="#161B27" CornerRadius="12" Padding="20,16" 
+                BorderBrush="#1E2D45" BorderThickness="1" Margin="0,0,0,24">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBox Text="{Binding NewDepartmentName}" 
+                         Watermark="Yeni departman adı girin..." 
+                         Width="300"
+                         VerticalAlignment="Center"/>
+                <Button Content="＋ Departman Ekle" 
+                        Classes="Primary"
+                        Command="{Binding AddCommand}"
+                        VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Liste -->
+        <Border Grid.Row="2" Background="#161B27" CornerRadius="12" Padding="2" 
+                BorderBrush="#1E2D45" BorderThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <Border Grid.Row="0" Background="#1E2D45" Padding="16,10" CornerRadius="10,10,0,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Departman Adı" FontWeight="SemiBold" Foreground="#94A3B8"/>
+                        <TextBlock Grid.Column="1" Text="İşlemler" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,20,0"/>
+                    </Grid>
+                </Border>
+                
+                <ListBox Grid.Row="1" 
+                         ItemsSource="{Binding Departments}" 
+                         SelectedItem="{Binding SelectedDepartment}"
+                         Background="Transparent" 
+                         BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="*,Auto" Margin="4">
+                                <TextBlock Text="{Binding}" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Button Content="✎ Düzenle" 
+                                            Classes="Secondary" 
+                                            Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Padding="8,4"
+                                            FontSize="12"/>
+                                    <Button Content="🗑 Sil" 
+                                            Classes="Danger" 
+                                            Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Padding="8,4"
+                                            FontSize="12"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+        
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+
+    </Grid>
+</UserControl>

@@ -48,6 +48,14 @@
                     </Button>
 
                     <Button Classes="MenuButton"
+                            Command="{Binding NavigateToReportsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📈" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Raporlar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
                             Command="{Binding NavigateToStockCardsCommand}">
                         <Grid ColumnDefinitions="40,*">
                             <TextBlock Grid.Column="0" Text="📇" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -76,6 +84,14 @@
                         <Grid ColumnDefinitions="40,*">
                             <TextBlock Grid.Column="0" Text="🛠" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="Servis Kayıtları" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToDepartmentsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="🏢" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Departmanlar" VerticalAlignment="Center" FontWeight="Medium"/>
                         </Grid>
                     </Button>
 

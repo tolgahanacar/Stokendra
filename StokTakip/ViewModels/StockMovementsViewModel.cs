@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
+using StokTakip.Infrastructure;
 using System.Collections.ObjectModel;
 
 namespace StokTakip.ViewModels;
@@ -11,6 +12,8 @@ public partial class StockMovementsViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IStockCardRepository _stockCards;
     private readonly IDepartmentRepository _departments;
+    private readonly IDialogService _dialogService;
+    private readonly ILogger _logger;
 
     // Filtreler
     [ObservableProperty] private DateTime _startDate = DateTime.Today.AddMonths(-1);
@@ -25,13 +28,13 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private StokHareketi? _selectedMovement;
 
     public bool IsMovementSelected => SelectedMovement != null;
+    [ObservableProperty] private bool _isMultipleSelected;
+
     partial void OnSelectedMovementChanged(StokHareketi? value) => OnPropertyChanged(nameof(IsMovementSelected));
 
-    public Func<AddMovementViewModel, Task<bool>>? ShowDialogAction { get; set; }
-    public Func<string, string, Task<string?>>? SaveFileAction { get; set; }
-    public Func<string, Task<string?>>? OpenFileAction { get; set; }
-
     public ObservableCollection<StokHareketi> Movements { get; } = new();
+    public ObservableCollection<StokHareketi> SelectedMovements { get; } = new();
+
     public ObservableCollection<string>       StockItems { get; } = new();
     public ObservableCollection<string>       TypeItems  { get; } = new() { "Tümü", "Giriş", "Çıkış", "Boş" };
 
@@ -41,11 +44,20 @@ public partial class StockMovementsViewModel : ViewModelBase
     public StockMovementsViewModel(
         IMovementRepository movements,
         IStockCardRepository stockCards,
-        IDepartmentRepository departments)
+        IDepartmentRepository departments,
+        IDialogService dialogService,
+        ILogger logger)
     {
         _movements   = movements;
         _stockCards  = stockCards;
         _departments = departments;
+        _dialogService = dialogService;
+        _logger = logger;
+        
+        SelectedMovements.CollectionChanged += (s, e) => {
+            IsMultipleSelected = SelectedMovements.Count >= 2;
+        };
+
         _ = InitAsync();
     }
 
@@ -81,7 +93,11 @@ public partial class StockMovementsViewModel : ViewModelBase
 
             ApplySearch();
         }
-        catch (Exception ex) { Console.WriteLine($"Movement load error: {ex.Message}"); }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Movement load error", ex);
+            StatusText = $"Hata: {ex.Message}"; 
+        }
         finally { IsLoading = false; }
     }
 
@@ -118,23 +134,52 @@ public partial class StockMovementsViewModel : ViewModelBase
     public async Task DeleteMovementAsync()
     {
         if (SelectedMovement == null) return;
+        
+        bool confirm = await _dialogService.ShowConfirmAsync("Silme Onayı", "Bu hareketi silmek istediğinize emin misiniz?");
+        if (!confirm) return;
+
         try
         {
             await Task.Run(() => _movements.Delete(SelectedMovement.Id));
             await LoadMovementsAsync();
+            StatusText = "Hareket silindi.";
         }
-        catch (Exception ex) { Console.WriteLine($"Delete error: {ex.Message}"); }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Delete error", ex);
+            await _dialogService.ShowMessageAsync("Hata", $"Silme işlemi başarısız: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    public async Task DeleteBulkAsync()
+    {
+        if (SelectedMovements.Count < 2) return;
+
+        bool confirm = await _dialogService.ShowConfirmAsync("Toplu Silme", $"{SelectedMovements.Count} adet hareketi silmek istediğinize emin misiniz?");
+        if (!confirm) return;
+
+        try
+        {
+            var ids = SelectedMovements.Select(m => m.Id).ToList();
+            await Task.Run(() => _movements.DeleteBulk(ids));
+            await LoadMovementsAsync();
+            StatusText = $"{ids.Count} adet hareket silindi.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Bulk delete error", ex);
+            await _dialogService.ShowMessageAsync("Hata", $"Toplu silme başarısız: {ex.Message}");
+        }
     }
 
     [RelayCommand]
     public async Task AddMovementAsync()
     {
-        if (ShowDialogAction == null) return;
-        
         var vm = new AddMovementViewModel(_stockCards, _departments);
-        if (await ShowDialogAction(vm) && vm.Result != null)
+        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await Task.Run(() => _movements.Add(vm.Result));
+            await _movements.AddAsync(vm.Result);
             await LoadMovementsAsync();
             StatusText = "Hareket başarıyla eklendi.";
         }
@@ -143,10 +188,10 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditMovementAsync()
     {
-        if (SelectedMovement == null || ShowDialogAction == null) return;
+        if (SelectedMovement == null) return;
         
         var vm = new AddMovementViewModel(_stockCards, _departments, SelectedMovement);
-        if (await ShowDialogAction(vm) && vm.Result != null)
+        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
             await Task.Run(() => _movements.Update(vm.Result));
             await LoadMovementsAsync();
@@ -155,12 +200,20 @@ public partial class StockMovementsViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    public async Task BulkMovementAsync()
+    {
+        var vm = new BulkMovementViewModel(_movements, _departments, _stockCards, _dialogService, _logger);
+        if (await _dialogService.ShowDialogAsync(vm))
+        {
+            await LoadMovementsAsync();
+        }
+    }
+
+    [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        if (SaveFileAction == null) return;
-
         string fileName = $"Stok_Hareketleri_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-        string? path = await SaveFileAction(fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.SaveFileAsync("Excel'e Aktar", fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
         
         if (string.IsNullOrEmpty(path)) return;
 
@@ -175,7 +228,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                     h.Tarih.ToString("dd.MM.yyyy HH:mm"),
                     h.StokKartKodNo,
                     h.StokKartAd,
-                    h.Tur,
+                    h.DisplayTur,
                     h.Miktar,
                     h.Departman,
                     h.TeslimEdilen,
@@ -188,21 +241,20 @@ public partial class StockMovementsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task ImportAsync()
+    public async Task ImportXlsxAsync()
     {
-        if (OpenFileAction == null) return;
-        
-        string? path = await OpenFileAction("Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.OpenFileAsync("Excel'den Aktar", "Excel Dosyası (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
             StatusText = "Excel dosyası okunuyor...";
+            int count = 0;
             await Task.Run(async () => 
             {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1); // Header'ı geç
+                var rows = worksheet.RangeUsed().RowsUsed().Skip(1); 
 
                 var movementsToImport = new List<StokHareketi>();
                 foreach (var row in rows)
@@ -211,10 +263,13 @@ public partial class StockMovementsViewModel : ViewModelBase
                     var card = _allCards.FirstOrDefault(c => c.KodNo == kod);
                     if (card == null) continue;
 
+                    string turRaw = row.Cell(4).GetValue<string>();
+                    string tur = turRaw.Contains("[G]") || turRaw.ToLower().Contains("giris") ? "Giris" : "Cikis";
+
                     movementsToImport.Add(new StokHareketi
                     {
                         StokKartId = card.Id,
-                        Tur = row.Cell(4).GetValue<string>().Contains("Giris") ? "Giris" : "Cikis",
+                        Tur = tur,
                         Miktar = row.Cell(5).GetValue<double>(),
                         Departman = row.Cell(6).GetValue<string>(),
                         TeslimEdilen = row.Cell(7).GetValue<string>(),
@@ -226,12 +281,45 @@ public partial class StockMovementsViewModel : ViewModelBase
                 if (movementsToImport.Count > 0)
                 {
                     await _movements.AddBulkAsync(movementsToImport);
+                    count = movementsToImport.Count;
                 }
             });
             await LoadMovementsAsync();
-            StatusText = "İçe aktarım başarıyla tamamlandı.";
+            StatusText = $"{count} adet hareket içe aktarıldı.";
+            await _dialogService.ShowMessageAsync("Başarılı", $"{count} adet hareket başarıyla içe aktarıldı.");
         }
-        catch (Exception ex) { StatusText = $"Hata: {ex.Message}"; }
+        catch (Exception ex) { 
+            _logger.LogError("Import error", ex);
+            await _dialogService.ShowMessageAsync("Hata", $"İçe aktarım başarısız: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    public async Task ExportSampleAsync()
+    {
+        string? path = await _dialogService.SaveFileAsync("Örnek Dosyayı Kaydet", "stok_hareket_ornek.xlsx", "Excel Dosyası (*.xlsx)|*.xlsx");
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            await Task.Run(() => 
+            {
+                using var workbook = new ClosedXML.Excel.XLWorkbook();
+                var ws = workbook.Worksheet(1);
+                string[] headers = { "Stok Kodu", "Stok Adı (Opsiyonel)", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
+                for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+                
+                ws.Cell(2, 1).Value = "001";
+                ws.Cell(2, 4).Value = "[G] Giriş";
+                ws.Cell(2, 5).Value = 10;
+                ws.Cell(2, 7).Value = DateTime.Now.ToString("dd.MM.yyyy");
+                
+                ws.Columns().AdjustToContents();
+                workbook.SaveAs(path);
+            });
+            StatusText = "Örnek dosya oluşturuldu.";
+        }
+        catch (Exception ex) { await _dialogService.ShowMessageAsync("Hata", ex.Message); }
     }
 
     [RelayCommand]
@@ -240,43 +328,49 @@ public partial class StockMovementsViewModel : ViewModelBase
         try
         {
             StatusText = "Yazdırma hazırlanıyor...";
-            string tempPath = Path.Combine(Path.GetTempPath(), $"Stok_Raporu_{DateTime.Now:yyyyMMdd_HHmm}.html");
-            
             var sb = new System.Text.StringBuilder();
             sb.Append("<html><head><meta charset='utf-8'><title>Stok Hareket Raporu</title>");
             sb.Append("<style>");
-            sb.Append("@page { size: landscape; margin: 1cm; } ");
-            sb.Append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; color: #333; } ");
-            sb.Append("table { width: 100%; border-collapse: collapse; margin-top: 20px; table-layout: fixed; } ");
-            sb.Append("th, td { border: 1px solid #999; padding: 10px; text-align: left; font-size: 12px; word-wrap: break-word; } ");
-            sb.Append("th { background: #f0f0f0; font-weight: bold; } ");
-            sb.Append(".header { text-align: center; border-bottom: 2px solid #2563EB; padding-bottom: 10px; margin-bottom: 20px; } ");
-            sb.Append(".header h1 { margin: 0; color: #2563EB; font-size: 24px; } ");
-            sb.Append(".footer { margin-top: 30px; font-size: 10px; text-align: right; color: #777; } ");
+            sb.Append("@page { size: landscape; margin: 0.5cm; } ");
+            sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
+            sb.Append(".top-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563EB; padding-bottom: 8px; margin-bottom: 15px; } ");
+            sb.Append(".top-header h1 { margin: 0; color: #2563EB; font-size: 20px; font-weight: 800; } ");
+            sb.Append(".date-box { text-align: right; font-size: 11px; color: #4b5563; } ");
+            sb.Append("table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; } ");
+            sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ");
+            sb.Append("th { background: #f1f5f9; font-weight: bold; text-align: center; } ");
+            sb.Append(".num { text-align: center; } ");
+            sb.Append(".bold { font-weight: bold; } ");
+            sb.Append(".green { color: #10B981; } ");
+            sb.Append(".red { color: #EF4444; } ");
+            sb.Append(".footer { margin-top: 20px; font-size: 10px; text-align: right; color: #94a3b8; } ");
             sb.Append("</style>");
+            sb.Append("<script>window.onload = function() { window.print(); }</script>");
             sb.Append("</head><body>");
             
-            sb.Append("<div class='header'>");
+            sb.Append("<div class='top-header'>");
             sb.Append("<h1>STOK HAREKET RAPORU</h1>");
-            sb.Append($"<p>Oluşturma Tarihi: {DateTime.Now:dd.MM.yyyy HH:mm}</p>");
+            sb.Append($"<div class='date-box'>Rapor Tarihi:<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b></div>");
             sb.Append("</div>");
 
             sb.Append("<table><thead><tr>");
-            sb.Append("<th style='width: 35%;'>Stok Adı</th>");
-            sb.Append("<th style='width: 7%; text-align: center;'>Miktar</th>");
-            sb.Append("<th style='width: 8%; text-align: center;'>Tür</th>");
-            sb.Append("<th style='width: 18%;'>Departman</th>");
-            sb.Append("<th style='width: 17%;'>Teslim Alan</th>");
-            sb.Append("<th style='width: 15%;'>Tarih</th>");
+            sb.Append("<th style='width: 8%;'>Kod</th>");
+            sb.Append("<th style='width: 32%; text-align: left;'>Stok Adı</th>");
+            sb.Append("<th style='width: 7%;'>Miktar</th>");
+            sb.Append("<th style='width: 6%;'>Tür</th>");
+            sb.Append("<th style='width: 15%;'>Departman</th>");
+            sb.Append("<th style='width: 15%;'>Teslim Alan</th>");
+            sb.Append("<th style='width: 17%;'>Tarih</th>");
             sb.Append("</tr></thead><tbody>");
             
             foreach (var h in Movements)
             {
-                string turText = h.Tur switch { "Giris" => "Giriş", "Cikis" => "Çıkış", _ => "-" };
+                string clr = h.Tur == "Giris" ? "green" : "red";
                 sb.Append("<tr>");
+                sb.Append($"<td class='num'>{h.StokKartKodNo}</td>");
                 sb.Append($"<td>{h.StokKartAd}</td>");
-                sb.Append($"<td style='text-align: center;'>{h.Miktar}</td>");
-                sb.Append($"<td style='text-align: center;'>{turText}</td>");
+                sb.Append($"<td class='num bold {clr}'>{h.Miktar}</td>");
+                sb.Append($"<td class='num bold {clr}'>{h.DisplayTur}</td>");
                 sb.Append($"<td>{h.Departman}</td>");
                 sb.Append($"<td>{h.TeslimEdilen}</td>");
                 sb.Append($"<td>{h.Tarih:dd.MM.yyyy HH:mm}</td>");
@@ -284,19 +378,13 @@ public partial class StockMovementsViewModel : ViewModelBase
             }
             
             sb.Append("</tbody></table>");
-            sb.Append($"<div class='footer'>Stokendra - {DateTime.Now.Year} | Toplam Kayıt: {Movements.Count}</div>");
+            sb.Append($"<div class='footer'>Toplam {Movements.Count} kayıt listelenmiştir.</div>");
             sb.Append("</body></html>");
             
-            await File.WriteAllTextAsync(tempPath, sb.ToString());
+            var previewVm = new PrintPreviewViewModel("Stok Hareket Raporu", sb.ToString());
+            await _dialogService.ShowDialogAsync(previewVm);
             
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = tempPath,
-                UseShellExecute = true
-            };
-            System.Diagnostics.Process.Start(psi);
-            
-            StatusText = "Rapor tarayıcıda açıldı. Yazdırmak için Ctrl+P kullanın (Yatay Seçmeyi Unutmayın).";
+            StatusText = "Yazdırma tamamlandı.";
         }
         catch (Exception ex) { StatusText = $"Hata: {ex.Message}"; }
     }

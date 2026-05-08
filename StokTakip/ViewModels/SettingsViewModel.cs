@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StokTakip.Data.Interfaces;
 using StokTakip.Infrastructure;
+using System;
+using System.Threading.Tasks;
 
 namespace StokTakip.ViewModels;
 
@@ -12,6 +14,9 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IServiceRecordRepository _serviceRecords;
     private readonly INoteRepository _notes;
+
+    private readonly IDialogService _dialogService;
+    private readonly ILogger _logger;
 
     [ObservableProperty] private string _companyName   = "";
     [ObservableProperty] private string _dbPath        = "";
@@ -27,17 +32,19 @@ public partial class SettingsViewModel : ViewModelBase
         IStockCardRepository stockCards,
         IMovementRepository movements,
         IServiceRecordRepository serviceRecords,
-        INoteRepository notes)
+        INoteRepository notes,
+        IDialogService dialogService,
+        ILogger logger)
     {
         _users = users;
         _stockCards = stockCards;
         _movements = movements;
         _serviceRecords = serviceRecords;
         _notes = notes;
+        _dialogService = dialogService;
+        _logger = logger;
         Load();
     }
-
-    public Func<string, string, Task<string?>>? SaveFileAction { get; set; }
 
     private void Load()
     {
@@ -104,9 +111,8 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task FullBackupAsync()
     {
-        if (SaveFileAction == null) return;
         string fileName = $"Stokendra_Yedek_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-        string? path = await SaveFileAction(fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.SaveFileAsync("Tam Yedek Kaydet", fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try
@@ -126,7 +132,7 @@ public partial class SettingsViewModel : ViewModelBase
                 }
 
                 // Hareketler
-                var movements = _movements.GetAll(null, new DateTime(2000,1,1), DateTime.Now.AddDays(1), null, null, null);
+                var movements = await _movements.GetAllAsync();
                 var wsMov = workbook.Worksheets.Add("Stok Hareketleri");
                 wsMov.Cell(1,1).Value = "Tarih"; wsMov.Cell(1,2).Value = "Kart"; wsMov.Cell(1,3).Value = "Tür"; wsMov.Cell(1,4).Value = "Miktar";
                 for(int i=0; i<movements.Count; i++) {
@@ -137,7 +143,7 @@ public partial class SettingsViewModel : ViewModelBase
                 }
 
                 // Servis Kayıtları
-                var services = _serviceRecords.GetAll(new DateTime(2000,1,1), DateTime.Now.AddDays(1), null);
+                var services = await _serviceRecords.GetAllAsync();
                 var wsSrv = workbook.Worksheets.Add("Servis Kayıtları");
                 wsSrv.Cell(1,1).Value = "Tarih"; wsSrv.Cell(1,2).Value = "Cihaz"; wsSrv.Cell(1,3).Value = "Sorun";
                 for(int i=0; i<services.Count; i++) {
@@ -160,7 +166,13 @@ public partial class SettingsViewModel : ViewModelBase
             });
             StatusMessage = "Tam yedek başarıyla alındı.";
             IsSuccess = true;
+            await _dialogService.ShowMessageAsync("Başarılı", "Tüm veriler Excel dosyasına yedeklendi.");
         }
-        catch (Exception ex) { StatusMessage = $"Hata: {ex.Message}"; IsSuccess = false; }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Full backup error", ex);
+            StatusMessage = $"Hata: {ex.Message}"; 
+            IsSuccess = false; 
+        }
     }
 }

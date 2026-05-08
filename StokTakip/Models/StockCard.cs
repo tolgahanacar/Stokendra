@@ -23,6 +23,12 @@ public class StokKarti
     /// <summary>Hesaplanmış mevcut stok miktarı (giriş - çıkış).</summary>
     public double MevcutStok { get; set; }
 
+    /// <summary>Toplam giriş miktarı.</summary>
+    public double ToplamGiris { get; set; }
+
+    /// <summary>Toplam çıkış miktarı.</summary>
+    public double ToplamCikis { get; set; }
+
     /// <summary>Kategori etiketi.</summary>
     public string Kategori { get; set; } = "";
 

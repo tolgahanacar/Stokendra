@@ -1,0 +1,111 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StokTakip.ViewModels"
+        x:Class="StokTakip.Views.StockCardDetailWindow"
+        Title="Stok Kartı Detayı"
+        Width="1000" Height="750"
+        WindowStartupLocation="CenterOwner"
+        Background="#0C0E14"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+        
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1C222E" Padding="24,40,24,20">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Card.Ad}" FontSize="24" FontWeight="Black" Foreground="#F8FAFC"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <TextBlock Text="{Binding Card.KodNo}" Foreground="#3B82F6" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding Card.Kategori}" Foreground="#94A3B8"/>
+                        <TextBlock Text="{Binding Card.UstKartAd, StringFormat='Üst Kart: {0}'}" Foreground="#64748B" IsVisible="{Binding Card.UstKartAd, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="4">
+                    <TextBlock Text="MEVCUT STOK" FontSize="10" FontWeight="Bold" Foreground="#64748B" HorizontalAlignment="Right"/>
+                    <TextBlock Text="{Binding Card.MevcutStok, StringFormat='{}{0} Adet'}" FontSize="32" FontWeight="Black" Foreground="#10B981" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Stats & Info -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="24,20,24,0">
+            <Border Grid.Column="0" Background="#161B27" CornerRadius="12" Padding="20" Margin="0,0,16,0" BorderBrush="#1E2D45" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="AÇIKLAMA" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
+                    <TextBlock Text="{Binding Card.Aciklama}" Foreground="#CBD5E1" TextWrapping="Wrap" MaxHeight="60"/>
+                </StackPanel>
+            </Border>
+            
+            <Border Grid.Column="1" Background="#161B27" CornerRadius="12" Padding="20" Width="300" BorderBrush="#1E2D45" BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="SON 30 GÜN ÖZETİ" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
+                    <Grid ColumnDefinitions="*,*">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="▲ GİRİŞ" FontSize="10" Foreground="#10B981" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TotalEntryLast30}" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Text="▼ ÇIKIŞ" FontSize="10" Foreground="#EF4444" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TotalExitLast30}" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Movement List -->
+        <Border Grid.Row="2" Margin="24,20,24,20" Background="#161B27" CornerRadius="12" BorderBrush="#1E2D45" BorderThickness="1">
+            <Grid RowDefinitions="Auto,*">
+                <Border Grid.Row="0" Background="#1E2D45" Padding="16,10" CornerRadius="12,12,0,0">
+                    <TextBlock Text="HAREKET GEÇMİŞİ" FontSize="12" FontWeight="Bold" Foreground="#94A3B8"/>
+                </Border>
+                <DataGrid Grid.Row="1" 
+                          ItemsSource="{Binding Movements}" 
+                          IsReadOnly="True" 
+                          Background="Transparent"
+                          BorderThickness="0"
+                          CanUserResizeColumns="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="150"/>
+                        <DataGridTemplateColumn Header="Tür" Width="100">
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayTur}" 
+                                           FontWeight="Bold" 
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center">
+                                    <TextBlock.Styles>
+                                        <Style Selector="TextBlock">
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                        </Style>
+                                        <!-- Burada Tur değerine göre renk tetikleyici eklenebilir ama MVVM'de DisplayTur yetebilir -->
+                                    </TextBlock.Styles>
+                                </TextBlock>
+                            </DataTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Miktar" Binding="{Binding Miktar}" Width="80"/>
+                        <DataGridTextColumn Header="Departman" Binding="{Binding Departman}" Width="150"/>
+                        <DataGridTextColumn Header="Teslim Edilen" Binding="{Binding TeslimEdilen}" Width="150"/>
+                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- Footer -->
+        <Border Grid.Row="3" Background="#1C222E" Padding="24,16" BorderBrush="#1E2D45" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto,*">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                    <Button Content="📥 Hareket Ekle" Classes="Success" Command="{Binding AddMovementCommand}"/>
+                    <Button Content="⎙ Yazdır" Classes="Secondary" Command="{Binding PrintCommand}"/>
+                </StackPanel>
+                
+                <Button Grid.Column="1" Content="Kapat" Classes="Secondary" Command="{Binding CloseCommand}" HorizontalAlignment="Right" Width="100"/>
+            </Grid>
+        </Border>
+
+        <ProgressBar Grid.Row="2" IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+    </Grid>
+</Window>

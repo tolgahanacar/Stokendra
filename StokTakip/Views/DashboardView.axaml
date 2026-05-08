@@ -78,11 +78,11 @@
                               Background="#0C0E14"
                               BorderThickness="0">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Kod"      Binding="{Binding KodNo}"   Width="80"/>
-                            <DataGridTextColumn Header="Stok Adı" Binding="{Binding Ad}"      Width="*"/>
-                            <DataGridTextColumn Header="Mevcut"   Binding="{Binding Mevcut}"  Width="80"/>
-                            <DataGridTextColumn Header="Min"      Binding="{Binding MinStok}" Width="60"/>
-                            <DataGridTextColumn Header="Durum"    Binding="{Binding Durum}"   Width="80"/>
+                            <DataGridTextColumn Header="Kod"      Binding="{Binding KodNo}"   Width="150"/>
+                            <DataGridTextColumn Header="Stok Adı" Binding="{Binding Ad}"      Width="200"/>
+                            <DataGridTextColumn Header="Mevcut"   Binding="{Binding Mevcut}"  Width="150"/>
+                            <DataGridTextColumn Header="Min"      Binding="{Binding MinStok}" Width="150"/>
+                            <DataGridTextColumn Header="Durum"    Binding="{Binding Durum}"   Width="200"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </StackPanel>

@@ -54,7 +54,6 @@ public sealed class UserRepository : IUserRepository
         
         // Failsafe: if it's admin and match fails, let's try a direct comparison if it's 'admin'
         // (Only for recovery, we will remove this later)
-        if (!match && username.ToLower() == "admin" && password == "admin") return (true, "admin");
 
         return (match, role);
     }

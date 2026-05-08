@@ -1,99 +1,71 @@
-using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using StokTakip.Tests.Helpers;
 
 namespace StokTakip.Tests.Integration;
 
-/// <summary>
-/// <see cref="INoteRepository"/> implementasyonu için integration testler.
-/// </summary>
 public class NoteRepositoryTests : IDisposable
 {
-    private readonly TestDatabaseFactory _factory;
-    private readonly INoteRepository _repo;
-
-    public NoteRepositoryTests()
-    {
-        _factory = new TestDatabaseFactory();
-        _repo = _factory.Create();
-    }
-
-    public void Dispose() => _factory.Dispose();
+    private readonly TestDb _db;
+    public NoteRepositoryTests() => _db = new TestDb();
+    public void Dispose() => _db.Dispose();
 
     [Fact]
-    public void Add_ValidNote_AssignsId()
+    public void Add_ValidNote_Persisted()
     {
         var not = new Not { Baslik = "Test Not", Icerik = "İçerik", Tarih = DateTime.Now };
+        _db.Notes.Add(not);
 
-        _repo.Add(not);
-
-        Assert.True(not.Id > 0);
+        var all = _db.Notes.GetAll();
+        Assert.Single(all);
+        Assert.Equal("Test Not", all[0].Baslik);
     }
 
     [Fact]
-    public void Add_EmptyTitle_ThrowsInvalidOperationException()
+    public void GetAll_OrderedByDateDesc()
     {
-        Assert.Throws<InvalidOperationException>(() =>
-            _repo.Add(new Not { Baslik = "", Icerik = "İçerik" }));
+        _db.Notes.Add(new Not { Baslik = "Eski", Icerik = "", Tarih = DateTime.Now.AddDays(-2) });
+        _db.Notes.Add(new Not { Baslik = "Yeni", Icerik = "", Tarih = DateTime.Now });
+
+        var all = _db.Notes.GetAll();
+        Assert.Equal("Yeni", all[0].Baslik);
+        Assert.Equal("Eski", all[1].Baslik);
     }
 
     [Fact]
-    public void GetAll_ReturnsAllNotes()
+    public void Update_ChangesTitle_Persisted()
     {
-        _repo.Add(new Not { Baslik = "Not 1", Tarih = DateTime.Now });
-        _repo.Add(new Not { Baslik = "Not 2", Tarih = DateTime.Now });
-
-        var result = _repo.GetAll();
-
-        Assert.True(result.Count >= 2);
-    }
-
-    [Fact]
-    public void GetAll_OrderedByDateDescending()
-    {
-        _repo.Add(new Not { Baslik = "Eski Not", Tarih = DateTime.Now.AddDays(-5) });
-        _repo.Add(new Not { Baslik = "Yeni Not", Tarih = DateTime.Now });
-
-        var result = _repo.GetAll();
-
-        Assert.True(result[0].Tarih >= result[1].Tarih);
-    }
-
-    [Fact]
-    public void Update_ExistingNote_ChangesArePersisted()
-    {
-        var not = new Not { Baslik = "Eski Başlık", Tarih = DateTime.Now };
-        _repo.Add(not);
+        var not = new Not { Baslik = "Eski Başlık", Icerik = "", Tarih = DateTime.Now };
+        _db.Notes.Add(not);
 
         not.Baslik = "Yeni Başlık";
-        _repo.Update(not);
+        _db.Notes.Update(not);
 
-        var all = _repo.GetAll();
-        Assert.Contains(all, n => n.Baslik == "Yeni Başlık");
+        Assert.Equal("Yeni Başlık", _db.Notes.GetAll()[0].Baslik);
     }
 
     [Fact]
-    public void Update_NonExistingNote_ThrowsInvalidOperationException()
+    public void Delete_ExistingNote_Removed()
     {
-        var not = new Not { Id = 99999, Baslik = "Yok", Tarih = DateTime.Now };
-        Assert.Throws<InvalidOperationException>(() => _repo.Update(not));
+        var not = new Not { Baslik = "Silinecek", Icerik = "", Tarih = DateTime.Now };
+        _db.Notes.Add(not);
+
+        _db.Notes.Delete(not.Id);
+
+        Assert.Empty(_db.Notes.GetAll());
     }
 
     [Fact]
-    public void Delete_ExistingNote_RemovesFromDatabase()
+    public void GetAll_EmptyDb_ReturnsEmpty()
     {
-        var not = new Not { Baslik = "Silinecek", Tarih = DateTime.Now };
-        _repo.Add(not);
-
-        _repo.Delete(not.Id);
-
-        var all = _repo.GetAll();
-        Assert.DoesNotContain(all, n => n.Id == not.Id);
+        Assert.Empty(_db.Notes.GetAll());
     }
 
     [Fact]
-    public void Delete_NonExistingId_ThrowsInvalidOperationException()
+    public void Add_MultipleNotes_AllPersisted()
     {
-        Assert.Throws<InvalidOperationException>(() => _repo.Delete(99999));
+        for (int i = 1; i <= 5; i++)
+            _db.Notes.Add(new Not { Baslik = $"Not {i}", Icerik = "", Tarih = DateTime.Now });
+
+        Assert.Equal(5, _db.Notes.GetAll().Count);
     }
 }

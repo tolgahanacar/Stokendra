@@ -41,6 +41,7 @@ public sealed class MovementRepository : IMovementRepository
     public void Add(StokHareketi movement)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateMovement(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama)
@@ -53,6 +54,7 @@ public sealed class MovementRepository : IMovementRepository
     public async Task AddAsync(StokHareketi movement)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateMovement(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama)
@@ -64,10 +66,14 @@ public sealed class MovementRepository : IMovementRepository
 
     public void AddBulk(IEnumerable<StokHareketi> movements)
     {
+        var list = movements.ToList();
+        if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
+
         using var conn = _connectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
-            foreach(var m in movements) {
+            foreach(var m in list) {
+                ValidateMovement(m, conn, trans);
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = trans;
                 cmd.CommandText = "INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama) VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
@@ -80,12 +86,16 @@ public sealed class MovementRepository : IMovementRepository
 
     public async Task AddBulkAsync(IEnumerable<StokHareketi> movements)
     {
+        var list = movements.ToList();
+        if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
+
         using var conn = _connectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
-            foreach(var m in movements) {
+            foreach(var m in list) {
+                ValidateMovement(m, conn, (SqliteTransaction)trans);
                 using var cmd = conn.CreateCommand();
-                cmd.Transaction = trans;
+                cmd.Transaction = (SqliteTransaction)trans;
                 cmd.CommandText = "INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama) VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
                 BindMovementParams(cmd, m);
                 await cmd.ExecuteNonQueryAsync();
@@ -97,6 +107,7 @@ public sealed class MovementRepository : IMovementRepository
     public void Update(StokHareketi movement)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateUpdate(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE StokHareketleri SET 
@@ -111,6 +122,7 @@ public sealed class MovementRepository : IMovementRepository
     public void Delete(int id)
     {
         using var conn = _connectionFactory.CreateConnection();
+        ValidateDeletion(new[] { id }, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
@@ -119,10 +131,22 @@ public sealed class MovementRepository : IMovementRepository
 
     public void DeleteBulk(IEnumerable<int> ids)
     {
+        var list = ids.ToList();
+        if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
+
         using var conn = _connectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
-            foreach(var id in ids) {
+            // Var olmayan ID kontrolü
+            using (var cmdExist = conn.CreateCommand()) {
+                cmdExist.Transaction = trans;
+                cmdExist.CommandText = $"SELECT COUNT(*) FROM StokHareketleri WHERE Id IN ({string.Join(",", list)})";
+                var count = Convert.ToInt32(cmdExist.ExecuteScalar());
+                if (count != list.Count) throw new InvalidOperationException("Bazı hareketler bulunamadı.");
+            }
+
+            ValidateDeletion(list, conn, trans);
+            foreach(var id in list) {
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = trans;
                 cmd.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id";
@@ -255,5 +279,85 @@ public sealed class MovementRepository : IMovementRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT last_insert_rowid()";
         return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    private void ValidateMovement(StokHareketi m, SqliteConnection conn, SqliteTransaction? trans = null)
+    {
+        if (double.IsNaN(m.Miktar) || double.IsInfinity(m.Miktar) || m.Miktar > 1_000_000_000) 
+            throw new InvalidOperationException("Geçersiz miktar değeri.");
+        
+        if (m.Tur != "Giris" && m.Tur != "Cikis" && m.Tur != "Bos") throw new InvalidOperationException("Geçersiz hareket tipi.");
+        
+        if (m.Miktar < 0) throw new InvalidOperationException("Miktar negatif olamaz.");
+        if (m.Miktar == 0 && m.Tur != "Bos") throw new InvalidOperationException("Miktar sıfır olamaz.");
+        
+        if (string.IsNullOrWhiteSpace(m.Tur)) throw new InvalidOperationException("Tür alanı boş olamaz.");
+        if (m.StokKartId <= 0) throw new InvalidOperationException("Geçersiz stok kartı ID.");
+
+        using var cmd = conn.CreateCommand();
+        if (trans != null) cmd.Transaction = trans;
+        cmd.CommandText = @"
+            SELECT KartTipi,
+            (SELECT COALESCE(SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END), 0) FROM StokHareketleri WHERE StokKartId=s.Id) as MevcutStok
+            FROM StokKartlari s WHERE Id=$id";
+        cmd.Parameters.AddWithValue("$id", m.StokKartId);
+        
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+        {
+            if (reader.GetString(0) == "Ust") throw new InvalidOperationException("Üst kartlara hareket eklenemez.");
+            if (m.Tur == "Cikis")
+            {
+                double mevcut = reader.IsDBNull(1) ? 0 : reader.GetDouble(1);
+                if (mevcut < m.Miktar) throw new InvalidOperationException("Yetersiz stok.");
+            }
+        }
+        else throw new InvalidOperationException("Stok kartı bulunamadı.");
+    }
+
+    private void ValidateDeletion(IEnumerable<int> ids, SqliteConnection conn, SqliteTransaction? trans = null)
+    {
+        // Silme işlemi sonrası herhangi bir kartın stoku negatife düşüyor mu?
+        using var cmd = conn.CreateCommand();
+        if (trans != null) cmd.Transaction = trans;
+        
+        var idList = string.Join(",", ids);
+        cmd.CommandText = $@"
+            SELECT StokKartId FROM StokHareketleri WHERE Id IN ({idList}) GROUP BY StokKartId";
+        
+        var cardIds = new List<int>();
+        using (var reader = cmd.ExecuteReader())
+            while (reader.Read()) cardIds.Add(reader.GetInt32(0));
+
+        foreach (var cardId in cardIds)
+        {
+            using var cmdCheck = conn.CreateCommand();
+            if (trans != null) cmdCheck.Transaction = trans;
+            cmdCheck.CommandText = @"
+                SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END)
+                FROM StokHareketleri 
+                WHERE StokKartId=$cid AND Id NOT IN (" + idList + ")";
+            cmdCheck.Parameters.AddWithValue("$cid", cardId);
+            var result = cmdCheck.ExecuteScalar();
+            double balance = (result == null || result == DBNull.Value) ? 0 : Convert.ToDouble(result);
+            if (balance < 0) throw new InvalidOperationException("Silme işlemi stok dengesini bozuyor (negatif stok).");
+        }
+    }
+
+    private void ValidateUpdate(StokHareketi m, SqliteConnection conn)
+    {
+        // Güncelleme sonrası stok dengesini kontrol et
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT SUM(CASE WHEN Id=$mid THEN 0 ELSE (CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) END)
+            FROM StokHareketleri WHERE StokKartId=$cid";
+        cmd.Parameters.AddWithValue("$mid", m.Id);
+        cmd.Parameters.AddWithValue("$cid", m.StokKartId);
+        
+        var baseResult = cmd.ExecuteScalar();
+        double baseBalance = (baseResult == null || baseResult == DBNull.Value) ? 0 : Convert.ToDouble(baseResult);
+        double newImpact = (m.Tur == "Giris") ? m.Miktar : (m.Tur == "Cikis" ? -m.Miktar : 0);
+        
+        if (baseBalance + newImpact < 0) throw new InvalidOperationException("Güncelleme işlemi stok dengesini bozuyor (negatif stok).");
     }
 }

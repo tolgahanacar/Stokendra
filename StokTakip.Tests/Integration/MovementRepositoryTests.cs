@@ -1,259 +1,341 @@
-using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using StokTakip.Tests.Helpers;
 
 namespace StokTakip.Tests.Integration;
 
 /// <summary>
-/// <see cref="IMovementRepository"/> implementasyonu için integration testler.
+/// MovementRepository — CRUD, stok etkisi, filtreler, bulk işlemler.
 /// </summary>
 public class MovementRepositoryTests : IDisposable
 {
-    private readonly TestDatabaseFactory _factory;
-    private readonly IMovementRepository _movRepo;
-    private readonly IStockCardRepository _cardRepo;
-    private readonly IDepartmentRepository _deptRepo;
-    private int _testCardId;
+    private readonly TestDb _db;
+    private readonly int _cardId;
 
     public MovementRepositoryTests()
     {
-        _factory = new TestDatabaseFactory();
-        var db = _factory.Create();
-        _movRepo = db;
-        _cardRepo = db;
-        _deptRepo = db;
-
-        // Test için departman ve stok kartı oluştur
-        _deptRepo.Add("Test Departman");
-        var kart = new StokKarti { Ad = "Test Stok", KodNo = "TS001", KartTipi = "Alt" };
-        _cardRepo.Add(kart);
-        _testCardId = kart.Id;
+        _db = new TestDb();
+        _cardId = _db.CreateCard("Test Stok", "TS001");
     }
 
-    public void Dispose() => _factory.Dispose();
+    public void Dispose() => _db.Dispose();
 
-    private StokHareketi MakeEntry(double miktar = 10) => new()
-    {
-        StokKartId = _testCardId,
-        Tur = "Giris",
-        Miktar = miktar,
-        Departman = "Test Departman",
-        Tarih = DateTime.Now
-    };
-
-    private StokHareketi MakeExit(double miktar = 5) => new()
-    {
-        StokKartId = _testCardId,
-        Tur = "Cikis",
-        Miktar = miktar,
-        Departman = "Test Departman",
-        Tarih = DateTime.Now
-    };
-
-    // ── Add ───────────────────────────────────────────────────────────────
+    // ── Giriş / Çıkış etkisi ─────────────────────────────────────────────
 
     [Fact]
-    public void Add_ValidEntry_IncreasesStock()
+    public void Add_Entry_IncreasesStock()
     {
-        _movRepo.Add(MakeEntry(20));
-
-        var card = _cardRepo.GetById(_testCardId);
-        Assert.Equal(20, card?.MevcutStok);
+        _db.AddEntry(_cardId, 50);
+        Assert.Equal(50, _db.GetStock(_cardId));
     }
 
     [Fact]
-    public void Add_ValidExit_DecreasesStock()
+    public void Add_Exit_DecreasesStock()
     {
-        _movRepo.Add(MakeEntry(20));
-        _movRepo.Add(MakeExit(8));
-
-        var card = _cardRepo.GetById(_testCardId);
-        Assert.Equal(12, card?.MevcutStok);
+        _db.AddEntry(_cardId, 50);
+        _db.AddExit(_cardId, 20);
+        Assert.Equal(30, _db.GetStock(_cardId));
     }
 
     [Fact]
-    public void Add_ExitWithoutSufficientStock_ThrowsInvalidOperationException()
+    public void Add_MultipleMovements_CorrectFinalStock()
     {
-        _movRepo.Add(MakeEntry(5));
-
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Add(MakeExit(10)));
+        _db.AddEntry(_cardId, 100);
+        _db.AddEntry(_cardId, 50);
+        _db.AddExit(_cardId, 30);
+        _db.AddExit(_cardId, 40);
+        // 100 + 50 - 30 - 40 = 80
+        Assert.Equal(80, _db.GetStock(_cardId));
     }
 
     [Fact]
-    public void Add_ZeroQuantityEntry_ThrowsInvalidOperationException()
+    public void Add_ExactlyDepletes_StockIsZero()
     {
-        var hareket = MakeEntry(0);
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Add(hareket));
+        _db.AddEntry(_cardId, 10);
+        _db.AddExit(_cardId, 10);
+        Assert.Equal(0, _db.GetStock(_cardId));
+    }
+
+    // ── Validasyon ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Add_ExitMoreThanStock_ThrowsInvalidOperationException()
+    {
+        _db.AddEntry(_cardId, 10);
+        Assert.Throws<InvalidOperationException>(() => _db.AddExit(_cardId, 11));
+    }
+
+    [Fact]
+    public void Add_ExitOnEmptyStock_ThrowsInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(() => _db.AddExit(_cardId, 1));
+    }
+
+    [Fact]
+    public void Add_ZeroQuantity_ThrowsInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            _db.Movements.Add(new StokHareketi
+            {
+                StokKartId = _cardId, Tur = "Giris", Miktar = 0, Departman = "Test"
+            }));
     }
 
     [Fact]
     public void Add_NegativeQuantity_ThrowsInvalidOperationException()
     {
-        var hareket = MakeEntry(-5);
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Add(hareket));
+        Assert.Throws<InvalidOperationException>(() =>
+            _db.Movements.Add(new StokHareketi
+            {
+                StokKartId = _cardId, Tur = "Giris", Miktar = -5, Departman = "Test"
+            }));
     }
 
     [Fact]
     public void Add_ToParentCard_ThrowsInvalidOperationException()
     {
-        var ustKart = new StokKarti { Ad = "Üst", KodNo = "UST_MOV", KartTipi = "Ust" };
-        _cardRepo.Add(ustKart);
+        var ust = new StokKarti { Ad = "Üst", KodNo = "UST_M", KartTipi = "Ust" };
+        _db.StockCards.Add(ust);
 
-        var hareket = new StokHareketi
-        {
-            StokKartId = ustKart.Id,
-            Tur = "Giris",
-            Miktar = 10,
-            Departman = "Test Departman"
-        };
-
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Add(hareket));
-    }
-
-    // ── AddBulk ───────────────────────────────────────────────────────────
-
-    [Fact]
-    public void AddBulk_MultipleEntries_AllPersisted()
-    {
-        var hareketler = new[]
-        {
-            MakeEntry(10),
-            MakeEntry(20),
-            MakeEntry(30)
-        };
-
-        _movRepo.AddBulk(hareketler);
-
-        var result = _movRepo.GetAll(stockCardId: _testCardId);
-        Assert.Equal(3, result.Count);
+        Assert.Throws<InvalidOperationException>(() =>
+            _db.Movements.Add(new StokHareketi
+            {
+                StokKartId = ust.Id, Tur = "Giris", Miktar = 10, Departman = "Test"
+            }));
     }
 
     [Fact]
-    public void AddBulk_EmptyList_ThrowsInvalidOperationException()
+    public void Add_InvalidMovementType_ThrowsInvalidOperationException()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            _movRepo.AddBulk(Array.Empty<StokHareketi>()));
+            _db.Movements.Add(new StokHareketi
+            {
+                StokKartId = _cardId, Tur = "YANLIS", Miktar = 10, Departman = "Test"
+            }));
     }
 
-    // ── GetAll ────────────────────────────────────────────────────────────
+    // ── Bos hareket ───────────────────────────────────────────────────────
 
     [Fact]
-    public void GetAll_FilterByStockCardId_ReturnsOnlyMatchingMovements()
+    public void Add_BosMovement_DoesNotChangeStock()
     {
-        var kart2 = new StokKarti { Ad = "Stok 2", KodNo = "TS002", KartTipi = "Alt" };
-        _cardRepo.Add(kart2);
-
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(new StokHareketi
+        _db.AddEntry(_cardId, 10);
+        _db.Movements.Add(new StokHareketi
         {
-            StokKartId = kart2.Id,
-            Tur = "Giris",
-            Miktar = 5,
-            Departman = "Test Departman"
+            StokKartId = _cardId, Tur = "Bos", Miktar = 0, Departman = "Test"
         });
+        Assert.Equal(10, _db.GetStock(_cardId));
+    }
 
-        var result = _movRepo.GetAll(stockCardId: _testCardId);
-        Assert.All(result, h => Assert.Equal(_testCardId, h.StokKartId));
+    // ── GetAll filtreleri ─────────────────────────────────────────────────
+
+    [Fact]
+    public void GetAll_FilterByCardId_ReturnsOnlyThatCard()
+    {
+        int card2 = _db.CreateCard("Stok 2", "TS002");
+        _db.AddEntry(_cardId, 10);
+        _db.AddEntry(card2, 20);
+
+        var result = _db.Movements.GetAll(stockCardId: _cardId);
+        Assert.All(result, h => Assert.Equal(_cardId, h.StokKartId));
     }
 
     [Fact]
-    public void GetAll_FilterByMovementType_ReturnsOnlyMatchingType()
+    public void GetAll_FilterByType_ReturnsOnlyThatType()
     {
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(MakeExit(3));
+        _db.AddEntry(_cardId, 20);
+        _db.AddExit(_cardId, 5);
 
-        var entries = _movRepo.GetAll(movementType: "Giris");
+        var entries = _db.Movements.GetAll(movementType: "Giris");
         Assert.All(entries, h => Assert.Equal("Giris", h.Tur));
+
+        var exits = _db.Movements.GetAll(movementType: "Cikis");
+        Assert.All(exits, h => Assert.Equal("Cikis", h.Tur));
     }
 
     [Fact]
     public void GetAll_FilterByDateRange_ReturnsOnlyInRange()
     {
         var yesterday = DateTime.Today.AddDays(-1);
-        var tomorrow = DateTime.Today.AddDays(1);
+        var tomorrow  = DateTime.Today.AddDays(1);
 
-        _movRepo.Add(MakeEntry(10));
+        _db.AddEntry(_cardId, 10, tarih: DateTime.Today);
 
-        var result = _movRepo.GetAll(startDate: yesterday, endDate: tomorrow);
+        var result = _db.Movements.GetAll(startDate: yesterday, endDate: tomorrow);
         Assert.NotEmpty(result);
+    }
+
+    [Fact]
+    public void GetAll_FilterByDepartment_ReturnsOnlyThatDept()
+    {
+        _db.AddEntry(_cardId, 10, dept: "Bilgi İşlem");
+        _db.AddEntry(_cardId, 5,  dept: "Muhasebe");
+
+        var result = _db.Movements.GetAll(department: "Bilgi İşlem");
+        Assert.All(result, h => Assert.Equal("Bilgi İşlem", h.Departman));
+    }
+
+    [Fact]
+    public void GetAll_NoFilter_ReturnsAllMovements()
+    {
+        _db.AddEntry(_cardId, 10);
+        _db.AddEntry(_cardId, 20);
+        _db.AddExit(_cardId, 5);
+
+        var result = _db.Movements.GetAll();
+        Assert.Equal(3, result.Count);
     }
 
     // ── Delete ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Delete_ExistingMovement_RemovesFromDatabase()
+    public void Delete_Entry_StockDecreases()
     {
-        _movRepo.Add(MakeEntry(10));
-        var movements = _movRepo.GetAll(stockCardId: _testCardId);
-        int id = movements[0].Id;
+        _db.AddEntry(_cardId, 30);
+        var movements = _db.Movements.GetAll(stockCardId: _cardId);
+        int entryId = movements[0].Id;
 
-        _movRepo.Delete(id);
+        _db.Movements.Delete(entryId);
 
-        var after = _movRepo.GetAll(stockCardId: _testCardId);
-        Assert.DoesNotContain(after, h => h.Id == id);
+        Assert.Equal(0, _db.GetStock(_cardId));
     }
 
     [Fact]
-    public void Delete_WouldCauseNegativeStock_ThrowsInvalidOperationException()
+    public void Delete_EntryWhenExitExists_ThrowsInvalidOperationException()
     {
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(MakeExit(10));
+        // Giriş 10, çıkış 10 → stok 0
+        // Girişi silmek stoku -10 yapar → hata
+        _db.AddEntry(_cardId, 10);
+        _db.AddExit(_cardId, 10);
 
-        // Girişi silmek stoku negatife düşürür
-        var entries = _movRepo.GetAll(stockCardId: _testCardId, movementType: "Giris");
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Delete(entries[0].Id));
+        var entry = _db.Movements.GetAll(stockCardId: _cardId, movementType: "Giris").Single();
+        Assert.Throws<InvalidOperationException>(() => _db.Movements.Delete(entry.Id));
     }
 
     // ── DeleteBulk ────────────────────────────────────────────────────────
 
     [Fact]
-    public void DeleteBulk_ValidIds_RemovesAll()
+    public void DeleteBulk_AllEntries_StockBecomesZero()
     {
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(MakeEntry(20));
-        var movements = _movRepo.GetAll(stockCardId: _testCardId);
-        var ids = movements.Select(h => h.Id).ToList();
+        _db.AddEntry(_cardId, 10);
+        _db.AddEntry(_cardId, 20);
+        var ids = _db.Movements.GetAll(stockCardId: _cardId).Select(h => h.Id).ToList();
 
-        _movRepo.DeleteBulk(ids);
+        _db.Movements.DeleteBulk(ids);
 
-        var after = _movRepo.GetAll(stockCardId: _testCardId);
-        Assert.Empty(after);
+        Assert.Equal(0, _db.GetStock(_cardId));
+        Assert.Empty(_db.Movements.GetAll(stockCardId: _cardId));
+    }
+
+    [Fact]
+    public void DeleteBulk_WouldCauseNegative_ThrowsInvalidOperationException()
+    {
+        _db.AddEntry(_cardId, 10);
+        _db.AddExit(_cardId, 5);
+
+        // Sadece girişi silmek → stok -5 olur
+        var entryId = _db.Movements.GetAll(stockCardId: _cardId, movementType: "Giris")
+                                   .Select(h => h.Id).ToList();
+
+        Assert.Throws<InvalidOperationException>(() => _db.Movements.DeleteBulk(entryId));
     }
 
     // ── Update ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Update_ExistingMovement_ChangesArePersisted()
+    public void Update_ChangeDescription_Persisted()
     {
-        _movRepo.Add(MakeEntry(10));
-        var movements = _movRepo.GetAll(stockCardId: _testCardId);
-        var hareket = movements[0];
+        _db.AddEntry(_cardId, 10);
+        var h = _db.Movements.GetAll(stockCardId: _cardId).Single();
+        h.Aciklama = "Güncellendi";
 
-        hareket.Aciklama = "Güncellenmiş açıklama";
-        _movRepo.Update(hareket);
+        _db.Movements.Update(h);
 
-        var updated = _movRepo.GetAll(stockCardId: _testCardId);
-        Assert.Equal("Güncellenmiş açıklama", updated[0].Aciklama);
+        var updated = _db.Movements.GetAll(stockCardId: _cardId).Single();
+        Assert.Equal("Güncellendi", updated.Aciklama);
+    }
+
+    [Fact]
+    public void Update_IncreaseMiktar_StockIncreases()
+    {
+        _db.AddEntry(_cardId, 10);
+        var h = _db.Movements.GetAll(stockCardId: _cardId).Single();
+        h.Miktar = 20;
+
+        _db.Movements.Update(h);
+
+        Assert.Equal(20, _db.GetStock(_cardId));
+    }
+
+    [Fact]
+    public void Update_DecreaseMiktar_WouldCauseNegative_ThrowsInvalidOperationException()
+    {
+        _db.AddEntry(_cardId, 10);
+        _db.AddExit(_cardId, 8);
+
+        // Girişi 5'e düşürmek → stok 5-8 = -3 olur
+        var entry = _db.Movements.GetAll(stockCardId: _cardId, movementType: "Giris").Single();
+        entry.Miktar = 5;
+
+        Assert.Throws<InvalidOperationException>(() => _db.Movements.Update(entry));
+    }
+
+    // ── AddBulk ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AddBulk_ThreeEntries_AllPersisted()
+    {
+        var list = new[]
+        {
+            new StokHareketi { StokKartId = _cardId, Tur = "Giris", Miktar = 10, Departman = "D" },
+            new StokHareketi { StokKartId = _cardId, Tur = "Giris", Miktar = 20, Departman = "D" },
+            new StokHareketi { StokKartId = _cardId, Tur = "Giris", Miktar = 30, Departman = "D" },
+        };
+
+        _db.Movements.AddBulk(list);
+
+        Assert.Equal(60, _db.GetStock(_cardId));
+        Assert.Equal(3, _db.Movements.GetAll(stockCardId: _cardId).Count);
+    }
+
+    [Fact]
+    public void AddBulk_EmptyList_ThrowsInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            _db.Movements.AddBulk(Array.Empty<StokHareketi>()));
     }
 
     // ── GetLast7DaysSummary ───────────────────────────────────────────────
 
     [Fact]
-    public async Task GetLast7DaysSummaryAsync_Returns7Days()
+    public async Task GetLast7DaysSummaryAsync_AlwaysReturns7Items()
     {
-        var result = await _movRepo.GetLast7DaysSummaryAsync();
+        var result = await _db.Movements.GetLast7DaysSummaryAsync();
         Assert.Equal(7, result.Count);
     }
 
     [Fact]
-    public async Task GetLast7DaysSummaryAsync_TodayEntryReflected()
+    public async Task GetLast7DaysSummaryAsync_TodayEntry_ReflectedInSummary()
     {
-        _movRepo.Add(MakeEntry(15));
+        _db.AddEntry(_cardId, 25, tarih: DateTime.Today);
 
-        var result = await _movRepo.GetLast7DaysSummaryAsync();
-        var today = result.FirstOrDefault(r => r.Date.Date == DateTime.Today);
+        var result = await _db.Movements.GetLast7DaysSummaryAsync();
+        var today = result.First(r => r.Date.Date == DateTime.Today);
 
-        Assert.Equal(15, today.Entry);
+        Assert.Equal(25, today.Entry);
+        Assert.Equal(0, today.Exit);
+    }
+
+    [Fact]
+    public async Task GetLast7DaysSummaryAsync_TodayExit_ReflectedInSummary()
+    {
+        _db.AddEntry(_cardId, 50, tarih: DateTime.Today);
+        _db.AddExit(_cardId, 15, tarih: DateTime.Today);
+
+        var result = await _db.Movements.GetLast7DaysSummaryAsync();
+        var today = result.First(r => r.Date.Date == DateTime.Today);
+
+        Assert.Equal(50, today.Entry);
+        Assert.Equal(15, today.Exit);
     }
 
     // ── GetDeliveredPersons ───────────────────────────────────────────────
@@ -261,47 +343,23 @@ public class MovementRepositoryTests : IDisposable
     [Fact]
     public void GetDeliveredPersons_ReturnsDistinctNames()
     {
-        var h1 = MakeExit(2); h1.TeslimEdilen = "Ahmet";
-        var h2 = MakeExit(2); h2.TeslimEdilen = "Mehmet";
-        var h3 = MakeExit(2); h3.TeslimEdilen = "Ahmet"; // tekrar
+        _db.AddEntry(_cardId, 30);
+        _db.AddExit(_cardId, 5,  teslim: "Ahmet");
+        _db.AddExit(_cardId, 5,  teslim: "Mehmet");
+        _db.AddExit(_cardId, 5,  teslim: "Ahmet"); // tekrar
 
-        _movRepo.Add(MakeEntry(20));
-        _movRepo.Add(h1);
-        _movRepo.Add(h2);
-        _movRepo.Add(h3);
-
-        var persons = _movRepo.GetDeliveredPersons();
+        var persons = _db.Movements.GetDeliveredPersons();
         Assert.Equal(2, persons.Count);
         Assert.Contains("Ahmet", persons);
         Assert.Contains("Mehmet", persons);
     }
-    [Fact]
-    public void Update_EntryWithDependentExit_AllowsSameCardUpdate()
-    {
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(MakeExit(5));
-
-        var entry = _movRepo.GetAll(stockCardId: _testCardId, movementType: "Giris").Single();
-        entry.Miktar = 12;
-
-        _movRepo.Update(entry);
-
-        var card = _cardRepo.GetById(_testCardId);
-        Assert.Equal(7, card?.MevcutStok);
-    }
 
     [Fact]
-    public void Update_MoveEntryToDifferentCard_WhenOldCardWouldGoNegative_ThrowsInvalidOperationException()
+    public void GetDeliveredPersons_EmptyTeslim_NotIncluded()
     {
-        var kart2 = new StokKarti { Ad = "Stok 2", KodNo = "TS002_MOVE", KartTipi = "Alt" };
-        _cardRepo.Add(kart2);
+        _db.AddEntry(_cardId, 10, teslim: "");
 
-        _movRepo.Add(MakeEntry(10));
-        _movRepo.Add(MakeExit(5));
-
-        var entry = _movRepo.GetAll(stockCardId: _testCardId, movementType: "Giris").Single();
-        entry.StokKartId = kart2.Id;
-
-        Assert.Throws<InvalidOperationException>(() => _movRepo.Update(entry));
+        var persons = _db.Movements.GetDeliveredPersons();
+        Assert.Empty(persons);
     }
 }

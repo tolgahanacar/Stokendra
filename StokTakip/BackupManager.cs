@@ -3,6 +3,11 @@ using System.IO.Compression;
 using StokTakip.Infrastructure;
 using StokTakip.Models;
 using StokTakip.Data.Interfaces;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
+using System.IO;
+using System.Linq;
 
 namespace StokTakip;
 
@@ -18,7 +23,7 @@ public static class BackupManager
             var lastBackup = AppServices.Current.Settings.LastBackupDate;
             if (lastBackup.HasValue && (DateTime.Now - lastBackup.Value).TotalDays < 7) return;
 
-            await Task.Run(() => PerformBackup(path));
+            await PerformBackupAsync(path);
 
             AppServices.Current.Settings.LastBackupDate = DateTime.Now;
             AppServices.Current.Settings.Kaydet();
@@ -29,7 +34,7 @@ public static class BackupManager
     /// <summary>
     /// Tam yedekleme: SQLite kopyası + tüm verilerin Excel dışa aktarımı (ZIP)
     /// </summary>
-    public static string PerformBackup(string destFolder)
+    public static async Task<string> PerformBackupAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
         string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Backup_{timestamp}");
@@ -41,19 +46,19 @@ public static class BackupManager
             CopyDatabase(tempDir);
 
             // 2. Stok Kartları (tüm alanlar)
-            ExportStokKartlari(tempDir);
+            await ExportStokKartlariAsync(tempDir);
 
             // 3. Stok Hareketleri
-            ExportStokHareketleri(tempDir);
+            await ExportStokHareketleriAsync(tempDir);
 
             // 4. Servis Kayıtları
-            ExportServisKayitlari(tempDir);
+            await ExportServisKayitlariAsync(tempDir);
 
             // 5. Notlar
             ExportNotlar(tempDir);
 
             // 6. Departmanlar
-            ExportDepartmanlar(tempDir);
+            await ExportDepartmanlarAsync(tempDir);
 
             // 7. SQL dışa aktarım
             ExportSql(tempDir);
@@ -61,7 +66,8 @@ public static class BackupManager
             // 8. ZIP oluştur
             string zipFile = Path.Combine(destFolder, $"Stokendra_FullBackup_{timestamp}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
-            ZipFile.CreateFromDirectory(tempDir, zipFile, CompressionLevel.Fastest, false);
+            
+            await Task.Run(() => ZipFile.CreateFromDirectory(tempDir, zipFile, CompressionLevel.Fastest, false));
             return zipFile;
         }
         finally
@@ -73,7 +79,7 @@ public static class BackupManager
     /// <summary>
     /// Sadece Excel dosyalarını dışa aktarır (ZIP olarak)
     /// </summary>
-    public static string ExportAllExcel(string destFolder)
+    public static async Task<string> ExportAllExcelAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
         string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Excel_{timestamp}");
@@ -81,15 +87,16 @@ public static class BackupManager
 
         try
         {
-            ExportStokKartlari(tempDir);
-            ExportStokHareketleri(tempDir);
-            ExportServisKayitlari(tempDir);
+            await ExportStokKartlariAsync(tempDir);
+            await ExportStokHareketleriAsync(tempDir);
+            await ExportServisKayitlariAsync(tempDir);
             ExportNotlar(tempDir);
-            ExportDepartmanlar(tempDir);
+            await ExportDepartmanlarAsync(tempDir);
 
             string zipFile = Path.Combine(destFolder, $"Stokendra_ExcelExport_{timestamp}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
-            ZipFile.CreateFromDirectory(tempDir, zipFile, CompressionLevel.Fastest, false);
+            
+            await Task.Run(() => ZipFile.CreateFromDirectory(tempDir, zipFile, CompressionLevel.Fastest, false));
             return zipFile;
         }
         finally
@@ -110,12 +117,9 @@ public static class BackupManager
 
         if (!File.Exists(dbPath)) return;
 
-        // Ham dosya kopyası yerine SQLite Online Backup API kullan.
-        // Bu yöntem WAL modunda tutarlı bir snapshot alır, -wal/-shm dosyalarına gerek kalmaz.
         string destFile = Path.Combine(tempDir, "stok.db");
         ServiceContainer.GetService<IConfigRepository>().CreateBackup(destFile);
 
-        // Orijinal dosya adı farklıysa onu da ekle (referans için)
         string origName = Path.GetFileName(dbPath);
         if (!origName.Equals("stok.db", StringComparison.OrdinalIgnoreCase))
         {
@@ -133,9 +137,9 @@ public static class BackupManager
         catch { /* SQL export opsiyonel */ }
     }
 
-    private static void ExportStokKartlari(string tempDir)
+    private static async Task ExportStokKartlariAsync(string tempDir)
     {
-        var tumKartlar = ServiceContainer.GetService<IStockCardRepository>().GetAll();
+        var tumKartlar = await ServiceContainer.GetService<IStockCardRepository>().GetAllAsync();
 
         if (tumKartlar.Count == 0) return;
 
@@ -170,9 +174,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "StokKartlari.xlsx"));
     }
 
-    private static void ExportStokHareketleri(string tempDir)
+    private static async Task ExportStokHareketleriAsync(string tempDir)
     {
-        var hareketler = ServiceContainer.GetService<IMovementRepository>().GetAll(null, null, null, null, null);
+        var hareketler = await ServiceContainer.GetService<IMovementRepository>().GetAllAsync(null, null, null, null, null);
         if (hareketler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -201,9 +205,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "StokHareketleri.xlsx"));
     }
 
-    private static void ExportServisKayitlari(string tempDir)
+    private static async Task ExportServisKayitlariAsync(string tempDir)
     {
-        var servisler = ServiceContainer.GetService<IServiceRecordRepository>().GetAll(null, null, null);
+        var servisler = await ServiceContainer.GetService<IServiceRecordRepository>().GetAllAsync(null, null, null);
         if (servisler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -256,9 +260,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "Notlar.xlsx"));
     }
 
-    private static void ExportDepartmanlar(string tempDir)
+    private static async Task ExportDepartmanlarAsync(string tempDir)
     {
-        var deptlar = ServiceContainer.GetService<IDepartmentRepository>().GetAll();
+        var deptlar = await ServiceContainer.GetService<IDepartmentRepository>().GetAllAsync();
         if (deptlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -276,10 +280,6 @@ public static class BackupManager
         ApplyTableStyle(ws, deptlar.Count, headers.Length);
         wb.SaveAs(Path.Combine(tempDir, "Departmanlar.xlsx"));
     }
-
-    // ═══════════════════════════════════════════
-    //  EXCEL STYLING HELPERS
-    // ═══════════════════════════════════════════
 
     private static void SetHeaders(IXLWorksheet ws, string[] headers)
     {
@@ -304,7 +304,6 @@ public static class BackupManager
         range.Style.Border.OutsideBorderColor = XLColor.FromArgb(180, 180, 180);
         range.Style.Border.InsideBorderColor = XLColor.FromArgb(220, 220, 220);
 
-        // Satır renklendirme (zebra)
         for (int r = 2; r <= rowCount + 1; r++)
         {
             if (r % 2 == 0)

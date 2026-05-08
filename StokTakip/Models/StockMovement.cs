@@ -61,4 +61,20 @@ public class StokHareketi
 
     /// <summary>Çıkış hareketi mi?</summary>
     public bool IsExit => TurEnum == HareketTuru.Cikis;
+
+    /// <summary>UI için formatlanmış tür (örn: [G] veya [Ç]).</summary>
+    public string DisplayTur => TurEnum switch
+    {
+        HareketTuru.Giris => "[G]",
+        HareketTuru.Cikis => "[Ç]",
+        _ => "[B]"
+    };
+
+    /// <summary>UI için renk kodu.</summary>
+    public string DisplayColor => TurEnum switch
+    {
+        HareketTuru.Giris => "#10B981", // Yeşil
+        HareketTuru.Cikis => "#EF4444", // Kırmızı
+        _ => "#94A3B8"                  // Gri
+    };
 }

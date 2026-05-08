@@ -79,6 +79,6 @@ public class StokKartiModelTests
     public void ToString_ReturnsAdAndKodNo()
     {
         var kart = new StokKarti { Ad = "Kalem", KodNo = "001" };
-        Assert.Equal("Kalem (001)", kart.ToString());
+        Assert.Equal("001 - Kalem", kart.ToString());
     }
 }

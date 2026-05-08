@@ -38,29 +38,51 @@
                     Command="{Binding DeleteCardCommand}"
                     IsEnabled="{Binding IsCardSelected}"/>
 
+            <Button Content="🗑 Toplu Sil" Classes="Danger"
+                    Command="{Binding BulkDeleteCommand}"
+                    IsEnabled="{Binding IsMultipleSelected}"/>
+
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+
+            <Button Content="🔍 Detay" Classes="Success"
+                    Command="{Binding ShowDetailCommand}"
+                    IsEnabled="{Binding IsCardSelected}"/>
+            
+            <Button Content="📥 Toplu Giriş" Classes="Secondary"
+                    Command="{Binding BulkEntryCommand}"/>
+
             <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
 
             <Button Content="📊 Excel" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
+            
+            <Button Content="📥 İçe Aktar" Classes="Secondary"
+                    Command="{Binding ImportExcelCommand}"/>
+            
+            <Button Content="📄 Örnek" Classes="Secondary"
+                    Command="{Binding DownloadSampleCommand}"/>
         </StackPanel>
 
         <!-- Grid -->
         <DataGrid Grid.Row="3"
+                  x:Name="CardsGrid"
                   Margin="40,24,40,24"
                   ItemsSource="{Binding Cards}"
                   SelectedItem="{Binding SelectedCard}"
                   IsReadOnly="True"
-                  CanUserResizeColumns="True">
+                  SelectionMode="Extended"
+                  CanUserResizeColumns="True"
+                  SelectionChanged="CardsGrid_SelectionChanged">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Kod"       Binding="{Binding KodNo}"      Width="80"/>
-                <DataGridTextColumn Header="Ad"        Binding="{Binding Ad}"          Width="*"/>
-                <DataGridTextColumn Header="Tip"       Binding="{Binding KartTipi}"    Width="70"/>
-                <DataGridTextColumn Header="Üst Kart"  Binding="{Binding UstKartAd}"   Width="130"/>
-                <DataGridTextColumn Header="Kategori"  Binding="{Binding Kategori}"    Width="110"/>
-                <DataGridTextColumn Header="Mevcut"    Binding="{Binding MevcutStok}"  Width="80"/>
-                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"     Width="60"/>
-                <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"       Width="70"/>
-                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"       Width="100"/>
+                <DataGridTextColumn Header="Kod"       Binding="{Binding KodNo}"      Width="100"/>
+                <DataGridTextColumn Header="Ad"        Binding="{Binding Ad}"          Width="300"/>
+                <DataGridTextColumn Header="Tip"       Binding="{Binding KartTipi}"    Width="100"/>
+                <DataGridTextColumn Header="Üst Kart"  Binding="{Binding UstKartAd}"   Width="300"/>
+                <DataGridTextColumn Header="Kategori"  Binding="{Binding Kategori}"    Width="200"/>
+                <DataGridTextColumn Header="Mevcut"    Binding="{Binding MevcutStok}"  Width="100"/>
+                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"     Width="100"/>
+                <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"       Width="150"/>
+                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"       Width="200"/>
             </DataGrid.Columns>
         </DataGrid>
 

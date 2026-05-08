@@ -2,6 +2,8 @@ using Microsoft.Data.Sqlite;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using System.Globalization;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace StokTakip.Data.Repositories;
 
@@ -14,7 +16,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         _connectionFactory = connectionFactory;
     }
 
-    public List<ServisKaydi> GetAll(DateTime? start, DateTime? end, string? search)
+    public async Task<List<ServisKaydi>> GetAllAsync(DateTime? start, DateTime? end, string? search)
     {
         var list = new List<ServisKaydi>();
         using var conn = _connectionFactory.CreateConnection();
@@ -32,8 +34,8 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         if (end.HasValue) cmd.Parameters.AddWithValue("$e", end.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("$q", $"%{search}%");
 
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
         {
             DateTime bakimTarihi = DateTime.Now;
             if (!reader.IsDBNull(4))
@@ -41,7 +43,6 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
                 string dateStr = reader.GetString(4);
                 if (!DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out bakimTarihi))
                 {
-                    // Fallback to legacy formats if needed
                     DateTime.TryParse(dateStr, out bakimTarihi);
                 }
             }
@@ -59,18 +60,27 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         return list;
     }
 
-    public void Add(ServisKaydi record)
+    public async Task AddAsync(ServisKaydi record)
     {
+        if (string.IsNullOrWhiteSpace(record.CihazAdi)) throw new System.Exception("Cihaz adı boş olamaz.");
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc)
             VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
         BindParams(cmd, record);
-        cmd.ExecuteNonQuery();
+        await cmd.ExecuteNonQueryAsync();
+        record.Id = GetLastId(conn);
     }
 
-    public void Update(ServisKaydi record)
+    private int GetLastId(SqliteConnection conn)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT last_insert_rowid()";
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public async Task UpdateAsync(ServisKaydi record)
     {
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
@@ -81,32 +91,32 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
             WHERE Id=$id";
         BindParams(cmd, record);
         cmd.Parameters.AddWithValue("$id", record.Id);
-        cmd.ExecuteNonQuery();
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id)
     {
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    public void AddBulk(IEnumerable<ServisKaydi> records)
+    public async Task AddBulkAsync(IEnumerable<ServisKaydi> records)
     {
         using var conn = _connectionFactory.CreateConnection();
-        using var trans = conn.BeginTransaction();
+        using var trans = await conn.BeginTransactionAsync();
         try {
             foreach(var r in records) {
                 using var cmd = conn.CreateCommand();
-                cmd.Transaction = trans;
+                cmd.Transaction = (SqliteTransaction)trans;
                 cmd.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc) VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
                 BindParams(cmd, r);
-                cmd.ExecuteNonQuery();
+                await cmd.ExecuteNonQueryAsync();
             }
-            trans.Commit();
-        } catch { trans.Rollback(); throw; }
+            await trans.CommitAsync();
+        } catch { await trans.RollbackAsync(); throw; }
     }
 
     private void BindParams(SqliteCommand cmd, ServisKaydi s)

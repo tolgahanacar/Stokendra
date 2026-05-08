@@ -58,7 +58,7 @@ public partial class AddMovementViewModel : ViewModelBase
             SelectedCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StokKartId);
         }
 
-        var depts = await Task.Run(() => _departments.GetAll());
+        var depts = await _departments.GetAllAsync();
         foreach (var d in depts) AllDepartments.Add(d);
         
         if (_editingMovement == null)

@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:StokTakip.ViewModels"
+        x:Class="StokTakip.Views.PrintPreviewView"
+        Title="{Binding Title}"
+        Width="900" Height="700"
+        WindowStartupLocation="CenterOwner"
+        Background="#0C0E14"
+        TransparencyLevelHint="AcrylicBlur"
+        ExtendClientAreaToDecorationsHint="True">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,20,0,20" Spacing="4">
+            <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6"/>
+            <TextBlock Text="Rapor içeriğini düzenleyebilir ve ardından yazdırabilirsiniz." FontSize="12" Foreground="#94A3B8"/>
+        </StackPanel>
+
+        <!-- Content Editor -->
+        <Border Grid.Row="1" Background="#161B27" CornerRadius="8" BorderBrush="#1E2D45" BorderThickness="1">
+            <TextBox Text="{Binding Content}" 
+                     AcceptsReturn="True" 
+                     FontFamily="Consolas, Monospace" 
+                     FontSize="13"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Padding="15"
+                     Foreground="#D1D5DB"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+        </Border>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,20,0,0">
+            <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#64748B" FontSize="11"/>
+            
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12">
+                <Button Content="Vazgeç" Classes="Secondary" Command="{Binding CancelCommand}" Width="100"/>
+                <Button Content="🖨 Tarayıcıda Aç ve Yazdır" Classes="Primary" Command="{Binding OpenInBrowserCommand}" Width="220"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

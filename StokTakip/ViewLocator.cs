@@ -1,51 +1,65 @@
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
-using StokTakip.Infrastructure;
 using StokTakip.ViewModels;
 using System;
+using System.IO;
 
 namespace StokTakip;
 
 public class ViewLocator : IDataTemplate
 {
+    public static Control? CreateView(object? data)
+    {
+        return new ViewLocator().Build(data);
+    }
+
     public Control? Build(object? data)
     {
         if (data is null) return null;
 
-        // StokTakip.ViewModels.DashboardViewModel → StokTakip.Views.DashboardView
-        var viewTypeName = data.GetType().FullName!
-            .Replace(".ViewModels.", ".Views.")
-            .Replace("ViewModel", "View");
+        // StokTakip.ViewModels.DashboardViewModel → StokTakip.Views.DashboardView veya DashboardWindow
+        var baseName = data.GetType().FullName!.Replace(".ViewModels.", ".Views.").Replace("ViewModel", "");
+        var viewType = Type.GetType(baseName + "View") ?? Type.GetType(baseName + "Window");
 
-        var viewType = Type.GetType(viewTypeName);
         if (viewType is null)
         {
             return new TextBlock
             {
-                Text = $"View bulunamadı: {viewTypeName}",
+                Text = $"View bulunamadı: {baseName}View/Window",
                 Foreground = Avalonia.Media.Brushes.OrangeRed
             };
         }
 
         try
         {
-            // View'ı parametresiz constructor ile oluştur
             var view = (Control)Activator.CreateInstance(viewType)!;
-            // DataContext'i ViewModel olarak set et
             view.DataContext = data;
             return view;
         }
         catch (Exception ex)
         {
-            // İç exception'ı bul (özellikle TargetInvocationException durumunda)
+            // İç exception zincirini çöz
             var inner = ex;
             while (inner.InnerException != null) inner = inner.InnerException;
 
-            var msg = $"View oluşturulamadı: {viewType.Name}\n{inner.GetType().Name}: {inner.Message}";
-            Console.WriteLine($"[ViewLocator ERROR] {viewType.Name}: {ex}");
+            // Dosyaya yaz — Avalonia'da Console.WriteLine görünmüyor
+            try
+            {
+                string logDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Stokendra");
+                Directory.CreateDirectory(logDir);
+                File.AppendAllText(
+                    Path.Combine(logDir, "viewlocator_error.log"),
+                    $"[{DateTime.Now:HH:mm:ss}] {viewType.Name}\n" +
+                    $"  Root: {inner.GetType().Name}: {inner.Message}\n" +
+                    $"  Full: {ex}\n\n");
+            }
+            catch { }
+
             return new TextBlock
             {
-                Text = msg,
+                Text = $"View oluşturulamadı: {viewType.Name}\n{inner.GetType().Name}: {inner.Message}",
                 Foreground = Avalonia.Media.Brushes.OrangeRed,
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap,
                 Margin = new Avalonia.Thickness(20)

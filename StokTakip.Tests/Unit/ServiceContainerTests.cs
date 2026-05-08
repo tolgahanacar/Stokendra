@@ -1,118 +1,79 @@
+using Microsoft.Extensions.DependencyInjection;
 using StokTakip.Infrastructure;
 
 namespace StokTakip.Tests.Unit;
 
 /// <summary>
-/// <see cref="ServiceContainer"/> için unit testler.
-/// Singleton, transient ve instance kayıt/çözümleme davranışlarını doğrular.
+/// ServiceContainer (static IServiceProvider wrapper) için unit testler.
 /// </summary>
 public class ServiceContainerTests
 {
-    // ── Singleton ─────────────────────────────────────────────────────────
+    [Fact]
+    public void GetService_RegisteredType_ReturnsInstance()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var provider = services.BuildServiceProvider();
+        ServiceContainer.Initialize(provider);
+
+        var result = ServiceContainer.GetService<ITestService>();
+
+        Assert.NotNull(result);
+        Assert.IsType<TestService>(result);
+    }
 
     [Fact]
-    public void RegisterSingleton_SameInstanceReturnedOnMultipleCalls()
+    public void GetService_Singleton_SameInstanceReturnedTwice()
     {
-        using var container = new ServiceContainer();
-        container.RegisterSingleton<ITestService, TestService>(() => new TestService());
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var provider = services.BuildServiceProvider();
+        ServiceContainer.Initialize(provider);
 
-        var first = container.Resolve<ITestService>();
-        var second = container.Resolve<ITestService>();
+        var first  = ServiceContainer.GetService<ITestService>();
+        var second = ServiceContainer.GetService<ITestService>();
 
         Assert.Same(first, second);
     }
 
     [Fact]
-    public void RegisterInstance_ReturnsRegisteredInstance()
+    public void GetService_Transient_DifferentInstancesReturned()
     {
-        using var container = new ServiceContainer();
-        var instance = new TestService();
-        container.RegisterInstance<ITestService>(instance);
+        var services = new ServiceCollection();
+        services.AddTransient<ITestService, TestService>();
+        var provider = services.BuildServiceProvider();
+        ServiceContainer.Initialize(provider);
 
-        var resolved = container.Resolve<ITestService>();
-
-        Assert.Same(instance, resolved);
-    }
-
-    // ── Transient ─────────────────────────────────────────────────────────
-
-    [Fact]
-    public void RegisterTransient_DifferentInstancesReturnedOnMultipleCalls()
-    {
-        using var container = new ServiceContainer();
-        container.RegisterTransient<ITestService, TestService>(() => new TestService());
-
-        var first = container.Resolve<ITestService>();
-        var second = container.Resolve<ITestService>();
+        var first  = ServiceContainer.GetService<ITestService>();
+        var second = ServiceContainer.GetService<ITestService>();
 
         Assert.NotSame(first, second);
     }
 
-    // ── Hata durumları ────────────────────────────────────────────────────
-
     [Fact]
-    public void Resolve_UnregisteredType_ThrowsInvalidOperationException()
+    public void GetService_UnregisteredType_ThrowsInvalidOperationException()
     {
-        using var container = new ServiceContainer();
+        var services = new ServiceCollection();
+        var provider = services.BuildServiceProvider();
+        ServiceContainer.Initialize(provider);
 
-        var ex = Assert.Throws<InvalidOperationException>(() => container.Resolve<ITestService>());
-        Assert.Contains("ITestService", ex.Message);
+        Assert.Throws<InvalidOperationException>(() =>
+            ServiceContainer.GetService<ITestService>());
     }
 
     [Fact]
-    public void TryResolve_UnregisteredType_ReturnsNull()
+    public void GetService_ByType_ReturnsInstance()
     {
-        using var container = new ServiceContainer();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestService, TestService>();
+        var provider = services.BuildServiceProvider();
+        ServiceContainer.Initialize(provider);
 
-        var result = container.TryResolve<ITestService>();
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void TryResolve_RegisteredType_ReturnsInstance()
-    {
-        using var container = new ServiceContainer();
-        container.RegisterSingleton<ITestService, TestService>(() => new TestService());
-
-        var result = container.TryResolve<ITestService>();
+        var result = ServiceContainer.GetService(typeof(ITestService));
 
         Assert.NotNull(result);
     }
 
-    // ── Dispose ───────────────────────────────────────────────────────────
-
-    [Fact]
-    public void Dispose_CallsDisposeOnSingletonInstances()
-    {
-        var container = new ServiceContainer();
-        var disposable = new DisposableTestService();
-        container.RegisterInstance<ITestService>(disposable);
-
-        // Singleton'ı çözümle (oluşturulsun)
-        _ = container.Resolve<ITestService>();
-        container.Dispose();
-
-        Assert.True(disposable.IsDisposed);
-    }
-
-    [Fact]
-    public void Dispose_CanBeCalledMultipleTimes_NoException()
-    {
-        var container = new ServiceContainer();
-        container.Dispose();
-        container.Dispose(); // İkinci çağrı exception fırlatmamalı
-    }
-
-    // ── Test yardımcıları ─────────────────────────────────────────────────
-
     private interface ITestService { }
-
     private class TestService : ITestService { }
-
-    private class DisposableTestService : ITestService, IDisposable
-    {
-        public bool IsDisposed { get; private set; }
-        public void Dispose() => IsDisposed = true;
-    }
 }

@@ -13,6 +13,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly NotesViewModel          _notes;
     private readonly SettingsViewModel       _settings;
     private readonly StocksViewModel         _stocks;
+    private readonly DepartmentsViewModel    _departments;
+    private readonly ReportsViewModel        _reports;
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private string _activeMenu = "dashboard";
@@ -25,7 +27,9 @@ public partial class MainViewModel : ViewModelBase
         ServicesViewModel       services,
         NotesViewModel          notes,
         SettingsViewModel       settings,
-        StocksViewModel         stocks)
+        StocksViewModel         stocks,
+        DepartmentsViewModel    departments,
+        ReportsViewModel        reports)
     {
         _dashboard  = dashboard;
         _stockCards = stockCards;
@@ -34,6 +38,8 @@ public partial class MainViewModel : ViewModelBase
         _notes      = notes;
         _settings   = settings;
         _stocks     = stocks;
+        _departments = departments;
+        _reports     = reports;
 
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         NavigateToDashboard();
@@ -46,4 +52,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand] public void NavigateToNotes()       { CurrentPage = _notes;      ActiveMenu = "notes";      }
     [RelayCommand] public void NavigateToSettings()    { CurrentPage = _settings;   ActiveMenu = "settings";   }
     [RelayCommand] public void NavigateToStocks()      { CurrentPage = _stocks;     ActiveMenu = "stocks";     }
+    [RelayCommand] public void NavigateToDepartments() { CurrentPage = _departments; ActiveMenu = "departments"; }
+    [RelayCommand] public void NavigateToReports()     { CurrentPage = _reports;     ActiveMenu = "reports";     }
 }
