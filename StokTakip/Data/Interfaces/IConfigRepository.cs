@@ -21,4 +21,7 @@ public interface IConfigRepository
 
     /// <summary>Denetim günlüğüne yeni bir kayıt ekler.</summary>
     void WriteAuditLog(string type, string table, int recordId, string detail);
+
+    /// <summary>Denetim günlüğündeki tüm kayıtları siler (Truncate).</summary>
+    void TruncateAuditLog();
 }

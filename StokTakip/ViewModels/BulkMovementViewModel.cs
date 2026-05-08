@@ -89,8 +89,13 @@ public partial class BulkMovementViewModel : ViewModelBase
         var term = SearchText.Trim().ToLowerInvariant();
         var filtered = string.IsNullOrWhiteSpace(term) 
             ? _allItemViewModels 
-            : _allItemViewModels.Where(i => i.Card.Ad.ToLowerInvariant().Contains(term) || i.Card.KodNo.ToLowerInvariant().Contains(term));
+            : _allItemViewModels.Where(i => i.Card.Ad.ToLowerInvariant().Contains(term) || i.Card.KodNo.ToLowerInvariant().Contains(term)).ToList();
 
+        // UI donmalarını önlemek için sadece değişenleri güncellemek daha iyidir
+        // Ancak basitlik için Clear/Add yerine yeni bir liste ataması yapmak (seçiliyse)
+        // veya geçici bir değişkende tutup bir kerede eklemek Avalonia'da ItemsSource değiştirilerek yapılabilir.
+        // Şimdilik toplu ekleme simülasyonu yapıyoruz.
+        
         Items.Clear();
         foreach (var i in filtered) Items.Add(i);
     }

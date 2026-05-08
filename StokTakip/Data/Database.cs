@@ -93,10 +93,11 @@ public sealed partial class Database : IDisposable
     private static void ApplyConnectionPragmas(SqliteConnection connection)
     {
         ExecutePragma(connection, "foreign_keys", "ON");
-        ExecutePragma(connection, "busy_timeout", "15000");
-        ExecutePragma(connection, "synchronous", "NORMAL");
+        ExecutePragma(connection, "busy_timeout", "30000"); // 30 sn
+        ExecutePragma(connection, "synchronous", "FULL");  // Maksimum güvenlik
+        ExecutePragma(connection, "journal_mode", "WAL");
         ExecutePragma(connection, "temp_store", "MEMORY");
-        ExecutePragma(connection, "cache_size", "-16000");
+        ExecutePragma(connection, "cache_size", "-32000"); // 32MB cache
     }
 
     private static void ExecutePragma(SqliteConnection connection, string pragma, string value)
@@ -109,41 +110,42 @@ public sealed partial class Database : IDisposable
     private void Initialize()
     {
         using var connection = CreateConnection();
+        
+        using var cmdBegin = connection.CreateCommand();
+        cmdBegin.CommandText = "BEGIN IMMEDIATE";
+        cmdBegin.ExecuteNonQuery();
 
-        using (var journalMode = connection.CreateCommand())
-        {
-            journalMode.CommandText = "PRAGMA journal_mode=WAL;";
-            journalMode.ExecuteScalar();
-        }
-
-        using var transaction = connection.BeginTransaction();
         try
         {
-            EnsureSchema(connection, transaction);
+            EnsureSchema(connection, null);
 
-            int version = GetSchemaVersion(connection, transaction);
-            if (version < 1) MigrateToV1(connection, transaction);
-            if (version < 2) MigrateToV2(connection, transaction);
-            if (version < 3) MigrateToV3(connection, transaction);
-            if (version < 4) MigrateToV4(connection, transaction);
-            if (version < 5) MigrateToV5(connection, transaction);
-            if (version < 6) MigrateToV6(connection, transaction);
-            if (version < 7) MigrateToV7(connection, transaction);
-            if (version < 8) MigrateToV8(connection, transaction);
-            if (version < 9) MigrateToV9(connection, transaction);
-            if (version < 10) MigrateToV10(connection, transaction);
+            int version = GetSchemaVersion(connection, null);
+            if (version < 1) MigrateToV1(connection, null);
+            if (version < 2) MigrateToV2(connection, null);
+            if (version < 3) MigrateToV3(connection, null);
+            if (version < 4) MigrateToV4(connection, null);
+            if (version < 5) MigrateToV5(connection, null);
+            if (version < 6) MigrateToV6(connection, null);
+            if (version < 7) MigrateToV7(connection, null);
+            if (version < 8) MigrateToV8(connection, null);
+            if (version < 9) MigrateToV9(connection, null);
+            if (version < 10) MigrateToV10(connection, null);
 
-            EnsureIndexes(connection, transaction);
-            SetSchemaVersion(connection, transaction, CurrentSchemaVersion);
-            NormalizeLegacyData(connection, transaction);
-            SeedDefaults(connection, transaction);
-            ValidateDatabase(connection, transaction);
+            EnsureIndexes(connection, null);
+            SetSchemaVersion(connection, null, CurrentSchemaVersion);
+            NormalizeLegacyData(connection, null);
+            SeedDefaults(connection, null);
+            ValidateDatabase(connection, null);
 
-            transaction.Commit();
+            using var cmdCommit = connection.CreateCommand();
+            cmdCommit.CommandText = "COMMIT";
+            cmdCommit.ExecuteNonQuery();
         }
         catch
         {
-            transaction.Rollback();
+            using var cmdRollback = connection.CreateCommand();
+            cmdRollback.CommandText = "ROLLBACK";
+            cmdRollback.ExecuteNonQuery();
             throw;
         }
 
@@ -152,29 +154,6 @@ public sealed partial class Database : IDisposable
         optimize.ExecuteNonQuery();
     }
 
-
-    public void AuditLogYaz(string tip, string tablo, int id, string detay)
-    {
-        // Internal usage only, actual writing should move to ConfigRepository eventually
-        try
-        {
-            using var connection = CreateConnection();
-            using var command = connection.CreateCommand();
-            command.CommandText = @"
-                INSERT INTO AuditLog (Tarih, IslemTipi, TabloAdi, KayitId, Detay)
-                VALUES ($t, $it, $ta, $id, $d)";
-            command.Parameters.AddWithValue("$t", DateTime.Now.ToString(DateFormat, CultureInfo.InvariantCulture));
-            command.Parameters.AddWithValue("$it", tip);
-            command.Parameters.AddWithValue("$ta", tablo);
-            command.Parameters.AddWithValue("$id", id);
-            command.Parameters.AddWithValue("$d", detay ?? "");
-            command.ExecuteNonQuery();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("AuditLogYaz error: " + ex);
-        }
-    }
 
     public void TopluHareketSil(IEnumerable<int> ids)
     {

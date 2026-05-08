@@ -92,7 +92,18 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
 
-        if (SecurityCode != "1951")
+        // Gerçek bir ERP'de bu kod veritabanında saklanan bir hash veya 
+        // e-posta/SMS ile gönderilen geçici bir kod olmalıdır.
+        // Şimdilik güvenlik açığını gidermek için bu kontrolü devre dışı bırakıyoruz
+        // veya ayarlardaki MasterCode ile eşleştiriyoruz.
+        if (string.IsNullOrWhiteSpace(SecurityCode))
+        {
+            ErrorMessage = "Güvenlik kodu gereklidir.";
+            return;
+        }
+
+        // Master code kontrolü (AppSettings'e eklenecek)
+        if (SecurityCode != AppServices.Current.Settings.MasterSecurityCode)
         {
             ErrorMessage = "Güvenlik kodu hatalı.";
             return;

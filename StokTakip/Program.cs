@@ -15,8 +15,29 @@ class Program
     [STAThread]
     public static void Main(string[] args) 
     {
-        SetupDI();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        // Global Exception Handling
+        AppDomain.CurrentDomain.UnhandledException += (s, e) => 
+        {
+            AppLogger.LogError("FATAL: AppDomain Unhandled Exception", e.ExceptionObject as Exception);
+        };
+
+        TaskScheduler.UnobservedTaskException += (s, e) => 
+        {
+            AppLogger.LogError("FATAL: TaskScheduler Unobserved Exception", e.Exception);
+            e.SetObserved();
+        };
+
+        try 
+        {
+            SetupDI();
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("FATAL: Startup Exception", ex);
+            // Kritik hata durumunda kullanıcıya bilgi verilebilir
+            throw;
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

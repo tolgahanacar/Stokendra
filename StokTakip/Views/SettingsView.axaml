@@ -95,6 +95,19 @@
                 <Border Classes="Card" Width="400" Margin="0,0,20,20">
                     <StackPanel Spacing="16">
                         <TextBlock Text="ℹ Sistem Bilgisi" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
+                        
+                        <!-- Bakım Kısmı -->
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Bakım ve Temizlik" FontSize="13" FontWeight="SemiBold" Foreground="#FF5B5B"/>
+                            <TextBlock Text="İşlem geçmişini (Audit Log) temizlemek veritabanını küçültür." FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                            <Button Content="🗑 İşlem Geçmişini Temizle" 
+                                    Background="#2D1A1A" Foreground="#FF5B5B" BorderBrush="#4D2A2A" BorderThickness="1"
+                                    Command="{Binding TruncateAuditLogCommand}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+
+                        <Separator Height="1" Background="#1E2D45" Margin="0,10"/>
+
                         <StackPanel Spacing="4">
                             <TextBlock Text="Stokendra" FontSize="22" FontWeight="Bold" Foreground="#38AEFF"/>
                             <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>

@@ -2,21 +2,20 @@ using Microsoft.Data.Sqlite;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using System.Globalization;
+using System.Collections.Generic;
+using System;
 
 namespace StokTakip.Data.Repositories;
 
-public sealed class ConfigRepository : IConfigRepository
+public sealed class ConfigRepository : RepositoryBase, IConfigRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public ConfigRepository(IDbConnectionFactory connectionFactory)
+    public ConfigRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public string GetConfig(string key, string defaultValue = "")
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT Değer FROM AppConfig WHERE Anahtar = $k";
         cmd.Parameters.AddWithValue("$k", key);
@@ -26,7 +25,7 @@ public sealed class ConfigRepository : IConfigRepository
 
     public void SetConfig(string key, string value)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "INSERT INTO AppConfig (Anahtar, Değer) VALUES ($k, $v) ON CONFLICT(Anahtar) DO UPDATE SET Değer=$v";
         cmd.Parameters.AddWithValue("$k", key);
@@ -37,7 +36,7 @@ public sealed class ConfigRepository : IConfigRepository
     public List<Birim> GetUnits()
     {
         var list = new List<Birim>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT Id, Ad FROM Birimler ORDER BY Ad";
         using var reader = cmd.ExecuteReader();
@@ -50,7 +49,7 @@ public sealed class ConfigRepository : IConfigRepository
 
     public void CreateBackup(string destinationPath)
     {
-        using var source = _connectionFactory.CreateConnection();
+        using var source = ConnectionFactory.CreateConnection();
         using var destination = new SqliteConnection($"Data Source={destinationPath}");
         destination.Open();
         source.BackupDatabase(destination);
@@ -58,16 +57,18 @@ public sealed class ConfigRepository : IConfigRepository
 
     public void WriteAuditLog(string type, string table, int recordId, string detail)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        LogAudit(type, table, recordId, detail);
+    }
+
+    public void TruncateAuditLog()
+    {
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO AuditLog (Tarih, IslemTipi, TabloAdi, KayitId, Detay)
-            VALUES ($t, $it, $ta, $id, $d)";
-        cmd.Parameters.AddWithValue("$t", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        cmd.Parameters.AddWithValue("$it", type);
-        cmd.Parameters.AddWithValue("$ta", table);
-        cmd.Parameters.AddWithValue("$id", recordId);
-        cmd.Parameters.AddWithValue("$d", detail ?? "");
+        cmd.CommandText = "DELETE FROM AuditLog";
         cmd.ExecuteNonQuery();
+        
+        using var cmdReset = conn.CreateCommand();
+        cmdReset.CommandText = "DELETE FROM sqlite_sequence WHERE name='AuditLog'";
+        cmdReset.ExecuteNonQuery();
     }
 }

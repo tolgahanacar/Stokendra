@@ -5,13 +5,10 @@ using System.Globalization;
 
 namespace StokTakip.Data.Repositories;
 
-public sealed class StockCardRepository : IStockCardRepository
+public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public StockCardRepository(IDbConnectionFactory connectionFactory)
+    public StockCardRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public List<StokKarti> GetAll() => GetStockCards(null, null, null);
@@ -29,58 +26,82 @@ public sealed class StockCardRepository : IStockCardRepository
 
     public void Add(StokKarti stokKarti)
     {
-        using var conn = _connectionFactory.CreateConnection();
-        ValidateCard(stokKarti, conn);
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
-            VALUES ($kn, $ad, $kt, $uk, $ka, $bi, $ms, $ko, $te, $ba, $bf, $ac)";
-        BindParams(cmd, stokKarti);
-        cmd.ExecuteNonQuery();
-        stokKarti.Id = GetLastId(conn);
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            ValidateCard(stokKarti, conn, trans);
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = trans;
+            cmd.CommandText = @"
+                INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
+                VALUES ($kn, $ad, $kt, $uk, $ka, $bi, $ms, $ko, $te, $ba, $bf, $ac)";
+            BindParams(cmd, stokKarti);
+            cmd.ExecuteNonQuery();
+            stokKarti.Id = GetLastId(conn, trans);
+            trans.Commit();
+            LogAudit("Ekleme", "StokKartlari", stokKarti.Id, $"Kod: {stokKarti.KodNo}, Ad: {stokKarti.Ad}");
+        } catch { trans.Rollback(); throw; }
     }
 
     public async Task AddAsync(StokKarti stokKarti)
     {
-        using var conn = _connectionFactory.CreateConnection();
-        ValidateCard(stokKarti, conn);
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
-            VALUES ($kn, $ad, $kt, $uk, $ka, $bi, $ms, $ko, $te, $ba, $bf, $ac)";
-        BindParams(cmd, stokKarti);
-        await cmd.ExecuteNonQueryAsync();
-        stokKarti.Id = GetLastId(conn);
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync();
+        try {
+            ValidateCard(stokKarti, conn, (SqliteTransaction)trans);
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = (SqliteTransaction)trans;
+            cmd.CommandText = @"
+                INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
+                VALUES ($kn, $ad, $kt, $uk, $ka, $bi, $ms, $ko, $te, $ba, $bf, $ac)";
+            BindParams(cmd, stokKarti);
+            await cmd.ExecuteNonQueryAsync();
+            stokKarti.Id = GetLastId(conn, (SqliteTransaction)trans);
+            await trans.CommitAsync();
+            LogAudit("Ekleme", "StokKartlari", stokKarti.Id, $"Kod: {stokKarti.KodNo}, Ad: {stokKarti.Ad}");
+        } catch { await trans.RollbackAsync(); throw; }
     }
 
     public void Update(StokKarti stokKarti)
     {
-        using var conn = _connectionFactory.CreateConnection();
-        ValidateCard(stokKarti, conn);
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            UPDATE StokKartlari SET 
-                KodNo=$kn, Ad=$ad, KartTipi=$kt, UstKartId=$uk, Kategori=$ka, 
-                Birim=$bi, MinStok=$ms, Konum=$ko, Tedarikci=$te, Barkod=$ba, 
-                BirimFiyat=$bf, Aciklama=$ac 
-            WHERE Id=$id";
-        BindParams(cmd, stokKarti);
-        cmd.Parameters.AddWithValue("$id", stokKarti.Id);
-        cmd.ExecuteNonQuery();
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            ValidateCard(stokKarti, conn, trans);
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = trans;
+            cmd.CommandText = @"
+                UPDATE StokKartlari SET 
+                    KodNo=$kn, Ad=$ad, KartTipi=$kt, UstKartId=$uk, Kategori=$ka, 
+                    Birim=$bi, MinStok=$ms, Konum=$ko, Tedarikci=$te, Barkod=$ba, 
+                    BirimFiyat=$bf, Aciklama=$ac 
+                WHERE Id=$id";
+            BindParams(cmd, stokKarti);
+            cmd.Parameters.AddWithValue("$id", stokKarti.Id);
+            cmd.ExecuteNonQuery();
+            trans.Commit();
+            LogAudit("Guncelleme", "StokKartlari", stokKarti.Id, $"Kod: {stokKarti.KodNo}, Ad: {stokKarti.Ad}");
+        } catch { trans.Rollback(); throw; }
     }
 
     public void Delete(int id)
     {
-        using var conn = _connectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM StokKartlari WHERE Id=$id";
-        cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            using var cmd = conn.CreateCommand();
+            cmd.Transaction = trans;
+            cmd.CommandText = "DELETE FROM StokKartlari WHERE Id=$id";
+            cmd.Parameters.AddWithValue("$id", id);
+            cmd.ExecuteNonQuery();
+            trans.Commit();
+            LogAudit("Silme", "StokKartlari", id, "");
+        } catch { trans.Rollback(); throw; }
     }
 
     public string GetNextCode()
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT MAX(CAST(KodNo AS INTEGER)) FROM StokKartlari WHERE KodNo GLOB '[0-9]*'";
         var result = cmd.ExecuteScalar();
@@ -91,7 +112,7 @@ public sealed class StockCardRepository : IStockCardRepository
     private List<StokKarti> GetStockCards(string? type, int? parentId, int? id)
     {
         var list = new List<StokKarti>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = BuildQuery(type, parentId, id);
         if (type != null) cmd.Parameters.AddWithValue("$kt", type);
@@ -106,7 +127,7 @@ public sealed class StockCardRepository : IStockCardRepository
     private async Task<List<StokKarti>> GetStockCardsAsync(string? type, int? parentId, int? id)
     {
         var list = new List<StokKarti>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = BuildQuery(type, parentId, id);
         if (type != null) cmd.Parameters.AddWithValue("$kt", type);
@@ -122,15 +143,18 @@ public sealed class StockCardRepository : IStockCardRepository
     {
         var sql = @"
             SELECT s.*, u.Ad as UstKartAd,
-            (SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE 0 END) FROM StokHareketleri WHERE StokKartId=s.Id) as ToplamGiris,
-            (SELECT SUM(CASE WHEN Tur IN ('Cikis', 'Çıkış') THEN Miktar ELSE 0 END) FROM StokHareketleri WHERE StokKartId=s.Id) as ToplamCikis
+            SUM(CASE WHEN h.Tur IN ('Giris', 'Giriş') THEN h.Miktar ELSE 0 END) as ToplamGiris,
+            SUM(CASE WHEN h.Tur IN ('Cikis', 'Çıkış') THEN h.Miktar ELSE 0 END) as ToplamCikis
             FROM StokKartlari s
             LEFT JOIN StokKartlari u ON s.UstKartId = u.Id
+            LEFT JOIN StokHareketleri h ON s.Id = h.StokKartId
             WHERE 1=1";
+        
         if (type != null) sql += " AND s.KartTipi = $kt";
         if (parentId.HasValue) sql += " AND s.UstKartId = $uk";
         if (id.HasValue) sql += " AND s.Id = $id";
-        sql += " ORDER BY s.KodNo";
+        
+        sql += " GROUP BY s.Id ORDER BY s.KodNo";
         return sql;
     }
 
@@ -174,14 +198,15 @@ public sealed class StockCardRepository : IStockCardRepository
         cmd.Parameters.AddWithValue("$ac", s.Aciklama ?? "");
     }
 
-    private int GetLastId(SqliteConnection conn)
+    private int GetLastId(SqliteConnection conn, SqliteTransaction? trans = null)
     {
         using var cmd = conn.CreateCommand();
+        if (trans != null) cmd.Transaction = trans;
         cmd.CommandText = "SELECT last_insert_rowid()";
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
-    private void ValidateCard(StokKarti s, SqliteConnection conn)
+    private void ValidateCard(StokKarti s, SqliteConnection conn, SqliteTransaction? trans = null)
     {
         if (string.IsNullOrWhiteSpace(s.Ad)) throw new InvalidOperationException("Stok adı boş olamaz.");
         if (string.IsNullOrWhiteSpace(s.KodNo)) throw new InvalidOperationException("Kod No boş olamaz.");
@@ -191,6 +216,7 @@ public sealed class StockCardRepository : IStockCardRepository
         if (s.BirimFiyat < 0) s.BirimFiyat = 0;
 
         using var cmd = conn.CreateCommand();
+        if (trans != null) cmd.Transaction = trans;
         cmd.CommandText = "SELECT COUNT(*) FROM StokKartlari WHERE KodNo=$kn AND Id<>$id";
         cmd.Parameters.AddWithValue("$kn", s.KodNo);
         cmd.Parameters.AddWithValue("$id", s.Id);

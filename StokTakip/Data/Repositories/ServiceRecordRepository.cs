@@ -7,19 +7,16 @@ using System.Threading.Tasks;
 
 namespace StokTakip.Data.Repositories;
 
-public sealed class ServiceRecordRepository : IServiceRecordRepository
+public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public ServiceRecordRepository(IDbConnectionFactory connectionFactory)
+    public ServiceRecordRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public async Task<List<ServisKaydi>> GetAllAsync(DateTime? start, DateTime? end, string? search)
     {
         var list = new List<ServisKaydi>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         
         string sql = "SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc FROM ServisKayitlari WHERE 1=1";
@@ -63,7 +60,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
     public async Task AddAsync(ServisKaydi record)
     {
         if (string.IsNullOrWhiteSpace(record.CihazAdi)) throw new System.Exception("Cihaz adı boş olamaz.");
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc)
@@ -71,6 +68,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         BindParams(cmd, record);
         await cmd.ExecuteNonQueryAsync();
         record.Id = GetLastId(conn);
+        LogAudit("Ekleme", "ServisKayitlari", record.Id, $"Cihaz: {record.CihazAdi}");
     }
 
     private int GetLastId(SqliteConnection conn)
@@ -82,7 +80,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
 
     public async Task UpdateAsync(ServisKaydi record)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             UPDATE ServisKayitlari SET 
@@ -92,20 +90,22 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
         BindParams(cmd, record);
         cmd.Parameters.AddWithValue("$id", record.Id);
         await cmd.ExecuteNonQueryAsync();
+        LogAudit("Guncelleme", "ServisKayitlari", record.Id, $"Cihaz: {record.CihazAdi}");
     }
 
     public async Task DeleteAsync(int id)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
         await cmd.ExecuteNonQueryAsync();
+        LogAudit("Silme", "ServisKayitlari", id, "");
     }
 
     public async Task AddBulkAsync(IEnumerable<ServisKaydi> records)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync();
         try {
             foreach(var r in records) {
@@ -116,6 +116,7 @@ public sealed class ServiceRecordRepository : IServiceRecordRepository
                 await cmd.ExecuteNonQueryAsync();
             }
             await trans.CommitAsync();
+            LogAudit("Ekleme", "ServisKayitlari", 0, "Toplu Servis Kaydı Ekleme");
         } catch { await trans.RollbackAsync(); throw; }
     }
 

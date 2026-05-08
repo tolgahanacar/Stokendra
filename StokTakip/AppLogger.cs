@@ -11,26 +11,28 @@ public static class AppLogger
         AppPaths.EnsureDirectory(Path.Combine(AppPaths.ApplicationDataDirectory, "logs")),
         "error.log");
 
+    private static readonly object _lock = new();
+
     /// <summary>
     /// Hata mesajını ve opsiyonel exception'ı günlük dosyasına yazar.
     /// </summary>
-    /// <param name="message">Günlüğe yazılacak mesaj.</param>
-    /// <param name="ex">Opsiyonel exception nesnesi.</param>
     public static void LogError(string message, Exception? ex = null)
     {
-        try
+        lock (_lock)
         {
-            string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR: {message}";
-            if (ex != null)
-                logEntry += $"\r\nException: {ex}";
+            try
+            {
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR: {message}";
+                if (ex != null)
+                    logEntry += $"\r\nException: {ex}";
 
-            File.AppendAllText(ErrorLogPath, logEntry + "\r\n");
-
-            System.Diagnostics.Debug.WriteLine(logEntry);
-        }
-        catch
-        {
-            // Günlük yazma başarısız olursa sessizce geç
+                File.AppendAllText(ErrorLogPath, logEntry + "\r\n");
+                System.Diagnostics.Debug.WriteLine(logEntry);
+            }
+            catch
+            {
+                // Günlük yazma başarısız olursa sessizce geç
+            }
         }
     }
 }

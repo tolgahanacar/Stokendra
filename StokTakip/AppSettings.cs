@@ -21,6 +21,9 @@ public class AppSettings
 
     /// <summary>Otomatik yedekleme hedef klasörü. Boşsa otomatik yedekleme devre dışıdır.</summary>
     public string AutoBackupPath { get; set; } = "";
+    
+    /// <summary>Yönetici güvenlik kodu.</summary>
+    public string MasterSecurityCode { get; set; } = "123456"; // Varsayılan kod, kullanıcı tarafından değiştirilmeli
 
     /// <summary>Son başarılı yedekleme tarihi.</summary>
     public DateTime? LastBackupDate { get; set; }

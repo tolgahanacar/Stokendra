@@ -17,7 +17,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IServiceRecordRepository _serviceRecords;
     private readonly INoteRepository _notes;
-
+    private readonly IConfigRepository _config;
     private readonly IDialogService _dialogService;
     private readonly ILogger _logger;
 
@@ -37,6 +37,7 @@ public partial class SettingsViewModel : ViewModelBase
         IMovementRepository movements,
         IServiceRecordRepository serviceRecords,
         INoteRepository notes,
+        IConfigRepository config,
         IDialogService dialogService,
         ILogger logger)
     {
@@ -45,6 +46,7 @@ public partial class SettingsViewModel : ViewModelBase
         _movements = movements;
         _serviceRecords = serviceRecords;
         _notes = notes;
+        _config = config;
         _dialogService = dialogService;
         _logger = logger;
         Load();
@@ -85,7 +87,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         StatusMessage = "";
         IsSuccess     = false;
-
+ 
         if (string.IsNullOrWhiteSpace(OldPassword) ||
             string.IsNullOrWhiteSpace(NewPassword) ||
             string.IsNullOrWhiteSpace(ConfirmPassword))
@@ -174,23 +176,22 @@ public partial class SettingsViewModel : ViewModelBase
                 using var fs = new FileStream(zipPath, FileMode.Create);
                 using var archive = new ZipArchive(fs, ZipArchiveMode.Create);
 
-                // 1. Stok Hareketleri (Import Uyumlu)
+                // 1. Stok Hareketleri
                 var movements = await _movements.GetAllAsync();
                 var movEntry = archive.CreateEntry("Stok Hareketleri.xlsx");
                 using (var entryStream = movEntry.Open())
                 using (var workbook = new ClosedXML.Excel.XLWorkbook())
                 {
                     var ws = workbook.Worksheets.Add("Stok Hareketleri");
-                    string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
+                    string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür", "Miktar", "Departman", "Tarih", "Açıklama" };
                     for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-                    
                     for (int i = 0; i < movements.Count; i++)
                     {
                         var m = movements[i];
                         ws.Cell(i + 2, 1).Value = m.StokKartKodNo;
                         ws.Cell(i + 2, 2).Value = m.StokKartAd;
                         ws.Cell(i + 2, 3).Value = m.TeslimEdilen;
-                        ws.Cell(i + 2, 4).Value = m.Tur == "Giris" ? "[G] Giriş" : "[Ç] Çıkış";
+                        ws.Cell(i + 2, 4).Value = m.Tur;
                         ws.Cell(i + 2, 5).Value = m.Miktar;
                         ws.Cell(i + 2, 6).Value = m.Departman;
                         ws.Cell(i + 2, 7).Value = m.Tarih.ToString("dd.MM.yyyy HH:mm");
@@ -272,6 +273,27 @@ public partial class SettingsViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError("Full zip backup error", ex);
+            StatusMessage = $"Hata: {ex.Message}";
+            IsSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task TruncateAuditLog()
+    {
+        bool confirm = await _dialogService.ShowConfirmAsync("Audit Log Temizleme", "Tüm işlem geçmişi silinecektir. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?");
+        if (!confirm) return;
+
+        try
+        {
+            await Task.Run(() => _config.TruncateAuditLog());
+            StatusMessage = "İşlem geçmişi başarıyla temizlendi.";
+            IsSuccess = true;
+            await _dialogService.ShowMessageAsync("Başarılı", "Audit log tablosu boşaltıldı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Audit log truncate error", ex);
             StatusMessage = $"Hata: {ex.Message}";
             IsSuccess = false;
         }

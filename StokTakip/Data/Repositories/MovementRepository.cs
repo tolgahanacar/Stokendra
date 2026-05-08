@@ -5,19 +5,16 @@ using System.Globalization;
 
 namespace StokTakip.Data.Repositories;
 
-public sealed class MovementRepository : IMovementRepository
+public sealed class MovementRepository : RepositoryBase, IMovementRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public MovementRepository(IDbConnectionFactory connectionFactory)
+    public MovementRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public List<StokHareketi> GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
     {
         var list = new List<StokHareketi>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = BuildQuery(stockCardId, startDate, endDate, department, movementType, category);
         BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category);
@@ -29,7 +26,7 @@ public sealed class MovementRepository : IMovementRepository
     public async Task<List<StokHareketi>> GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
     {
         var list = new List<StokHareketi>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = BuildQuery(stockCardId, startDate, endDate, department, movementType, category);
         BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category);
@@ -40,7 +37,7 @@ public sealed class MovementRepository : IMovementRepository
 
     public void Add(StokHareketi movement)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         ValidateMovement(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
@@ -49,11 +46,12 @@ public sealed class MovementRepository : IMovementRepository
         BindMovementParams(cmd, movement);
         cmd.ExecuteNonQuery();
         movement.Id = GetLastId(conn);
+        LogAudit("Ekleme", "StokHareketleri", movement.Id, $"{movement.Tur}: {movement.Miktar}");
     }
 
     public async Task AddAsync(StokHareketi movement)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         ValidateMovement(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
@@ -67,46 +65,104 @@ public sealed class MovementRepository : IMovementRepository
     public void AddBulk(IEnumerable<StokHareketi> movements)
     {
         var list = movements.ToList();
-        if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
+        if (list.Count == 0) return;
 
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
+        // IMMEDIATE transaction prevents race conditions during validation
         using var trans = conn.BeginTransaction();
         try {
+            // Pre-fetch all balances for affected cards to avoid N+1
+            var cardIds = list.Select(m => m.StokKartId).Distinct().ToList();
+            var balances = GetBalances(conn, trans, cardIds);
+
             foreach(var m in list) {
-                ValidateMovement(m, conn, trans);
+                if (!balances.TryGetValue(m.StokKartId, out var info))
+                    throw new InvalidOperationException($"Stok kartı bulunamadı: ID {m.StokKartId}");
+
+                if (info.Type == "Ust")
+                    throw new InvalidOperationException($"'{info.Name}' bir üst karttır, hareket eklenemez.");
+
+                if (m.Tur == "Cikis" && info.Balance < m.Miktar)
+                    throw new InvalidOperationException($"'{info.Name}' için yetersiz stok. Mevcut: {info.Balance}, İstenen: {m.Miktar}");
+
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = trans;
                 cmd.CommandText = "INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama) VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
                 BindMovementParams(cmd, m);
                 cmd.ExecuteNonQuery();
+
+                // Update local balance for subsequent items in the same bulk
+                info.Balance += (m.Tur == "Giris" ? m.Miktar : -m.Miktar);
             }
             trans.Commit();
+            LogAudit("Ekleme", "StokHareketleri", 0, "Toplu Ekleme");
         } catch { trans.Rollback(); throw; }
     }
 
     public async Task AddBulkAsync(IEnumerable<StokHareketi> movements)
     {
         var list = movements.ToList();
-        if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
+        if (list.Count == 0) return;
 
-        using var conn = _connectionFactory.CreateConnection();
-        using var trans = conn.BeginTransaction();
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync();
         try {
+            var cardIds = list.Select(m => m.StokKartId).Distinct().ToList();
+            var balances = GetBalances(conn, (SqliteTransaction)trans, cardIds);
+
             foreach(var m in list) {
-                ValidateMovement(m, conn, (SqliteTransaction)trans);
+                if (!balances.TryGetValue(m.StokKartId, out var info))
+                    throw new InvalidOperationException($"Stok kartı bulunamadı: ID {m.StokKartId}");
+
+                if (info.Type == "Ust")
+                    throw new InvalidOperationException($"'{info.Name}' bir üst karttır, hareket eklenemez.");
+
+                if (m.Tur == "Cikis" && info.Balance < m.Miktar)
+                    throw new InvalidOperationException($"'{info.Name}' için yetersiz stok. Mevcut: {info.Balance}, İstenen: {m.Miktar}");
+
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = (SqliteTransaction)trans;
                 cmd.CommandText = "INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama) VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
                 BindMovementParams(cmd, m);
                 await cmd.ExecuteNonQueryAsync();
+
+                info.Balance += (m.Tur == "Giris" ? m.Miktar : -m.Miktar);
             }
-            trans.Commit();
-        } catch { trans.Rollback(); throw; }
+            await trans.CommitAsync();
+            LogAudit("Ekleme", "StokHareketleri", 0, "Toplu Ekleme (Asenkron)");
+        } catch { await trans.RollbackAsync(); throw; }
+    }
+
+    private class CardBalanceInfo { public string Name; public string Type; public double Balance; }
+
+    private Dictionary<int, CardBalanceInfo> GetBalances(SqliteConnection conn, SqliteTransaction trans, List<int> ids)
+    {
+        var result = new Dictionary<int, CardBalanceInfo>();
+        if (ids.Count == 0) return result;
+
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = trans;
+        string idList = string.Join(",", ids);
+        cmd.CommandText = $@"
+            SELECT s.Id, s.Ad, s.KartTipi,
+            COALESCE((SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) FROM StokHareketleri WHERE StokKartId=s.Id), 0)
+            FROM StokKartlari s WHERE s.Id IN ({idList})";
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            result[reader.GetInt32(0)] = new CardBalanceInfo {
+                Name = reader.GetString(1),
+                Type = reader.GetString(2),
+                Balance = reader.GetDouble(3)
+            };
+        }
+        return result;
     }
 
     public void Update(StokHareketi movement)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         ValidateUpdate(movement, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
@@ -117,16 +173,18 @@ public sealed class MovementRepository : IMovementRepository
         BindMovementParams(cmd, movement);
         cmd.Parameters.AddWithValue("$id", movement.Id);
         cmd.ExecuteNonQuery();
+        LogAudit("Guncelleme", "StokHareketleri", movement.Id, $"{movement.Tur}: {movement.Miktar}");
     }
 
     public void Delete(int id)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         ValidateDeletion(new[] { id }, conn);
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM StokHareketleri WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
+        LogAudit("Silme", "StokHareketleri", id, "");
     }
 
     public void DeleteBulk(IEnumerable<int> ids)
@@ -134,7 +192,7 @@ public sealed class MovementRepository : IMovementRepository
         var list = ids.ToList();
         if (list.Count == 0) throw new InvalidOperationException("Liste boş olamaz.");
 
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
             // Var olmayan ID kontrolü
@@ -159,7 +217,7 @@ public sealed class MovementRepository : IMovementRepository
 
     public void UpdateBulk(IEnumerable<StokHareketi> movements)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
             foreach(var m in movements) {
@@ -177,7 +235,7 @@ public sealed class MovementRepository : IMovementRepository
     public async Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync()
     {
         var list = new List<(DateTime, double, double)>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT DATE(Tarih) as Day,
@@ -206,7 +264,7 @@ public sealed class MovementRepository : IMovementRepository
     public List<string> GetDeliveredPersons()
     {
         var list = new List<string>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT DISTINCT KimeVerildi FROM StokHareketleri WHERE KimeVerildi IS NOT NULL AND KimeVerildi <> '' ORDER BY KimeVerildi";
         using var reader = cmd.ExecuteReader();

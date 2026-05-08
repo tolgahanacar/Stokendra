@@ -2,22 +2,21 @@ using Microsoft.Data.Sqlite;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using System.Globalization;
+using System.Collections.Generic;
+using System;
 
 namespace StokTakip.Data.Repositories;
 
-public sealed class NoteRepository : INoteRepository
+public sealed class NoteRepository : RepositoryBase, INoteRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public NoteRepository(IDbConnectionFactory connectionFactory)
+    public NoteRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
     {
-        _connectionFactory = connectionFactory;
     }
 
     public List<Not> GetAll()
     {
         var list = new List<Not>();
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT Id, Tarih, Baslik, Icerik FROM Notlar ORDER BY Tarih DESC, Id DESC";
         using var reader = cmd.ExecuteReader();
@@ -37,7 +36,7 @@ public sealed class NoteRepository : INoteRepository
     public void Add(Not note)
     {
         if (string.IsNullOrWhiteSpace(note.Baslik)) throw new InvalidOperationException("Başlık boş olamaz.");
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "INSERT INTO Notlar (Tarih, Baslik, Icerik) VALUES ($t, $b, $i)";
         cmd.Parameters.AddWithValue("$t", note.Tarih.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
@@ -45,6 +44,7 @@ public sealed class NoteRepository : INoteRepository
         cmd.Parameters.AddWithValue("$i", note.Icerik ?? "");
         cmd.ExecuteNonQuery();
         note.Id = GetLastId(conn);
+        LogAudit("Ekleme", "Notlar", note.Id, $"Başlık: {note.Baslik}");
     }
 
     private int GetLastId(SqliteConnection conn)
@@ -56,7 +56,7 @@ public sealed class NoteRepository : INoteRepository
 
     public void Update(Not note)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "UPDATE Notlar SET Baslik=$b, Icerik=$i, Tarih=$t WHERE Id=$id";
         cmd.Parameters.AddWithValue("$b", note.Baslik);
@@ -64,14 +64,16 @@ public sealed class NoteRepository : INoteRepository
         cmd.Parameters.AddWithValue("$t", note.Tarih.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         cmd.Parameters.AddWithValue("$id", note.Id);
         cmd.ExecuteNonQuery();
+        LogAudit("Guncelleme", "Notlar", note.Id, $"Başlık: {note.Baslik}");
     }
 
     public void Delete(int id)
     {
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM Notlar WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
         cmd.ExecuteNonQuery();
+        LogAudit("Silme", "Notlar", id, "");
     }
 }
