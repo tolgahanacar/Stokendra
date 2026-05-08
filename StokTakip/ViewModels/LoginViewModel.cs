@@ -21,6 +21,15 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isBusy = false;
 
+    [ObservableProperty]
+    private bool _isForgotMode = false;
+
+    [ObservableProperty]
+    private string _securityCode = "";
+
+    [ObservableProperty]
+    private string _newPassword = "";
+
     public LoginViewModel(IUserRepository userRepository)
     {
         _userRepository = userRepository;
@@ -63,6 +72,62 @@ public partial class LoginViewModel : ViewModelBase
     }
 
     private bool CanLogin() => !IsBusy;
+
+    [RelayCommand]
+    private void ToggleForgotMode()
+    {
+        IsForgotMode = !IsForgotMode;
+        ErrorMessage = "";
+        SecurityCode = "";
+        NewPassword = "";
+    }
+
+    [RelayCommand]
+    private async Task DoResetPasswordAsync()
+    {
+        ErrorMessage = "";
+        if (string.IsNullOrWhiteSpace(Username))
+        {
+            ErrorMessage = "Lütfen kullanıcı adınızı girin.";
+            return;
+        }
+
+        if (SecurityCode != "1951")
+        {
+            ErrorMessage = "Güvenlik kodu hatalı.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(NewPassword) || NewPassword.Length < 4)
+        {
+            ErrorMessage = "Yeni şifre en az 4 karakter olmalıdır.";
+            return;
+        }
+
+        IsBusy = true;
+        try
+        {
+            bool ok = await _userRepository.ResetPasswordAsync(Username.Trim(), NewPassword);
+            if (ok)
+            {
+                ErrorMessage = "Şifre başarıyla sıfırlandı. Giriş yapabilirsiniz.";
+                IsForgotMode = false;
+                Password = "";
+            }
+            else
+            {
+                ErrorMessage = "Kullanıcı bulunamadı.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Hata: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
     /// <summary>Başarılı giriş sonrası App.axaml.cs tarafından dinlenir.</summary>
     public event EventHandler? LoginSuccessful;

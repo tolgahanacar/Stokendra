@@ -43,6 +43,9 @@ public partial class MainViewModel : ViewModelBase
 
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         NavigateToDashboard();
+        
+        // Haftalık yedekleme kontrolü (Arka planda)
+        _ = BackupManager.CheckWeeklyBackupAsync();
     }
 
     [RelayCommand] public void NavigateToDashboard()  { CurrentPage = _dashboard;  ActiveMenu = "dashboard";  }

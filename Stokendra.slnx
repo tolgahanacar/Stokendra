@@ -1,5 +1,3 @@
 <Solution>
-  <Project Path="StokTakip.HardTests/StokTakip.HardTests.csproj" />
-  <Project Path="StokTakip.Tests/StokTakip.Tests.csproj" />
   <Project Path="StokTakip/StokTakip.csproj" />
 </Solution>

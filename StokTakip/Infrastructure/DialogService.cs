@@ -66,6 +66,21 @@ public class DialogService : IDialogService
         return files.FirstOrDefault()?.Path.LocalPath;
     }
 
+    public async Task<string?> OpenFolderAsync(string title)
+    {
+        var window = GetMainWindow();
+        if (window == null) return null;
+
+        var options = new FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false
+        };
+
+        var folders = await window.StorageProvider.OpenFolderPickerAsync(options);
+        return folders.FirstOrDefault()?.Path.LocalPath;
+    }
+
     public async Task<bool> ShowDialogAsync<TViewModel>(TViewModel viewModel) where TViewModel : class
     {
         var window = GetMainWindow();

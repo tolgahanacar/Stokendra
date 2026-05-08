@@ -272,9 +272,9 @@ public partial class StockMovementsViewModel : ViewModelBase
                         Tur = tur,
                         Miktar = row.Cell(5).GetValue<double>(),
                         Departman = row.Cell(6).GetValue<string>(),
-                        TeslimEdilen = row.Cell(7).GetValue<string>(),
-                        Tarih = DateTime.TryParse(row.Cell(8).GetValue<string>(), out var dt) ? dt : DateTime.Now,
-                        Aciklama = row.Cell(9).GetValue<string>()
+                        TeslimEdilen = row.Cell(3).GetValue<string>(),
+                        Tarih = DateTime.TryParse(row.Cell(7).GetValue<string>(), out var dt) ? dt : DateTime.Now,
+                        Aciklama = row.Cell(8).GetValue<string>()
                     });
                 }
 

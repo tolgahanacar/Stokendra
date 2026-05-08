@@ -33,4 +33,9 @@ public interface IUserRepository
     /// <param name="username">Şifrenin kullanıcı adını içermemesi için opsiyonel kullanıcı adı.</param>
     /// <returns>Politika ihlali varsa hata mesajı, uygunsa <c>null</c>.</returns>
     string? ValidatePasswordPolicy(string password, string? username = null);
+
+    /// <summary>
+    /// Güvenlik kodu doğrulaması sonrası şifreyi sıfırlar.
+    /// </summary>
+    Task<bool> ResetPasswordAsync(string username, string newPassword);
 }

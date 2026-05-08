@@ -42,11 +42,6 @@ public sealed class UserRepository : IUserRepository
 
         bool match = Verify(password, salt, storedHash, out bool upgrade);
         
-        // Debug logging to a file in the app directory
-        try {
-            System.IO.File.AppendAllText("auth_debug.log", $"[{DateTime.Now}] User: {username}, Match: {match}, Upgrade: {upgrade}, HashStart: {storedHash.Substring(0, Math.Min(10, storedHash.Length))}\n");
-        } catch {}
-
         if (match && upgrade)
         {
             Upgrade(username, password, conn);
@@ -145,6 +140,25 @@ public sealed class UserRepository : IUserRepository
         cmd.Parameters.AddWithValue("$s", salt);
         cmd.Parameters.AddWithValue("$u", user);
         cmd.ExecuteNonQuery();
+    }
+
+    public async Task<bool> ResetPasswordAsync(string username, string newPassword)
+    {
+        try
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            // Kullanıcının var olduğunu kontrol et
+            using var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = "SELECT COUNT(*) FROM Kullanicilar WHERE KullaniciAdi = $u COLLATE NOCASE";
+            checkCmd.Parameters.AddWithValue("$u", username);
+            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+            
+            if (count == 0) return false;
+
+            Upgrade(username, newPassword, conn);
+            return true;
+        }
+        catch { return false; }
     }
 
     private bool FixedTimeEquals(string a, string b)

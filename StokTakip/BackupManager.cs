@@ -182,22 +182,22 @@ public static class BackupManager
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("StokHareketleri");
 
-        string[] headers = { "ID", "Tarih", "Stok Kodu", "Stok Adı", "Tür", "Miktar", "Teslim Edilen/Alınan", "Departman", "Açıklama" };
+        // Import uyumlu başlıklar
+        string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
         SetHeaders(ws, headers);
 
         for (int i = 0; i < hareketler.Count; i++)
         {
             var h = hareketler[i];
             int r = i + 2;
-            ws.Cell(r, 1).Value = h.Id;
-            ws.Cell(r, 2).Value = h.Tarih.ToString("dd.MM.yyyy HH:mm");
-            ws.Cell(r, 3).Value = h.StokKartKodNo;
-            ws.Cell(r, 4).Value = h.StokKartAd;
-            ws.Cell(r, 5).Value = h.Tur == "Giris" ? "Giriş" : (h.Tur == "Cikis" ? "Çıkış" : "Boş");
-            ws.Cell(r, 6).Value = h.Miktar;
-            ws.Cell(r, 7).Value = h.TeslimEdilen;
-            ws.Cell(r, 8).Value = h.Departman;
-            ws.Cell(r, 9).Value = h.Aciklama;
+            ws.Cell(r, 1).Value = h.StokKartKodNo;
+            ws.Cell(r, 2).Value = h.StokKartAd;
+            ws.Cell(r, 3).Value = h.TeslimEdilen;
+            ws.Cell(r, 4).Value = h.Tur == "Giris" ? "[G] Giriş" : "[Ç] Çıkış";
+            ws.Cell(r, 5).Value = h.Miktar;
+            ws.Cell(r, 6).Value = h.Departman;
+            ws.Cell(r, 7).Value = h.Tarih.ToString("dd.MM.yyyy HH:mm");
+            ws.Cell(r, 8).Value = h.Aciklama;
         }
 
         ws.Columns().AdjustToContents();
