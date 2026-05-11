@@ -19,10 +19,14 @@ public partial class ServicesViewModel : ViewModelBase
     [ObservableProperty] private string      _searchText  = "";
     [ObservableProperty] private DateTime    _startDate   = new DateTime(2024, 1, 1);
     [ObservableProperty] private DateTime    _endDate     = DateTime.Today;
-    [ObservableProperty] private bool        _isLoading;
+    [ObservableProperty] 
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    private bool        _isLoading;
     [ObservableProperty] private string      _statusText  = "";
     [ObservableProperty] private ServisKaydi? _selectedRecord;
     
+    public bool IsNotLoading => !IsLoading;
+
     [ObservableProperty] private int _currentPage = 1;
     [ObservableProperty] private int _totalPages = 1;
     private const int PageSize = 20;
@@ -37,9 +41,23 @@ public partial class ServicesViewModel : ViewModelBase
         _services = services;
         _dialogService = dialogService;
         _logger = logger;
-        _ = LoadAsync();
+        SafeLoadAsync();
     }
 
+    private async void SafeLoadAsync()
+    {
+        try
+        {
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Load error", ex);
+            StatusText = $"Hata: {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
         IsLoading = true;
@@ -67,7 +85,7 @@ public partial class ServicesViewModel : ViewModelBase
         finally { IsLoading = false; }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task SearchAsync() => await LoadAsync();
 
     [RelayCommand]
@@ -186,7 +204,7 @@ public partial class ServicesViewModel : ViewModelBase
         catch (Exception ex) { StatusText = $"Hata: {ex.Message}"; }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task RefreshAsync() => await LoadAsync();
 
     [RelayCommand]

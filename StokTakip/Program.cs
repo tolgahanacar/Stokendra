@@ -7,6 +7,9 @@ using StokTakip.Data.Repositories;
 using StokTakip.Infrastructure;
 using StokTakip.Services;
 using StokTakip.ViewModels;
+using ReactiveUI;
+using System.Reactive;
+using System;
 
 namespace StokTakip;
 
@@ -27,9 +30,15 @@ class Program
             e.SetObserved();
         };
 
+        RxApp.DefaultExceptionHandler = Observer.Create<Exception>(ex => 
+        {
+            AppLogger.LogError("FATAL: ReactiveUI Exception", ex);
+        });
+
+        ServiceProvider? container = null;
         try 
         {
-            SetupDI();
+            container = SetupDI();
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
@@ -37,6 +46,10 @@ class Program
             AppLogger.LogError("FATAL: Startup Exception", ex);
             // Kritik hata durumunda kullanıcıya bilgi verilebilir
             throw;
+        }
+        finally
+        {
+            container?.Dispose();
         }
     }
 
@@ -49,7 +62,7 @@ class Program
             .UseReactiveUI();
     }
 
-    private static void SetupDI()
+    private static ServiceProvider SetupDI()
     {
         var services = new ServiceCollection();
 
@@ -108,5 +121,7 @@ class Program
 
         // AppServices singleton'ını başlat
         container.GetRequiredService<AppServices>();
+        
+        return container;
     }
 }

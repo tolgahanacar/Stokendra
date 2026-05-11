@@ -19,8 +19,12 @@ public partial class StocksViewModel : ViewModelBase
     private readonly ILogger _logger;
 
     [ObservableProperty] private string _searchText = "";
-    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] 
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    private bool _isLoading;
     [ObservableProperty] private string _statusText = "";
+
+    public bool IsNotLoading => !IsLoading;
 
     public ObservableCollection<StokKarti> Stocks { get; } = new();
     private List<StokKarti> _allStocks = new();
@@ -30,9 +34,23 @@ public partial class StocksViewModel : ViewModelBase
         _stockCards = stockCards;
         _dialogService = dialogService;
         _logger = logger;
-        _ = LoadAsync();
+        SafeLoadAsync();
     }
 
+    private async void SafeLoadAsync()
+    {
+        try
+        {
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Load error", ex);
+            StatusText = $"Hata: {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
         IsLoading = true;
@@ -68,7 +86,7 @@ public partial class StocksViewModel : ViewModelBase
         StatusText = $"{data.Count} Ürün | ⚠ {lowStockCount} Düşük Stok | ❌ {depletedCount} Tükenmiş";
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task RefreshAsync() => await LoadAsync();
 
     [RelayCommand]

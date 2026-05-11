@@ -22,12 +22,12 @@ public partial class App : Application
         {
             desktop.ShutdownMode = ShutdownMode.OnLastWindowClose;
 
-            // ViewModel DI'dan alınır, View'a DataContext olarak verilir
             var loginVm = ServiceContainer.GetService<LoginViewModel>();
             var loginView = new LoginView { DataContext = loginVm };
 
-            loginVm.LoginSuccessful += (_, _) =>
+            void OnLoginSuccessful(object? sender, EventArgs e)
             {
+                loginVm.LoginSuccessful -= OnLoginSuccessful; // Unsubscribe to prevent memory leak
                 Dispatcher.UIThread.Post(() =>
                 {
                     var mainVm = ServiceContainer.GetService<MainViewModel>();
@@ -37,7 +37,9 @@ public partial class App : Application
                     mainWindow.Show();
                     loginView.Close();
                 });
-            };
+            }
+
+            loginVm.LoginSuccessful += OnLoginSuccessful;
 
             desktop.MainWindow = loginView;
         }

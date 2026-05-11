@@ -23,9 +23,13 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private int      _selectedTypeIndex  = 0;
 
     // Durum
-    [ObservableProperty] private bool   _isLoading;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    private bool   _isLoading;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private StokHareketi? _selectedMovement;
+
+    public bool IsNotLoading => !IsLoading;
 
     [ObservableProperty] private int _currentPage = 1;
     [ObservableProperty] private int _totalPages = 1;
@@ -62,7 +66,20 @@ public partial class StockMovementsViewModel : ViewModelBase
             IsMultipleSelected = SelectedMovements.Count >= 2;
         };
 
-        _ = InitAsync();
+        SafeInitAsync();
+    }
+
+    private async void SafeInitAsync()
+    {
+        try
+        {
+            await InitAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Init error", ex);
+            StatusText = $"Başlangıç Hatası: {ex.Message}";
+        }
     }
 
     private async Task InitAsync()
@@ -74,7 +91,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         await LoadMovementsAsync();
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadMovementsAsync()
     {
         IsLoading = true;

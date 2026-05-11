@@ -17,9 +17,13 @@ public partial class StockCardsViewModel : ViewModelBase
     private readonly ILogger _logger;
 
     [ObservableProperty] private string    _searchText = "";
-    [ObservableProperty] private bool      _isLoading;
+    [ObservableProperty] 
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    private bool      _isLoading;
     [ObservableProperty] private string    _statusText = "";
     [ObservableProperty] private StokKarti? _selectedCard;
+
+    public bool IsNotLoading => !IsLoading;
 
     public bool IsCardSelected => SelectedCard != null;
     [ObservableProperty] private bool _isMultipleSelected;
@@ -41,9 +45,23 @@ public partial class StockCardsViewModel : ViewModelBase
             IsMultipleSelected = SelectedCards.Count >= 2;
         };
         
-        _ = LoadAsync();
+        SafeLoadAsync();
     }
 
+    private async void SafeLoadAsync()
+    {
+        try
+        {
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Load error", ex);
+            StatusText = $"Hata: {ex.Message}";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
         IsLoading = true;
@@ -80,7 +98,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public void ClearSearch() => SearchText = "";
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task RefreshAsync() => await LoadAsync();
 
     [RelayCommand]
