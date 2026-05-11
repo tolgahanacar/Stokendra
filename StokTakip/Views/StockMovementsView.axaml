@@ -82,7 +82,7 @@
                 <DataGridTextColumn Header="Kod"      Binding="{Binding StokKartKodNo}" Width="75"  MinWidth="60"/>
                 <DataGridTextColumn Header="Stok Adı" Binding="{Binding StokKartAd}"    Width="2*"  MinWidth="120"/>
 
-                <DataGridTemplateColumn Header="G/Ç" Width="55" MinWidth="45">
+                <DataGridTemplateColumn Header="G/Ç" Width="100" MinWidth="80">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:StokHareketi">
                             <TextBlock Text="{Binding DisplayTur}"
@@ -108,8 +108,8 @@
                 </DataGridTemplateColumn>
 
                 <DataGridTextColumn Header="Departman" Binding="{Binding Departman}"    Width="*"   MinWidth="100"/>
-                <DataGridTextColumn Header="Teslim"    Binding="{Binding TeslimEdilen}" Width="*"   MinWidth="100"/>
-                <DataGridTextColumn Header="Tarih"     Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="130" MinWidth="110"/>
+                <DataGridTextColumn Header="Teslim"    Binding="{Binding TeslimEdilen}" Width="200"   MinWidth="120"/>
+                <DataGridTextColumn Header="Tarih"     Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="200" MinWidth="150"/>
                 <DataGridTextColumn Header="Açıklama"  Binding="{Binding Aciklama}"     Width="2*"  MinWidth="120"/>
             </DataGrid.Columns>
         </DataGrid>

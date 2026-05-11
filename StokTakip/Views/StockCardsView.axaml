@@ -77,12 +77,12 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Kod"      Binding="{Binding KodNo}"      Width="80"  MinWidth="60"/>
                 <DataGridTextColumn Header="Ad"       Binding="{Binding Ad}"          Width="2*"  MinWidth="120"/>
-                <DataGridTextColumn Header="Tip"      Binding="{Binding KartTipi}"    Width="70"  MinWidth="60"/>
-                <DataGridTextColumn Header="Üst Kart" Binding="{Binding UstKartAd}"   Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="Tip"      Binding="{Binding KartTipi}"    Width="100"  MinWidth="80"/>
+                <DataGridTextColumn Header="Üst Kart" Binding="{Binding UstKartAd}"   Width="*"   MinWidth="150"/>
                 <DataGridTextColumn Header="Kategori" Binding="{Binding Kategori}"    Width="*"   MinWidth="80"/>
-                <DataGridTextColumn Header="Mevcut"   Binding="{Binding MevcutStok}"  Width="75"  MinWidth="60"/>
-                <DataGridTextColumn Header="Min"      Binding="{Binding MinStok}"     Width="55"  MinWidth="45"/>
-                <DataGridTextColumn Header="Birim"    Binding="{Binding Birim}"       Width="70"  MinWidth="55"/>
+                <DataGridTextColumn Header="Mevcut"   Binding="{Binding MevcutStok}"  Width="100"  MinWidth="80"/>
+                <DataGridTextColumn Header="Min"      Binding="{Binding MinStok}"     Width="100"  MinWidth="80"/>
+                <DataGridTextColumn Header="Birim"    Binding="{Binding Birim}"       Width="100"  MinWidth="70"/>
                 <DataGridTextColumn Header="Konum"    Binding="{Binding Konum}"       Width="*"   MinWidth="80"/>
                 <DataGridTextColumn Header="Barkod"   Binding="{Binding Barkod}"      Width="*"   MinWidth="100"/>
             </DataGrid.Columns>
