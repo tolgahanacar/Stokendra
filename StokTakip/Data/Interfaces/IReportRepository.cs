@@ -12,12 +12,12 @@ public interface IReportRepository
     /// Toplam kart sayısı, toplam stok miktarı, düşük stok sayısı,
     /// tükenmiş stok sayısı, toplam hareket sayısı ve bugünkü hareket sayısı.
     /// </returns>
-    Task<DashboardStats> GetDashboardStatsAsync();
+    Task<DashboardStats> GetDashboardStatsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Tüm alt stok kartlarının özet raporunu asenkron olarak getirir.
     /// </summary>
-    Task<List<StockReportRow>> GetStockReportAsync();
+    Task<List<StockReportRow>> GetStockReportAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Veritabanının SQL dump'ını belirtilen dosya yoluna yazar.

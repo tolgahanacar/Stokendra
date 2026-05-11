@@ -5,8 +5,8 @@ namespace StokTakip.Data.Interfaces;
 
 public interface IDepartmentRepository
 {
-    Task<List<string>> GetAllAsync();
-    Task AddAsync(string name);
-    Task DeleteAsync(string name);
-    Task UpdateAsync(string oldName, string newName);
+    Task<List<string>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task AddAsync(string name, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string name, CancellationToken cancellationToken = default);
+    Task UpdateAsync(string oldName, string newName, CancellationToken cancellationToken = default);
 }

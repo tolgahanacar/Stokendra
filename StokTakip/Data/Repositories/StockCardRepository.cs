@@ -12,11 +12,11 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
     }
 
     public List<StokKarti> GetAll() => GetStockCards(null, null, null);
-    public async Task<List<StokKarti>> GetAllAsync() => await GetStockCardsAsync(null, null, null);
+    public async Task<List<StokKarti>> GetAllAsync(CancellationToken cancellationToken = default) => await GetStockCardsAsync(null, null, null, cancellationToken);
     public List<StokKarti> GetParentCards() => GetStockCards("Ust", null, null);
-    public async Task<List<StokKarti>> GetParentCardsAsync() => await GetStockCardsAsync("Ust", null, null);
+    public async Task<List<StokKarti>> GetParentCardsAsync(CancellationToken cancellationToken = default) => await GetStockCardsAsync("Ust", null, null, cancellationToken);
     public List<StokKarti> GetChildCards(int? parentId = null) => GetStockCards("Alt", parentId, null);
-    public async Task<List<StokKarti>> GetChildCardsAsync(int? parentId = null) => await GetStockCardsAsync("Alt", parentId, null);
+    public async Task<List<StokKarti>> GetChildCardsAsync(int? parentId = null, CancellationToken cancellationToken = default) => await GetStockCardsAsync("Alt", parentId, null, cancellationToken);
 
     public StokKarti? GetById(int id)
     {
@@ -43,10 +43,10 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
         } catch { trans.Rollback(); throw; }
     }
 
-    public async Task AddAsync(StokKarti stokKarti)
+    public async Task AddAsync(StokKarti stokKarti, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var trans = await conn.BeginTransactionAsync();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             ValidateCard(stokKarti, conn, (SqliteTransaction)trans);
             using var cmd = conn.CreateCommand();
@@ -55,11 +55,11 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
                 INSERT INTO StokKartlari (KodNo, Ad, KartTipi, UstKartId, Kategori, Birim, MinStok, Konum, Tedarikci, Barkod, BirimFiyat, Aciklama)
                 VALUES ($kn, $ad, $kt, $uk, $ka, $bi, $ms, $ko, $te, $ba, $bf, $ac)";
             BindParams(cmd, stokKarti);
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
             stokKarti.Id = GetLastId(conn, (SqliteTransaction)trans);
-            await trans.CommitAsync();
+            await trans.CommitAsync(cancellationToken);
             LogAudit("Ekleme", "StokKartlari", stokKarti.Id, $"Kod: {stokKarti.KodNo}, Ad: {stokKarti.Ad}");
-        } catch { await trans.RollbackAsync(); throw; }
+        } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 
     public void Update(StokKarti stokKarti)
@@ -124,7 +124,7 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
         return list;
     }
 
-    private async Task<List<StokKarti>> GetStockCardsAsync(string? type, int? parentId, int? id)
+    private async Task<List<StokKarti>> GetStockCardsAsync(string? type, int? parentId, int? id, CancellationToken cancellationToken = default)
     {
         var list = new List<StokKarti>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -134,8 +134,8 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
         if (parentId.HasValue) cmd.Parameters.AddWithValue("$uk", parentId.Value);
         if (id.HasValue) cmd.Parameters.AddWithValue("$id", id.Value);
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) list.Add(Read(reader));
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) list.Add(Read(reader));
         return list;
     }
 

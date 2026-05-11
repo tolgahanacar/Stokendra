@@ -23,15 +23,15 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         return list;
     }
 
-    public async Task<List<StokHareketi>> GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category)
+    public async Task<List<StokHareketi>> GetAllAsync(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category, CancellationToken cancellationToken = default)
     {
         var list = new List<StokHareketi>();
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = BuildQuery(stockCardId, startDate, endDate, department, movementType, category);
         BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category);
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) list.Add(Read(reader));
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) list.Add(Read(reader));
         return list;
     }
 
@@ -49,7 +49,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         LogAudit("Ekleme", "StokHareketleri", movement.Id, $"{movement.Tur}: {movement.Miktar}");
     }
 
-    public async Task AddAsync(StokHareketi movement)
+    public async Task AddAsync(StokHareketi movement, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         ValidateMovement(movement, conn);
@@ -58,7 +58,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
             INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama)
             VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
         BindMovementParams(cmd, movement);
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
         movement.Id = GetLastId(conn);
     }
 
@@ -99,13 +99,13 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         } catch { trans.Rollback(); throw; }
     }
 
-    public async Task AddBulkAsync(IEnumerable<StokHareketi> movements)
+    public async Task AddBulkAsync(IEnumerable<StokHareketi> movements, CancellationToken cancellationToken = default)
     {
         var list = movements.ToList();
         if (list.Count == 0) return;
 
         using var conn = ConnectionFactory.CreateConnection();
-        using var trans = await conn.BeginTransactionAsync();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             var cardIds = list.Select(m => m.StokKartId).Distinct().ToList();
             var balances = GetBalances(conn, (SqliteTransaction)trans, cardIds);
@@ -124,13 +124,13 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
                 cmd.Transaction = (SqliteTransaction)trans;
                 cmd.CommandText = "INSERT INTO StokHareketleri (StokKartId, Tur, Miktar, KimeVerildi, Departman, Tarih, Aciklama) VALUES ($sk, $tr, $mk, $kv, $dp, $th, $ac)";
                 BindMovementParams(cmd, m);
-                await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
 
                 info.Balance += (m.Tur == "Giris" ? m.Miktar : -m.Miktar);
             }
-            await trans.CommitAsync();
+            await trans.CommitAsync(cancellationToken);
             LogAudit("Ekleme", "StokHareketleri", 0, "Toplu Ekleme (Asenkron)");
-        } catch { await trans.RollbackAsync(); throw; }
+        } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 
     private class CardBalanceInfo { public string Name; public string Type; public double Balance; }
@@ -232,7 +232,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         } catch { trans.Rollback(); throw; }
     }
 
-    public async Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync()
+    public async Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync(CancellationToken cancellationToken = default)
     {
         var list = new List<(DateTime, double, double)>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -247,9 +247,9 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
             ORDER BY Day";
         cmd.Parameters.AddWithValue("$bas", DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         
-        using var reader = await cmd.ExecuteReaderAsync();
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         var data = new Dictionary<DateTime, (double e, double x)>();
-        while(await reader.ReadAsync()) {
+        while(await reader.ReadAsync(cancellationToken)) {
             data[DateTime.Parse(reader.GetString(0))] = (reader.GetDouble(1), reader.GetDouble(2));
         }
         
@@ -404,7 +404,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         }
     }
 
-    public async Task<List<StokHareketi>> GetPagedAsync(int page, int pageSize, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search)
+    public async Task<List<StokHareketi>> GetPagedAsync(int page, int pageSize, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, CancellationToken cancellationToken = default)
     {
         var list = new List<StokHareketi>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -415,12 +415,12 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         cmd.Parameters.AddWithValue("$limit", pageSize);
         cmd.Parameters.AddWithValue("$offset", (page - 1) * pageSize);
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) list.Add(Read(reader));
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) list.Add(Read(reader));
         return list;
     }
 
-    public async Task<int> GetCountAsync(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search)
+    public async Task<int> GetCountAsync(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
@@ -435,7 +435,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         
         cmd.CommandText = sql;
         BindQueryParams(cmd, cardId, start, end, dept, type, cat, search);
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync(cancellationToken));
     }
 
     private void ValidateUpdate(StokHareketi m, SqliteConnection conn)

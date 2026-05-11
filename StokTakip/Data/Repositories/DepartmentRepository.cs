@@ -14,18 +14,18 @@ public sealed class DepartmentRepository : IDepartmentRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<List<string>> GetAllAsync()
+    public async Task<List<string>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var list = new List<string>();
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT Ad FROM Departmanlar ORDER BY Ad";
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync()) list.Add(reader.GetString(0));
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken)) list.Add(reader.GetString(0));
         return list;
     }
 
-    public async Task AddAsync(string name)
+    public async Task AddAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
         
@@ -33,10 +33,10 @@ public sealed class DepartmentRepository : IDepartmentRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "INSERT INTO Departmanlar (Ad) VALUES ($n)";
         cmd.Parameters.AddWithValue("$n", name.Trim());
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(string name)
+    public async Task DeleteAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
 
@@ -44,15 +44,15 @@ public sealed class DepartmentRepository : IDepartmentRepository
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM Departmanlar WHERE Ad = $n";
         cmd.Parameters.AddWithValue("$n", name.Trim());
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(string oldName, string newName)
+    public async Task UpdateAsync(string oldName, string newName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName)) return;
 
         using var conn = _connectionFactory.CreateConnection();
-        using var trans = await conn.BeginTransactionAsync();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             // 1. Departmanlar tablosunu güncelle
             using var cmd1 = conn.CreateCommand();
@@ -60,7 +60,7 @@ public sealed class DepartmentRepository : IDepartmentRepository
             cmd1.CommandText = "UPDATE Departmanlar SET Ad = $new WHERE Ad = $old";
             cmd1.Parameters.AddWithValue("$new", newName.Trim());
             cmd1.Parameters.AddWithValue("$old", oldName.Trim());
-            await cmd1.ExecuteNonQueryAsync();
+            await cmd1.ExecuteNonQueryAsync(cancellationToken);
 
             // 2. Stok Hareketleri tablosunu güncelle (Cascade)
             using var cmd2 = conn.CreateCommand();
@@ -68,9 +68,9 @@ public sealed class DepartmentRepository : IDepartmentRepository
             cmd2.CommandText = "UPDATE StokHareketleri SET Departman = $new WHERE Departman = $old";
             cmd2.Parameters.AddWithValue("$new", newName.Trim());
             cmd2.Parameters.AddWithValue("$old", oldName.Trim());
-            await cmd2.ExecuteNonQueryAsync();
+            await cmd2.ExecuteNonQueryAsync(cancellationToken);
 
-            await trans.CommitAsync();
-        } catch { await trans.RollbackAsync(); throw; }
+            await trans.CommitAsync(cancellationToken);
+        } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 }

@@ -14,7 +14,7 @@ public sealed class ReportRepository : IReportRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<DashboardStats> GetDashboardStatsAsync()
+    public async Task<DashboardStats> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
     {
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
@@ -27,8 +27,8 @@ public sealed class ReportRepository : IReportRepository
                 (SELECT COUNT(*) FROM StokHareketleri),
                 (SELECT COUNT(*) FROM StokHareketleri WHERE DATE(Tarih) = DATE('now'))";
         
-        using var reader = await cmd.ExecuteReaderAsync();
-        if (await reader.ReadAsync())
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
             return new DashboardStats(
                 TotalCards: reader.GetInt32(0),
@@ -42,7 +42,7 @@ public sealed class ReportRepository : IReportRepository
         return new DashboardStats(0, 0, 0, 0, 0, 0);
     }
 
-    public async Task<List<StockReportRow>> GetStockReportAsync()
+    public async Task<List<StockReportRow>> GetStockReportAsync(CancellationToken cancellationToken = default)
     {
         var list = new List<StockReportRow>();
         using var conn = _connectionFactory.CreateConnection();
@@ -58,8 +58,8 @@ public sealed class ReportRepository : IReportRepository
             GROUP BY s.Id
             ORDER BY s.KodNo";
         
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             list.Add(new StockReportRow(
                 reader.GetString(0),

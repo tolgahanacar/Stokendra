@@ -11,7 +11,7 @@ public interface INoteRepository
     List<Not> GetAll();
 
     /// <summary>Tüm notları asenkron getirir.</summary>
-    Task<List<Not>> GetAllAsync();
+    Task<List<Not>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Yeni bir not ekler. Eklenen kaydın ID'si <paramref name="not"/>.Id alanına yazılır.</summary>
     void Add(Not not);

@@ -24,11 +24,11 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         return conn.Query<Not>(sql).ToList();
     }
 
-    public async Task<List<Not>> GetAllAsync()
+    public async Task<List<Not>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         var sql = "SELECT Id, Tarih, Baslik, Icerik, OlusturmaTarihi, GuncellenmeTarihi FROM Notlar ORDER BY OlusturmaTarihi DESC, Id DESC";
-        var result = await conn.QueryAsync<Not>(sql);
+        var result = await conn.QueryAsync<Not>(new CommandDefinition(sql, cancellationToken: cancellationToken));
         return result.ToList();
     }
 

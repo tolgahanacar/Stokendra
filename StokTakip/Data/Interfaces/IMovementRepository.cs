@@ -31,19 +31,20 @@ public interface IMovementRepository
         DateTime? endDate = null,
         string? department = null,
         string? movementType = null,
-        string? category = null);
+        string? category = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Tek bir stok hareketi ekler.</summary>
     void Add(StokHareketi hareket);
 
     /// <summary>Tek bir stok hareketini asenkron olarak ekler.</summary>
-    Task AddAsync(StokHareketi hareket);
+    Task AddAsync(StokHareketi hareket, CancellationToken cancellationToken = default);
 
     /// <summary>Birden fazla stok hareketini tek transaction içinde toplu ekler.</summary>
     void AddBulk(IEnumerable<StokHareketi> hareketler);
 
     /// <summary>Birden fazla stok hareketini asenkron olarak toplu ekler.</summary>
-    Task AddBulkAsync(IEnumerable<StokHareketi> hareketler);
+    Task AddBulkAsync(IEnumerable<StokHareketi> hareketler, CancellationToken cancellationToken = default);
 
     /// <summary>Mevcut bir stok hareketini günceller.</summary>
     void Update(StokHareketi hareket);
@@ -61,7 +62,7 @@ public interface IMovementRepository
     void UpdateBulk(IEnumerable<StokHareketi> hareketler);
 
     /// <summary>Son 7 güne ait günlük giriş/çıkış özetlerini asenkron olarak getirir.</summary>
-    Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync();
+    Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Teslim edilen kişilerin benzersiz listesini getirir.</summary>
     List<string> GetDeliveredPersons();
@@ -75,7 +76,8 @@ public interface IMovementRepository
         string? department = null,
         string? movementType = null,
         string? category = null,
-        string? searchTerm = null);
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Filtrelere uyan toplam hareket sayısını getirir.</summary>
     Task<int> GetCountAsync(
@@ -85,5 +87,6 @@ public interface IMovementRepository
         string? department = null,
         string? movementType = null,
         string? category = null,
-        string? searchTerm = null);
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default);
 }

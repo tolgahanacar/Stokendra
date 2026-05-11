@@ -17,7 +17,7 @@ public sealed class UserRepository : IUserRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<(bool success, string role)> VerifyPasswordAsync(string username, string password)
+    public async Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default)
     {
         Console.WriteLine($"LOGIN ATTEMPT: {username}");
         using var conn = _connectionFactory.CreateConnection();
@@ -25,8 +25,8 @@ public sealed class UserRepository : IUserRepository
         cmd.CommandText = "SELECT SifreHash, Tuz, Rol FROM Kullanicilar WHERE KullaniciAdi = $u COLLATE NOCASE";
         cmd.Parameters.AddWithValue("$u", username);
         
-        using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync()) 
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken)) 
         {
             Console.WriteLine("USER NOT FOUND");
             return (false, "");
@@ -142,7 +142,7 @@ public sealed class UserRepository : IUserRepository
         cmd.ExecuteNonQuery();
     }
 
-    public async Task<bool> ResetPasswordAsync(string username, string newPassword)
+    public async Task<bool> ResetPasswordAsync(string username, string newPassword, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -151,7 +151,7 @@ public sealed class UserRepository : IUserRepository
             using var checkCmd = conn.CreateCommand();
             checkCmd.CommandText = "SELECT COUNT(*) FROM Kullanicilar WHERE KullaniciAdi = $u COLLATE NOCASE";
             checkCmd.Parameters.AddWithValue("$u", username);
-            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(cancellationToken));
             
             if (count == 0) return false;
 

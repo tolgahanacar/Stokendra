@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StokTakip.Infrastructure;
+using StokTakip.Services;
 
 namespace StokTakip.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly StocksViewModel         _stocks;
     private readonly DepartmentsViewModel    _departments;
     private readonly ReportsViewModel        _reports;
+    private readonly IBackupService          _backupService;
 
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private string _activeMenu = "dashboard";
@@ -29,7 +31,8 @@ public partial class MainViewModel : ViewModelBase
         SettingsViewModel       settings,
         StocksViewModel         stocks,
         DepartmentsViewModel    departments,
-        ReportsViewModel        reports)
+        ReportsViewModel        reports,
+        IBackupService          backupService)
     {
         _dashboard  = dashboard;
         _stockCards = stockCards;
@@ -40,12 +43,25 @@ public partial class MainViewModel : ViewModelBase
         _stocks     = stocks;
         _departments = departments;
         _reports     = reports;
+        _backupService = backupService;
 
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         NavigateToDashboard();
         
         // Haftalık yedekleme kontrolü (Arka planda)
-        _ = BackupManager.CheckWeeklyBackupAsync();
+        SafeCheckBackupAsync();
+    }
+
+    private async void SafeCheckBackupAsync()
+    {
+        try
+        {
+            await _backupService.CheckWeeklyBackupAsync();
+        }
+        catch (System.Exception ex)
+        {
+            AppLogger.LogError("Weekly backup check failed.", ex);
+        }
     }
 
     [RelayCommand] public void NavigateToDashboard()  { CurrentPage = _dashboard;  ActiveMenu = "dashboard";  }

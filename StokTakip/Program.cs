@@ -87,6 +87,7 @@ class Program
 
         // ── Services ──────────────────────────────────────────────────────
         services.AddSingleton<IStockCardService, StockCardService>();
+        services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<AppServices>();
 
         // ── ViewModels ────────────────────────────────────────────────────

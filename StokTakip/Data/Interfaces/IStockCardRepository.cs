@@ -11,19 +11,19 @@ public interface IStockCardRepository
     List<StokKarti> GetAll();
 
     /// <summary>Tüm stok kartlarını asenkron olarak getirir.</summary>
-    Task<List<StokKarti>> GetAllAsync();
+    Task<List<StokKarti>> GetAllAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Sadece üst kartları getirir (KartTipi = Ust).</summary>
     List<StokKarti> GetParentCards();
 
     /// <summary>Sadece üst kartları asenkron olarak getirir.</summary>
-    Task<List<StokKarti>> GetParentCardsAsync();
+    Task<List<StokKarti>> GetParentCardsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Alt kartları getirir. <paramref name="parentId"/> verilirse sadece o üst karta ait alt kartlar döner.</summary>
     List<StokKarti> GetChildCards(int? parentId = null);
 
     /// <summary>Alt kartları asenkron olarak getirir.</summary>
-    Task<List<StokKarti>> GetChildCardsAsync(int? parentId = null);
+    Task<List<StokKarti>> GetChildCardsAsync(int? parentId = null, CancellationToken cancellationToken = default);
 
     /// <summary>Belirtilen ID'ye sahip stok kartını getirir. Bulunamazsa <c>null</c> döner.</summary>
     StokKarti? GetById(int id);
@@ -32,7 +32,7 @@ public interface IStockCardRepository
     void Add(StokKarti stokKarti);
 
     /// <summary>Yeni bir stok kartını asenkron olarak ekler.</summary>
-    Task AddAsync(StokKarti stokKarti);
+    Task AddAsync(StokKarti stokKarti, CancellationToken cancellationToken = default);
 
     /// <summary>Mevcut bir stok kartını günceller.</summary>
     void Update(StokKarti stokKarti);

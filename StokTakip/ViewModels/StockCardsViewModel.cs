@@ -13,6 +13,8 @@ namespace StokTakip.ViewModels;
 public partial class StockCardsViewModel : ViewModelBase
 {
     private readonly IStockCardRepository _stockCards;
+    private readonly IMovementRepository _movements;
+    private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
     private readonly ILogger _logger;
 
@@ -35,9 +37,16 @@ public partial class StockCardsViewModel : ViewModelBase
 
     private List<StokKarti> _allCards = new();
 
-    public StockCardsViewModel(IStockCardRepository stockCards, IDialogService dialogService, ILogger logger)
+    public StockCardsViewModel(
+        IStockCardRepository stockCards,
+        IMovementRepository movements,
+        IDepartmentRepository departments,
+        IDialogService dialogService,
+        ILogger logger)
     {
         _stockCards = stockCards;
+        _movements = movements;
+        _departments = departments;
         _dialogService = dialogService;
         _logger = logger;
         
@@ -179,8 +188,8 @@ public partial class StockCardsViewModel : ViewModelBase
     public async Task BulkEntryAsync()
     {
         // Global toplu giriş viewmodel'ini kullanıyoruz
-        var movements = ServiceContainer.GetService<IMovementRepository>();
-        var depts = ServiceContainer.GetService<IDepartmentRepository>();
+        var movements = _movements;
+        var depts = _departments;
         var vm = new BulkMovementViewModel(movements, depts, _stockCards, _dialogService, _logger);
         
         if (await _dialogService.ShowDialogAsync(vm))
@@ -272,8 +281,8 @@ public partial class StockCardsViewModel : ViewModelBase
     {
         if (SelectedCard == null) return;
         
-        var movements = ServiceContainer.GetService<IMovementRepository>();
-        var depts = ServiceContainer.GetService<IDepartmentRepository>();
+        var movements = _movements;
+        var depts = _departments;
         
         var vm = new StockCardDetailViewModel(
             SelectedCard.Id, 

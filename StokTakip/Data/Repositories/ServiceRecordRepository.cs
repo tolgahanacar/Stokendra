@@ -13,7 +13,7 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
     {
     }
 
-    public async Task<List<ServisKaydi>> GetAllAsync(DateTime? start, DateTime? end, string? search)
+    public async Task<List<ServisKaydi>> GetAllAsync(DateTime? start, DateTime? end, string? search, CancellationToken cancellationToken = default)
     {
         var list = new List<ServisKaydi>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -31,8 +31,8 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         if (end.HasValue) cmd.Parameters.AddWithValue("$e", end.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
         if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("$q", $"%{search}%");
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             DateTime bakimTarihi = DateTime.Now;
             if (!reader.IsDBNull(4))
@@ -57,7 +57,7 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         return list;
     }
 
-    public async Task AddAsync(ServisKaydi record)
+    public async Task AddAsync(ServisKaydi record, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(record.CihazAdi)) throw new System.Exception("Cihaz adı boş olamaz.");
         using var conn = ConnectionFactory.CreateConnection();
@@ -66,7 +66,7 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
             INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc)
             VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
         BindParams(cmd, record);
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
         record.Id = GetLastId(conn);
         LogAudit("Ekleme", "ServisKayitlari", record.Id, $"Cihaz: {record.CihazAdi}");
     }
@@ -78,7 +78,7 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
-    public async Task UpdateAsync(ServisKaydi record)
+    public async Task UpdateAsync(ServisKaydi record, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
@@ -89,38 +89,38 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
             WHERE Id=$id";
         BindParams(cmd, record);
         cmd.Parameters.AddWithValue("$id", record.Id);
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
         LogAudit("Guncelleme", "ServisKayitlari", record.Id, $"Cihaz: {record.CihazAdi}");
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "DELETE FROM ServisKayitlari WHERE Id=$id";
         cmd.Parameters.AddWithValue("$id", id);
-        await cmd.ExecuteNonQueryAsync();
+        await cmd.ExecuteNonQueryAsync(cancellationToken);
         LogAudit("Silme", "ServisKayitlari", id, "");
     }
 
-    public async Task AddBulkAsync(IEnumerable<ServisKaydi> records)
+    public async Task AddBulkAsync(IEnumerable<ServisKaydi> records, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var trans = await conn.BeginTransactionAsync();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             foreach(var r in records) {
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = (SqliteTransaction)trans;
                 cmd.CommandText = "INSERT INTO ServisKayitlari (CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc) VALUES ($ca, $sn, $f, $bt, $sr, $sc)";
                 BindParams(cmd, r);
-                await cmd.ExecuteNonQueryAsync();
+                await cmd.ExecuteNonQueryAsync(cancellationToken);
             }
-            await trans.CommitAsync();
+            await trans.CommitAsync(cancellationToken);
             LogAudit("Ekleme", "ServisKayitlari", 0, "Toplu Servis Kaydı Ekleme");
-        } catch { await trans.RollbackAsync(); throw; }
+        } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 
-    public async Task<List<ServisKaydi>> GetPagedAsync(int page, int pageSize, DateTime? start, DateTime? end, string? search)
+    public async Task<List<ServisKaydi>> GetPagedAsync(int page, int pageSize, DateTime? start, DateTime? end, string? search, CancellationToken cancellationToken = default)
     {
         var list = new List<ServisKaydi>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -133,8 +133,8 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         cmd.Parameters.AddWithValue("$limit", pageSize);
         cmd.Parameters.AddWithValue("$offset", (page - 1) * pageSize);
 
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             DateTime bakimTarihi = DateTime.Now;
             if (!reader.IsDBNull(4)) {
@@ -156,14 +156,14 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         return list;
     }
 
-    public async Task<int> GetCountAsync(DateTime? start, DateTime? end, string? search)
+    public async Task<int> GetCountAsync(DateTime? start, DateTime? end, string? search, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         string where = BuildWhereClause(start, end, search);
         cmd.CommandText = $"SELECT COUNT(*) FROM ServisKayitlari {where}";
         BindFilterParams(cmd, start, end, search);
-        return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync(cancellationToken));
     }
 
     private string BuildWhereClause(DateTime? start, DateTime? end, string? search)

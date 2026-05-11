@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StokTakip.Data.Interfaces;
 using StokTakip.Infrastructure;
+using StokTakip.Services;
 using System;
 using System.Threading.Tasks;
 using System.IO;
@@ -13,12 +14,9 @@ namespace StokTakip.ViewModels;
 public partial class SettingsViewModel : ViewModelBase
 {
     private readonly IUserRepository _users;
-    private readonly IStockCardRepository _stockCards;
-    private readonly IMovementRepository _movements;
-    private readonly IServiceRecordRepository _serviceRecords;
-    private readonly INoteRepository _notes;
     private readonly IConfigRepository _config;
     private readonly IDialogService _dialogService;
+    private readonly IBackupService _backupService;
     private readonly ILogger _logger;
 
     [ObservableProperty] private string _companyName   = "";
@@ -33,21 +31,15 @@ public partial class SettingsViewModel : ViewModelBase
 
     public SettingsViewModel(
         IUserRepository users,
-        IStockCardRepository stockCards,
-        IMovementRepository movements,
-        IServiceRecordRepository serviceRecords,
-        INoteRepository notes,
         IConfigRepository config,
         IDialogService dialogService,
+        IBackupService backupService,
         ILogger logger)
     {
         _users = users;
-        _stockCards = stockCards;
-        _movements = movements;
-        _serviceRecords = serviceRecords;
-        _notes = notes;
         _config = config;
         _dialogService = dialogService;
+        _backupService = backupService;
         _logger = logger;
         Load();
     }
@@ -165,108 +157,20 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task FullBackupAsync()
     {
-        string zipFileName = $"Stokendra_FullExcel_Backup_{DateTime.Now:ddMMyyyy}.zip";
-        string? zipPath = await _dialogService.SaveFileAsync("Tam Excel Yedeği Kaydet", zipFileName, "Zip Arşivi (*.zip)|*.zip");
+        string? zipPath = await _dialogService.SaveFileAsync("Tam Excel Yedeği Kaydet", 
+            $"Stokendra_FullExcel_Backup_{DateTime.Now:ddMMyyyy}.zip", "Zip Arşivi (*.zip)|*.zip");
         if (string.IsNullOrEmpty(zipPath)) return;
 
         try
         {
             StatusMessage = "Tam yedek hazırlanıyor...";
-            await Task.Run(async () => {
-                using var fs = new FileStream(zipPath, FileMode.Create);
-                using var archive = new ZipArchive(fs, ZipArchiveMode.Create);
-
-                // 1. Stok Hareketleri
-                var movements = await _movements.GetAllAsync();
-                var movEntry = archive.CreateEntry("Stok Hareketleri.xlsx");
-                using (var entryStream = movEntry.Open())
-                using (var workbook = new ClosedXML.Excel.XLWorkbook())
-                {
-                    var ws = workbook.Worksheets.Add("Stok Hareketleri");
-                    string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür", "Miktar", "Departman", "Tarih", "Açıklama" };
-                    for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-                    for (int i = 0; i < movements.Count; i++)
-                    {
-                        var m = movements[i];
-                        ws.Cell(i + 2, 1).Value = m.StokKartKodNo;
-                        ws.Cell(i + 2, 2).Value = m.StokKartAd;
-                        ws.Cell(i + 2, 3).Value = m.TeslimEdilen;
-                        ws.Cell(i + 2, 4).Value = m.Tur;
-                        ws.Cell(i + 2, 5).Value = m.Miktar;
-                        ws.Cell(i + 2, 6).Value = m.Departman;
-                        ws.Cell(i + 2, 7).Value = m.Tarih.ToString("dd.MM.yyyy HH:mm");
-                        ws.Cell(i + 2, 8).Value = m.Aciklama;
-                    }
-                    ws.Columns().AdjustToContents();
-                    workbook.SaveAs(entryStream);
-                }
-
-                // 2. Stok Kartları
-                var cards = await _stockCards.GetAllAsync();
-                var cardEntry = archive.CreateEntry("Stok Kartları.xlsx");
-                using (var entryStream = cardEntry.Open())
-                using (var workbook = new ClosedXML.Excel.XLWorkbook())
-                {
-                    var ws = workbook.Worksheets.Add("Stok Kartları");
-                    string[] headers = { "Kod", "Ad", "Kategori", "Mevcut Stok", "Min Stok", "Birim", "Konum" };
-                    for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-                    for (int i = 0; i < cards.Count; i++)
-                    {
-                        ws.Cell(i + 2, 1).Value = cards[i].KodNo;
-                        ws.Cell(i + 2, 2).Value = cards[i].Ad;
-                        ws.Cell(i + 2, 3).Value = cards[i].Kategori;
-                        ws.Cell(i + 2, 4).Value = cards[i].MevcutStok;
-                        ws.Cell(i + 2, 5).Value = cards[i].MinStok;
-                        ws.Cell(i + 2, 6).Value = cards[i].Birim;
-                        ws.Cell(i + 2, 7).Value = cards[i].Konum;
-                    }
-                    ws.Columns().AdjustToContents();
-                    workbook.SaveAs(entryStream);
-                }
-
-                // 3. Servis Kayıtları
-                var services = await _serviceRecords.GetAllAsync();
-                var srvEntry = archive.CreateEntry("Servis Kayıtları.xlsx");
-                using (var entryStream = srvEntry.Open())
-                using (var workbook = new ClosedXML.Excel.XLWorkbook())
-                {
-                    var ws = workbook.Worksheets.Add("Servis Kayıtları");
-                    string[] headers = { "Tarih", "Cihaz Adı", "Seri No", "Firma", "Sorun", "Sonuç" };
-                    for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-                    for (int i = 0; i < services.Count; i++)
-                    {
-                        ws.Cell(i + 2, 1).Value = services[i].BakimTarihi.ToString("dd.MM.yyyy HH:mm");
-                        ws.Cell(i + 2, 2).Value = services[i].CihazAdi;
-                        ws.Cell(i + 2, 3).Value = services[i].SeriNumarasi;
-                        ws.Cell(i + 2, 4).Value = services[i].Firma;
-                        ws.Cell(i + 2, 5).Value = services[i].Sorun;
-                        ws.Cell(i + 2, 6).Value = services[i].Sonuc;
-                    }
-                    ws.Columns().AdjustToContents();
-                    workbook.SaveAs(entryStream);
-                }
-
-                // 4. Notlar
-                var notes = await _notes.GetAllAsync();
-                var noteEntry = archive.CreateEntry("Notlar.xlsx");
-                using (var entryStream = noteEntry.Open())
-                using (var workbook = new ClosedXML.Excel.XLWorkbook())
-                {
-                    var ws = workbook.Worksheets.Add("Notlar");
-                    string[] headers = { "Oluşturma Tarihi", "Güncelleme Tarihi", "Başlık", "İçerik" };
-                    for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
-                    for (int i = 0; i < notes.Count; i++)
-                    {
-                        var n = notes[i];
-                        ws.Cell(i + 2, 1).Value = n.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm");
-                        ws.Cell(i + 2, 2).Value = n.GuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm");
-                        ws.Cell(i + 2, 3).Value = n.Baslik;
-                        ws.Cell(i + 2, 4).Value = n.Icerik;
-                    }
-                    ws.Columns().AdjustToContents();
-                    workbook.SaveAs(entryStream);
-                }
-            });
+            
+            // Note: BackupService generates its own timestamped name, 
+            // but for user experience we move it to the requested location.
+            string tempZip = await _backupService.ExportAllExcelAsync(Path.GetTempPath());
+            
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            File.Move(tempZip, zipPath);
 
             StatusMessage = "Tam Excel yedeği (ZIP) başarıyla alındı.";
             IsSuccess = true;

@@ -1,6 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:StokTakip.ViewModels"
+             xmlns:models="using:StokTakip.Models"
              x:Class="StokTakip.Views.StockMovementsView"
+             x:DataType="vm:StockMovementsViewModel"
              Background="#0C0E14">
 
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
@@ -80,7 +83,7 @@
                 
                 <DataGridTemplateColumn Header="G/Ç" Width="80">
                     <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:StokHareketi">
                             <TextBlock Text="{Binding DisplayTur}" 
                                        Foreground="{Binding DisplayColor}" 
                                        FontWeight="Bold" 
@@ -92,7 +95,7 @@
 
                 <DataGridTemplateColumn Header="Miktar" Width="100">
                     <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:StokHareketi">
                             <TextBlock Text="{Binding Miktar}" 
                                        Foreground="{Binding DisplayColor}" 
                                        FontWeight="Bold" 

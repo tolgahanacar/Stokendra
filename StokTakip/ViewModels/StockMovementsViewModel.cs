@@ -4,6 +4,7 @@ using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using StokTakip.Infrastructure;
 using System.Collections.ObjectModel;
+using System.Threading;
 
 namespace StokTakip.ViewModels;
 
@@ -21,6 +22,8 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private string   _searchText = "";
     [ObservableProperty] private int      _selectedStockIndex = 0;
     [ObservableProperty] private int      _selectedTypeIndex  = 0;
+    
+    private CancellationTokenSource? _cts;
 
     // Durum
     [ObservableProperty]
@@ -94,28 +97,38 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadMovementsAsync()
     {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
         IsLoading = true;
         try
         {
             int? cardId = SelectedStockIndex > 0 ? _allCards[SelectedStockIndex - 1].Id : null;
-            string? tur = SelectedTypeIndex switch { 1 => "Giris", 2 => "Cikis", 3 => "Bos", _ => null };
-            string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            string? type = SelectedTypeIndex switch { 1 => "Giris", 2 => "Cikis", 3 => "Bos", _ => null };
+            string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            var totalCount = await _movements.GetCountAsync(cardId, StartDate, EndDate.AddDays(1), null, tur, null, term);
+            var totalCount = await _movements.GetCountAsync(cardId, StartDate, EndDate.AddDays(1), null, type, null, search, token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
-            
+
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, cardId, StartDate, EndDate.AddDays(1), null, tur, null, term);
-            
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, cardId, StartDate, EndDate.AddDays(1), null, type, null, search, token);
+
+            token.ThrowIfCancellationRequested();
+
             Movements.Clear();
             foreach (var h in data) Movements.Add(h);
             StatusText = $"{totalCount} hareketten {Movements.Count} tanesi listeleniyor (Sayfa {CurrentPage}/{TotalPages})";
         }
+        catch (OperationCanceledException) 
+        { 
+            // Ignored, operation was intentionally cancelled
+        }
         catch (Exception ex) 
         { 
-            _logger.LogError("Movement load error", ex);
+            _logger.LogError("LoadMovements error", ex);
             StatusText = $"Hata: {ex.Message}"; 
         }
         finally { IsLoading = false; }

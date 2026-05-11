@@ -10,7 +10,7 @@ public interface IUserRepository
     /// Şifre eski hash formatındaysa otomatik olarak güncel formata yükseltir.
     /// </summary>
     /// <returns>Kimlik bilgileri geçerliyse <c>true</c> ve kullanıcı rolünü döndürür.</returns>
-    Task<(bool success, string role)> VerifyPasswordAsync(string username, string password);
+    Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default);
 
     bool Authenticate(string username, string password);
 
@@ -37,5 +37,5 @@ public interface IUserRepository
     /// <summary>
     /// Güvenlik kodu doğrulaması sonrası şifreyi sıfırlar.
     /// </summary>
-    Task<bool> ResetPasswordAsync(string username, string newPassword);
+    Task<bool> ResetPasswordAsync(string username, string newPassword, CancellationToken cancellationToken = default);
 }

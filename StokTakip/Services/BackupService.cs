@@ -9,32 +9,58 @@ using System;
 using System.IO;
 using System.Linq;
 
-namespace StokTakip;
+namespace StokTakip.Services;
 
-public static class BackupManager
+public class BackupService : IBackupService
 {
-    public static async Task CheckWeeklyBackupAsync()
+    private readonly AppSettings _settings;
+    private readonly IConfigRepository _configRepository;
+    private readonly IReportRepository _reportRepository;
+    private readonly IStockCardRepository _stockCardRepository;
+    private readonly IMovementRepository _movementRepository;
+    private readonly IServiceRecordRepository _serviceRecordRepository;
+    private readonly INoteRepository _noteRepository;
+    private readonly IDepartmentRepository _departmentRepository;
+
+    public BackupService(
+        AppSettings settings,
+        IConfigRepository configRepository,
+        IReportRepository reportRepository,
+        IStockCardRepository stockCardRepository,
+        IMovementRepository movementRepository,
+        IServiceRecordRepository serviceRecordRepository,
+        INoteRepository noteRepository,
+        IDepartmentRepository departmentRepository)
+    {
+        _settings = settings;
+        _configRepository = configRepository;
+        _reportRepository = reportRepository;
+        _stockCardRepository = stockCardRepository;
+        _movementRepository = movementRepository;
+        _serviceRecordRepository = serviceRecordRepository;
+        _noteRepository = noteRepository;
+        _departmentRepository = departmentRepository;
+    }
+
+    public async Task CheckWeeklyBackupAsync()
     {
         try
         {
-            var path = AppServices.Current.Settings.AutoBackupPath;
+            var path = _settings.AutoBackupPath;
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
 
-            var lastBackup = AppServices.Current.Settings.LastBackupDate;
+            var lastBackup = _settings.LastBackupDate;
             if (lastBackup.HasValue && (DateTime.Now - lastBackup.Value).TotalDays < 7) return;
 
             await PerformBackupAsync(path);
 
-            AppServices.Current.Settings.LastBackupDate = DateTime.Now;
-            AppServices.Current.Settings.Kaydet();
+            _settings.LastBackupDate = DateTime.Now;
+            _settings.Kaydet();
         }
-        catch { } // Fail silently
+        catch { } // Fail silently as it's a background task
     }
 
-    /// <summary>
-    /// Tam yedekleme: SQLite kopyası + tüm verilerin Excel dışa aktarımı (ZIP)
-    /// </summary>
-    public static async Task<string> PerformBackupAsync(string destFolder)
+    public async Task<string> PerformBackupAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
         string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Backup_{timestamp}");
@@ -42,28 +68,14 @@ public static class BackupManager
 
         try
         {
-            // 1. SQLite DB kopyası
             CopyDatabase(tempDir);
-
-            // 2. Stok Kartları (tüm alanlar)
             await ExportStokKartlariAsync(tempDir);
-
-            // 3. Stok Hareketleri
             await ExportStokHareketleriAsync(tempDir);
-
-            // 4. Servis Kayıtları
             await ExportServisKayitlariAsync(tempDir);
-
-            // 5. Notlar
-            ExportNotlar(tempDir);
-
-            // 6. Departmanlar
+            await ExportNotlarAsync(tempDir);
             await ExportDepartmanlarAsync(tempDir);
-
-            // 7. SQL dışa aktarım
             ExportSql(tempDir);
 
-            // 8. ZIP oluştur
             string zipFile = Path.Combine(destFolder, $"Stokendra_FullBackup_{timestamp}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
             
@@ -76,10 +88,7 @@ public static class BackupManager
         }
     }
 
-    /// <summary>
-    /// Sadece Excel dosyalarını dışa aktarır (ZIP olarak)
-    /// </summary>
-    public static async Task<string> ExportAllExcelAsync(string destFolder)
+    public async Task<string> ExportAllExcelAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
         string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Excel_{timestamp}");
@@ -90,7 +99,7 @@ public static class BackupManager
             await ExportStokKartlariAsync(tempDir);
             await ExportStokHareketleriAsync(tempDir);
             await ExportServisKayitlariAsync(tempDir);
-            ExportNotlar(tempDir);
+            await ExportNotlarAsync(tempDir);
             await ExportDepartmanlarAsync(tempDir);
 
             string zipFile = Path.Combine(destFolder, $"Stokendra_ExcelExport_{timestamp}.zip");
@@ -105,20 +114,16 @@ public static class BackupManager
         }
     }
 
-    // ═══════════════════════════════════════════
-    //  PRIVATE HELPERS
-    // ═══════════════════════════════════════════
-
-    private static void CopyDatabase(string tempDir)
+    private void CopyDatabase(string tempDir)
     {
-        string dbPath = string.IsNullOrWhiteSpace(AppServices.Current.Settings.DbPath)
+        string dbPath = string.IsNullOrWhiteSpace(_settings.DbPath)
             ? AppPaths.DefaultDatabasePath
-            : AppServices.Current.Settings.DbPath;
+            : _settings.DbPath;
 
         if (!File.Exists(dbPath)) return;
 
         string destFile = Path.Combine(tempDir, "stok.db");
-        ServiceContainer.GetService<IConfigRepository>().CreateBackup(destFile);
+        _configRepository.CreateBackup(destFile);
 
         string origName = Path.GetFileName(dbPath);
         if (!origName.Equals("stok.db", StringComparison.OrdinalIgnoreCase))
@@ -127,20 +132,19 @@ public static class BackupManager
         }
     }
 
-    private static void ExportSql(string tempDir)
+    private void ExportSql(string tempDir)
     {
         try
         {
             string sqlFile = Path.Combine(tempDir, "stokendra_backup.sql");
-            ServiceContainer.GetService<IReportRepository>().ExportSqlBackup(sqlFile);
+            _reportRepository.ExportSqlBackup(sqlFile);
         }
-        catch { /* SQL export opsiyonel */ }
+        catch { }
     }
 
-    private static async Task ExportStokKartlariAsync(string tempDir)
+    private async Task ExportStokKartlariAsync(string tempDir)
     {
-        var tumKartlar = await ServiceContainer.GetService<IStockCardRepository>().GetAllAsync();
-
+        var tumKartlar = await _stockCardRepository.GetAllAsync();
         if (tumKartlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -174,15 +178,14 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "StokKartlari.xlsx"));
     }
 
-    private static async Task ExportStokHareketleriAsync(string tempDir)
+    private async Task ExportStokHareketleriAsync(string tempDir)
     {
-        var hareketler = await ServiceContainer.GetService<IMovementRepository>().GetAllAsync(null, null, null, null, null);
+        var hareketler = await _movementRepository.GetAllAsync();
         if (hareketler.Count == 0) return;
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("StokHareketleri");
 
-        // Import uyumlu başlıklar
         string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
         SetHeaders(ws, headers);
 
@@ -205,9 +208,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "StokHareketleri.xlsx"));
     }
 
-    private static async Task ExportServisKayitlariAsync(string tempDir)
+    private async Task ExportServisKayitlariAsync(string tempDir)
     {
-        var servisler = await ServiceContainer.GetService<IServiceRecordRepository>().GetAllAsync(null, null, null);
+        var servisler = await _serviceRecordRepository.GetAllAsync();
         if (servisler.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -234,9 +237,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "ServisKayitlari.xlsx"));
     }
 
-    private static void ExportNotlar(string tempDir)
+    private async Task ExportNotlarAsync(string tempDir)
     {
-        var notlar = ServiceContainer.GetService<INoteRepository>().GetAll();
+        var notlar = await _noteRepository.GetAllAsync();
         if (notlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -250,7 +253,7 @@ public static class BackupManager
             var n = notlar[i];
             int r = i + 2;
             ws.Cell(r, 1).Value = n.Id;
-            ws.Cell(r, 2).Value = n.Tarih.ToString("dd.MM.yyyy HH:mm");
+            ws.Cell(r, 2).Value = n.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm");
             ws.Cell(r, 3).Value = n.Baslik;
             ws.Cell(r, 4).Value = n.Icerik;
         }
@@ -260,9 +263,9 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "Notlar.xlsx"));
     }
 
-    private static async Task ExportDepartmanlarAsync(string tempDir)
+    private async Task ExportDepartmanlarAsync(string tempDir)
     {
-        var deptlar = await ServiceContainer.GetService<IDepartmentRepository>().GetAllAsync();
+        var deptlar = await _departmentRepository.GetAllAsync();
         if (deptlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
@@ -281,7 +284,7 @@ public static class BackupManager
         wb.SaveAs(Path.Combine(tempDir, "Departmanlar.xlsx"));
     }
 
-    private static void SetHeaders(IXLWorksheet ws, string[] headers)
+    private void SetHeaders(IXLWorksheet ws, string[] headers)
     {
         for (int i = 0; i < headers.Length; i++)
         {
@@ -294,10 +297,9 @@ public static class BackupManager
         }
     }
 
-    private static void ApplyTableStyle(IXLWorksheet ws, int rowCount, int colCount)
+    private void ApplyTableStyle(IXLWorksheet ws, int rowCount, int colCount)
     {
         if (rowCount == 0) return;
-
         var range = ws.Range(1, 1, rowCount + 1, colCount);
         range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -307,9 +309,7 @@ public static class BackupManager
         for (int r = 2; r <= rowCount + 1; r++)
         {
             if (r % 2 == 0)
-            {
                 ws.Range(r, 1, r, colCount).Style.Fill.BackgroundColor = XLColor.FromArgb(245, 247, 250);
-            }
         }
     }
 }

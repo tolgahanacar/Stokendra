@@ -1,7 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:StokTakip.ViewModels"
+             xmlns:models="using:StokTakip.Models"
              x:Class="StokTakip.Views.StocksView"
+             x:DataType="vm:StocksViewModel"
              Background="#0C0E14">
 
     <Design.DataContext>
@@ -41,7 +43,7 @@
                 <DataGridTextColumn Header="Kategori"  Binding="{Binding Kategori}"   Width="150"/>
                 <DataGridTemplateColumn Header="Durum" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
+                        <DataTemplate x:DataType="models:StokKarti">
                             <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2" Margin="4" HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding StatusLabel}"
                                            Foreground="#FFFFFF"
