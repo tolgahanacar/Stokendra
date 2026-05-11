@@ -8,8 +8,14 @@ public class Not
     /// <summary>Birincil anahtar.</summary>
     public int Id { get; set; }
 
-    /// <summary>Not tarihi ve saati.</summary>
+    /// <summary>Not tarihi ve saati (Legacy).</summary>
     public DateTime Tarih { get; set; } = DateTime.Now;
+
+    /// <summary>Oluşturma tarihi.</summary>
+    public DateTime OlusturmaTarihi { get; set; } = DateTime.Now;
+
+    /// <summary>Son güncelleme tarihi.</summary>
+    public DateTime GuncellenmeTarihi { get; set; } = DateTime.Now;
 
     /// <summary>Not başlığı (zorunlu).</summary>
     public string Baslik { get; set; } = "";

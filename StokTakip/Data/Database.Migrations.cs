@@ -36,7 +36,7 @@ public sealed partial class Database
                 Tarih TEXT NOT NULL,
                 Aciklama TEXT DEFAULT ''
             )",
-            "CREATE TABLE IF NOT EXISTS Notlar (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tarih TEXT NOT NULL, Baslik TEXT NOT NULL, Icerik TEXT DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS Notlar (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tarih TEXT NOT NULL, Baslik TEXT NOT NULL, Icerik TEXT DEFAULT '', OlusturmaTarihi TEXT DEFAULT '', GuncellenmeTarihi TEXT DEFAULT '')",
             "CREATE TABLE IF NOT EXISTS Birimler (Id INTEGER PRIMARY KEY AUTOINCREMENT, Ad TEXT NOT NULL UNIQUE)",
             "CREATE TABLE IF NOT EXISTS Departmanlar (Id INTEGER PRIMARY KEY AUTOINCREMENT, Ad TEXT NOT NULL UNIQUE)",
             "CREATE TABLE IF NOT EXISTS AuditLog (Id INTEGER PRIMARY KEY AUTOINCREMENT, Tarih TEXT NOT NULL, IslemTipi TEXT NOT NULL, TabloAdi TEXT NOT NULL, KayitId INTEGER DEFAULT 0, Detay TEXT DEFAULT '')",
@@ -158,6 +158,12 @@ public sealed partial class Database
         TryAlter(connection, transaction, "UPDATE StokKartlari SET MinStok=0 WHERE MinStok < 0");
         TryAlter(connection, transaction, "UPDATE StokKartlari SET BirimFiyat=0 WHERE BirimFiyat < 0");
         TryAlter(connection, transaction, "CREATE UNIQUE INDEX IF NOT EXISTS UX_StokKartlari_KodNo ON StokKartlari(KodNo COLLATE NOCASE)");
+    }
+
+    private static void MigrateToV11(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN OlusturmaTarihi TEXT DEFAULT ''");
+        TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN GuncellenmeTarihi TEXT DEFAULT ''");
     }
 
     private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction transaction)

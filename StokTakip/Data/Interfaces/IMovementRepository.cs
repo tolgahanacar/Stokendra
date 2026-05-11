@@ -65,4 +65,25 @@ public interface IMovementRepository
 
     /// <summary>Teslim edilen kişilerin benzersiz listesini getirir.</summary>
     List<string> GetDeliveredPersons();
+
+    /// <summary>Sayfalanmış stok hareketlerini getirir.</summary>
+    Task<List<StokHareketi>> GetPagedAsync(
+        int page, int pageSize,
+        int? stockCardId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        string? department = null,
+        string? movementType = null,
+        string? category = null,
+        string? searchTerm = null);
+
+    /// <summary>Filtrelere uyan toplam hareket sayısını getirir.</summary>
+    Task<int> GetCountAsync(
+        int? stockCardId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        string? department = null,
+        string? movementType = null,
+        string? category = null,
+        string? searchTerm = null);
 }

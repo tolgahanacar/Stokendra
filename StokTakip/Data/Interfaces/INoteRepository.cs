@@ -10,6 +10,9 @@ public interface INoteRepository
     /// <summary>Tüm notları tarihe göre azalan sırada getirir.</summary>
     List<Not> GetAll();
 
+    /// <summary>Tüm notları asenkron getirir.</summary>
+    Task<List<Not>> GetAllAsync();
+
     /// <summary>Yeni bir not ekler. Eklenen kaydın ID'si <paramref name="not"/>.Id alanına yazılır.</summary>
     void Add(Not not);
 
@@ -18,4 +21,7 @@ public interface INoteRepository
 
     /// <summary>Belirtilen ID'ye sahip notu siler.</summary>
     void Delete(int id);
+
+    /// <summary>Birden fazla notu toplu siler.</summary>
+    void DeleteBulk(IEnumerable<int> ids);
 }

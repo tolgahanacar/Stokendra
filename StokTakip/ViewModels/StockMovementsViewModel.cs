@@ -16,7 +16,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     private readonly ILogger _logger;
 
     // Filtreler
-    [ObservableProperty] private DateTime _startDate = DateTime.Today.AddMonths(-1);
+    [ObservableProperty] private DateTime _startDate = new DateTime(2024, 1, 1);
     [ObservableProperty] private DateTime _endDate   = DateTime.Today;
     [ObservableProperty] private string   _searchText = "";
     [ObservableProperty] private int      _selectedStockIndex = 0;
@@ -26,6 +26,10 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private bool   _isLoading;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private StokHareketi? _selectedMovement;
+
+    [ObservableProperty] private int _currentPage = 1;
+    [ObservableProperty] private int _totalPages = 1;
+    private const int PageSize = 30;
 
     public bool IsMovementSelected => SelectedMovement != null;
     [ObservableProperty] private bool _isMultipleSelected;
@@ -77,21 +81,20 @@ public partial class StockMovementsViewModel : ViewModelBase
         try
         {
             int? cardId = SelectedStockIndex > 0 ? _allCards[SelectedStockIndex - 1].Id : null;
-            string? tur = SelectedTypeIndex switch
-            {
-                1 => "Giris",
-                2 => "Cikis",
-                3 => "Bos",
-                _ => null
-            };
+            string? tur = SelectedTypeIndex switch { 1 => "Giris", 2 => "Cikis", 3 => "Bos", _ => null };
+            string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            _allMovements = await _movements.GetAllAsync(
-                stockCardId: cardId,
-                startDate: StartDate,
-                endDate: EndDate.AddDays(1),
-                movementType: tur);
+            var totalCount = await _movements.GetCountAsync(cardId, StartDate, EndDate.AddDays(1), null, tur, null, term);
+            TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+            
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
 
-            ApplySearch();
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, cardId, StartDate, EndDate.AddDays(1), null, tur, null, term);
+            
+            Movements.Clear();
+            foreach (var h in data) Movements.Add(h);
+            StatusText = $"{totalCount} hareketten {Movements.Count} tanesi listeleniyor (Sayfa {CurrentPage}/{TotalPages})";
         }
         catch (Exception ex) 
         { 
@@ -101,34 +104,23 @@ public partial class StockMovementsViewModel : ViewModelBase
         finally { IsLoading = false; }
     }
 
-    partial void OnSearchTextChanged(string value) => ApplySearch();
-
-    private void ApplySearch()
-    {
-        var term = SearchText.Trim().ToLowerInvariant();
-        var data = string.IsNullOrEmpty(term)
-            ? _allMovements
-            : _allMovements.Where(h =>
-                h.StokKartAd.ToLowerInvariant().Contains(term) ||
-                h.StokKartKodNo.ToLowerInvariant().Contains(term) ||
-                h.TeslimEdilen.ToLowerInvariant().Contains(term) ||
-                h.Departman.ToLowerInvariant().Contains(term)).ToList();
-
-        Movements.Clear();
-        foreach (var h in data) Movements.Add(h);
-        StatusText = $"{data.Count} hareket";
-    }
 
     [RelayCommand]
     public void ClearFilters()
     {
-        StartDate          = DateTime.Today.AddMonths(-1);
+        StartDate          = new DateTime(2024, 1, 1);
         EndDate            = DateTime.Today;
         SearchText         = "";
         SelectedStockIndex = 0;
         SelectedTypeIndex  = 0;
+        CurrentPage        = 1;
         _ = LoadMovementsAsync();
     }
+
+    [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadMovementsAsync(); } }
+    [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadMovementsAsync(); } }
+
+    partial void OnSearchTextChanged(string value) => _ = LoadMovementsAsync();
 
     [RelayCommand]
     public async Task DeleteMovementAsync()

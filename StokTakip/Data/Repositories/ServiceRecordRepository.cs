@@ -120,6 +120,68 @@ public sealed class ServiceRecordRepository : RepositoryBase, IServiceRecordRepo
         } catch { await trans.RollbackAsync(); throw; }
     }
 
+    public async Task<List<ServisKaydi>> GetPagedAsync(int page, int pageSize, DateTime? start, DateTime? end, string? search)
+    {
+        var list = new List<ServisKaydi>();
+        using var conn = ConnectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        
+        string where = BuildWhereClause(start, end, search);
+        cmd.CommandText = $"SELECT Id, CihazAdi, SeriNumarasi, Firma, BakimTarihi, Sorun, Sonuc FROM ServisKayitlari {where} ORDER BY BakimTarihi DESC, Id DESC LIMIT $limit OFFSET $offset";
+        
+        BindFilterParams(cmd, start, end, search);
+        cmd.Parameters.AddWithValue("$limit", pageSize);
+        cmd.Parameters.AddWithValue("$offset", (page - 1) * pageSize);
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            DateTime bakimTarihi = DateTime.Now;
+            if (!reader.IsDBNull(4)) {
+                string dateStr = reader.GetString(4);
+                if (!DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.None, out bakimTarihi))
+                    DateTime.TryParse(dateStr, out bakimTarihi);
+            }
+
+            list.Add(new ServisKaydi {
+                Id = reader.GetInt32(0),
+                CihazAdi = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                SeriNumarasi = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                Firma = reader.IsDBNull(3) ? "" : reader.GetString(3),
+                BakimTarihi = bakimTarihi,
+                Sorun = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                Sonuc = reader.IsDBNull(6) ? "" : reader.GetString(6)
+            });
+        }
+        return list;
+    }
+
+    public async Task<int> GetCountAsync(DateTime? start, DateTime? end, string? search)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        string where = BuildWhereClause(start, end, search);
+        cmd.CommandText = $"SELECT COUNT(*) FROM ServisKayitlari {where}";
+        BindFilterParams(cmd, start, end, search);
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync());
+    }
+
+    private string BuildWhereClause(DateTime? start, DateTime? end, string? search)
+    {
+        var conditions = new List<string> { "1=1" };
+        if (start.HasValue) conditions.Add("BakimTarihi >= $s");
+        if (end.HasValue) conditions.Add("BakimTarihi <= $e");
+        if (!string.IsNullOrWhiteSpace(search)) conditions.Add("(CihazAdi LIKE $q OR SeriNumarasi LIKE $q OR Firma LIKE $q OR Sorun LIKE $q OR Sonuc LIKE $q)");
+        return "WHERE " + string.Join(" AND ", conditions);
+    }
+
+    private void BindFilterParams(SqliteCommand cmd, DateTime? start, DateTime? end, string? search)
+    {
+        if (start.HasValue) cmd.Parameters.AddWithValue("$s", start.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (end.HasValue) cmd.Parameters.AddWithValue("$e", end.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        if (!string.IsNullOrWhiteSpace(search)) cmd.Parameters.AddWithValue("$q", $"%{search}%");
+    }
+
     private void BindParams(SqliteCommand cmd, ServisKaydi s)
     {
         cmd.Parameters.AddWithValue("$ca", s.CihazAdi);

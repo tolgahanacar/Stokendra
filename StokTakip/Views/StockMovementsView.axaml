@@ -35,6 +35,9 @@
                          Watermark="🔍 Stok adı, departman, kişi..."
                          Width="230" Margin="0,0,10,8"/>
 
+                <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8" Watermark="Başlangıç"/>
+                <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8" Watermark="Bitiş"/>
+
                 <Button Content="🔍 Filtrele" Classes="Primary"
                         Command="{Binding LoadMovementsCommand}"
                         Margin="0,0,8,8"/>
@@ -110,7 +113,16 @@
 
         <!-- Status bar -->
         <Border Grid.Row="4" Background="#0E1119" Padding="40,8">
-            <TextBlock Text="{Binding StatusText}" Foreground="#475569" FontSize="12"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StatusText}" Foreground="#475569" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Content="◀" Command="{Binding PrevPageCommand}" Classes="Secondary" Padding="8,2"/>
+                    <TextBlock Text="{Binding CurrentPage}" Foreground="#F1F5F9" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <TextBlock Text="/" Foreground="#475569" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalPages}" Foreground="#475569" VerticalAlignment="Center"/>
+                    <Button Content="▶" Command="{Binding NextPageCommand}" Classes="Secondary" Padding="8,2"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
     </Grid>

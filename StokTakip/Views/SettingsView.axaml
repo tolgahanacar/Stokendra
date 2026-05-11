@@ -102,6 +102,7 @@
                             <TextBlock Text="İşlem geçmişini (Audit Log) temizlemek veritabanını küçültür." FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
                             <Button Content="🗑 İşlem Geçmişini Temizle" 
                                     Background="#2D1A1A" Foreground="#FF5B5B" BorderBrush="#4D2A2A" BorderThickness="1"
+                                    Cursor="Hand"
                                     Command="{Binding TruncateAuditLogCommand}"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                         </StackPanel>

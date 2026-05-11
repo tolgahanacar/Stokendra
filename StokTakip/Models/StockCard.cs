@@ -81,6 +81,15 @@ public class StokKarti
     /// <summary>UI gösterimi için formatlanmış ad.</summary>
     public string DisplayName => $"{KodNo} - {Ad}";
 
+    /// <summary>Stok durumu için renk kodu.</summary>
+    public string StatusColor => 
+        MevcutStok > MinStok ? "#10B981" : // Emerald 500 (Okunabilir Yeşil)
+        MevcutStok < MinStok ? "#EF4444" : // Red 500 (Okunabilir Kırmızı)
+        "#D97706"; // Amber 600 (Beyaz yazıyla okunabilir Sarı/Turuncu)
+
+    /// <summary>Stok durumu için metin.</summary>
+    public string StatusLabel => $"{MevcutStok} {Birim}";
+
     /// <inheritdoc/>
     public override string ToString() => DisplayName;
 }

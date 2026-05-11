@@ -247,19 +247,21 @@ public partial class SettingsViewModel : ViewModelBase
                 }
 
                 // 4. Notlar
-                var notes = _notes.GetAll();
+                var notes = await _notes.GetAllAsync();
                 var noteEntry = archive.CreateEntry("Notlar.xlsx");
                 using (var entryStream = noteEntry.Open())
                 using (var workbook = new ClosedXML.Excel.XLWorkbook())
                 {
                     var ws = workbook.Worksheets.Add("Notlar");
-                    string[] headers = { "Tarih", "Başlık", "İçerik" };
+                    string[] headers = { "Oluşturma Tarihi", "Güncelleme Tarihi", "Başlık", "İçerik" };
                     for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
                     for (int i = 0; i < notes.Count; i++)
                     {
-                        ws.Cell(i + 2, 1).Value = notes[i].Tarih.ToString("dd.MM.yyyy HH:mm");
-                        ws.Cell(i + 2, 2).Value = notes[i].Baslik;
-                        ws.Cell(i + 2, 3).Value = notes[i].Icerik;
+                        var n = notes[i];
+                        ws.Cell(i + 2, 1).Value = n.OlusturmaTarihi.ToString("dd.MM.yyyy HH:mm");
+                        ws.Cell(i + 2, 2).Value = n.GuncellenmeTarihi.ToString("dd.MM.yyyy HH:mm");
+                        ws.Cell(i + 2, 3).Value = n.Baslik;
+                        ws.Cell(i + 2, 4).Value = n.Icerik;
                     }
                     ws.Columns().AdjustToContents();
                     workbook.SaveAs(entryStream);

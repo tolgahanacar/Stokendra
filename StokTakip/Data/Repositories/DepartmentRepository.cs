@@ -52,10 +52,25 @@ public sealed class DepartmentRepository : IDepartmentRepository
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName)) return;
 
         using var conn = _connectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE Departmanlar SET Ad = $new WHERE Ad = $old";
-        cmd.Parameters.AddWithValue("$new", newName.Trim());
-        cmd.Parameters.AddWithValue("$old", oldName.Trim());
-        await cmd.ExecuteNonQueryAsync();
+        using var trans = await conn.BeginTransactionAsync();
+        try {
+            // 1. Departmanlar tablosunu güncelle
+            using var cmd1 = conn.CreateCommand();
+            cmd1.Transaction = (SqliteTransaction)trans;
+            cmd1.CommandText = "UPDATE Departmanlar SET Ad = $new WHERE Ad = $old";
+            cmd1.Parameters.AddWithValue("$new", newName.Trim());
+            cmd1.Parameters.AddWithValue("$old", oldName.Trim());
+            await cmd1.ExecuteNonQueryAsync();
+
+            // 2. Stok Hareketleri tablosunu güncelle (Cascade)
+            using var cmd2 = conn.CreateCommand();
+            cmd2.Transaction = (SqliteTransaction)trans;
+            cmd2.CommandText = "UPDATE StokHareketleri SET Departman = $new WHERE Departman = $old";
+            cmd2.Parameters.AddWithValue("$new", newName.Trim());
+            cmd2.Parameters.AddWithValue("$old", oldName.Trim());
+            await cmd2.ExecuteNonQueryAsync();
+
+            await trans.CommitAsync();
+        } catch { await trans.RollbackAsync(); throw; }
     }
 }

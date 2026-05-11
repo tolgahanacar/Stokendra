@@ -42,30 +42,19 @@
                 <DataGridTemplateColumn Header="Durum" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Border CornerRadius="4" Padding="6,2" Margin="4" HorizontalAlignment="Center">
-                                <Border.Styles>
-                                    <Style Selector="Border">
-                                        <Setter Property="Background" Value="#1E2533"/>
-                                    </Style>
-                                </Border.Styles>
-                                <TextBlock Text="{Binding MevcutStok, StringFormat='{}{0} Adet'}"
-                                           FontSize="12" FontWeight="Bold">
-                                    <TextBlock.Styles>
-                                        <Style Selector="TextBlock">
-                                            <Setter Property="Foreground" Value="#A0AEC0"/>
-                                        </Style>
-                                    </TextBlock.Styles>
-                                </TextBlock>
+                            <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2" Margin="4" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding StatusLabel}"
+                                           Foreground="#FFFFFF"
+                                           FontSize="12" FontWeight="Bold"/>
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Giriş (Y)" Binding="{Binding ToplamGiris}" Width="90"/>
-                <DataGridTextColumn Header="Çıkış (G)" Binding="{Binding ToplamCikis}" Width="90"/>
-                <DataGridTextColumn Header="Sonuç"    Binding="{Binding MevcutStok}" Width="90"/>
-                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"    Width="80"/>
-                <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"      Width="80"/>
-                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"      Width="*"/>
+                <DataGridTextColumn Header="Giriş (Y)" Binding="{Binding ToplamGiris}" Width="100"/>
+                <DataGridTextColumn Header="Çıkış (G)" Binding="{Binding ToplamCikis}" Width="100"/>
+                <DataGridTextColumn Header="Sonuç"    Binding="{Binding MevcutStok}" Width="100"/>
+                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"    Width="100"/>
+                <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"      Width="100"/>
             </DataGrid.Columns>
         </DataGrid>
 

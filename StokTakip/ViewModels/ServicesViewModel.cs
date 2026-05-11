@@ -17,11 +17,15 @@ public partial class ServicesViewModel : ViewModelBase
     private readonly ILogger _logger;
 
     [ObservableProperty] private string      _searchText  = "";
-    [ObservableProperty] private DateTime    _startDate   = new DateTime(2000, 1, 1);
+    [ObservableProperty] private DateTime    _startDate   = new DateTime(2024, 1, 1);
     [ObservableProperty] private DateTime    _endDate     = DateTime.Today;
     [ObservableProperty] private bool        _isLoading;
     [ObservableProperty] private string      _statusText  = "";
     [ObservableProperty] private ServisKaydi? _selectedRecord;
+    
+    [ObservableProperty] private int _currentPage = 1;
+    [ObservableProperty] private int _totalPages = 1;
+    private const int PageSize = 20;
 
     public bool IsRecordSelected => SelectedRecord != null;
     partial void OnSelectedRecordChanged(ServisKaydi? value) => OnPropertyChanged(nameof(IsRecordSelected));
@@ -42,11 +46,18 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var data = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
+            
+            var totalCount = await _services.GetCountAsync(StartDate, EndDate.AddDays(1), term);
+            TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
+            
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
+
+            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate, EndDate.AddDays(1), term);
 
             Records.Clear();
             foreach (var r in data) Records.Add(r);
-            StatusText = $"{data.Count} kayıt listeleniyor";
+            StatusText = $"{totalCount} kayıttan {Records.Count} tanesi listeleniyor (Sayfa {CurrentPage}/{TotalPages})";
         }
         catch (Exception ex) 
         { 
@@ -65,8 +76,12 @@ public partial class ServicesViewModel : ViewModelBase
         SearchText = "";
         StartDate  = new DateTime(2000, 1, 1);
         EndDate    = DateTime.Today;
+        CurrentPage = 1;
         _ = LoadAsync();
     }
+
+    [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadAsync(); } }
+    [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadAsync(); } }
 
     [RelayCommand]
     public async Task DeleteAsync()
@@ -173,4 +188,69 @@ public partial class ServicesViewModel : ViewModelBase
 
     [RelayCommand]
     public async Task RefreshAsync() => await LoadAsync();
+
+    [RelayCommand]
+    public async Task PrintAsync()
+    {
+        try
+        {
+            if (Records.Count == 0) return;
+            StatusText = "Yazdırma hazırlanıyor...";
+            
+            var sb = new System.Text.StringBuilder();
+            sb.Append("<html><head><meta charset='utf-8'><title>Servis Kayıt Raporu</title>");
+            sb.Append("<style>");
+            sb.Append("@page { size: landscape; margin: 0.5cm; } ");
+            sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
+            sb.Append(".top-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563EB; padding-bottom: 8px; margin-bottom: 15px; } ");
+            sb.Append(".top-header h1 { margin: 0; color: #2563EB; font-size: 20px; font-weight: 800; } ");
+            sb.Append(".date-box { text-align: right; font-size: 11px; color: #4b5563; } ");
+            sb.Append("table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; } ");
+            sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ");
+            sb.Append("th { background: #f1f5f9; font-weight: bold; text-align: center; } ");
+            sb.Append(".num { text-align: center; } ");
+            sb.Append(".footer { margin-top: 20px; font-size: 10px; text-align: right; color: #94a3b8; } ");
+            sb.Append("</style>");
+            sb.Append("<script>window.onload = function() { window.print(); }</script>");
+            sb.Append("</head><body>");
+            
+            sb.Append("<div class='top-header'>");
+            sb.Append("<h1>SERVİS KAYIT RAPORU</h1>");
+            sb.Append($"<div class='date-box'>Rapor Tarihi:<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b></div>");
+            sb.Append("</div>");
+
+            sb.Append("<table><thead><tr>");
+            sb.Append("<th style='width: 15%;'>Tarih</th>");
+            sb.Append("<th style='width: 25%;'>Cihaz Adı</th>");
+            sb.Append("<th style='width: 20%;'>Seri No</th>");
+            sb.Append("<th style='width: 20%;'>Firma</th>");
+            sb.Append("<th style='width: 20%;'>Sonuç</th>");
+            sb.Append("</tr></thead><tbody>");
+            
+            foreach (var r in Records)
+            {
+                sb.Append("<tr>");
+                sb.Append($"<td class='num'>{r.BakimTarihi:dd.MM.yyyy}</td>");
+                sb.Append($"<td>{r.CihazAdi}</td>");
+                sb.Append($"<td>{r.SeriNumarasi}</td>");
+                sb.Append($"<td>{r.Firma}</td>");
+                sb.Append($"<td>{r.Sonuc}</td>");
+                sb.Append("</tr>");
+            }
+            
+            sb.Append("</tbody></table>");
+            sb.Append($"<div class='footer'>Toplam {Records.Count} kayıt listelenmiştir.</div>");
+            sb.Append("</body></html>");
+            
+            var previewVm = new PrintPreviewViewModel("Servis Kayıt Raporu", sb.ToString());
+            await _dialogService.ShowDialogAsync(previewVm);
+            
+            StatusText = "Yazdırma tamamlandı.";
+        }
+        catch (Exception ex) 
+        { 
+            _logger.LogError("Print error", ex);
+            StatusText = $"Hata: {ex.Message}"; 
+        }
+    }
 }

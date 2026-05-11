@@ -17,7 +17,7 @@ public sealed partial class Database : IDisposable
     private readonly string _databasePath;
     private readonly string _connectionString;
 
-    private const int CurrentSchemaVersion = 10;
+    private const int CurrentSchemaVersion = 11;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
     private const int PasswordIterationsV2 = 20000;
     private const int PasswordIterationsV3 = 120000;
@@ -130,6 +130,7 @@ public sealed partial class Database : IDisposable
             if (version < 8) MigrateToV8(connection, null);
             if (version < 9) MigrateToV9(connection, null);
             if (version < 10) MigrateToV10(connection, null);
+            if (version < 11) MigrateToV11(connection, null);
 
             EnsureIndexes(connection, null);
             SetSchemaVersion(connection, null, CurrentSchemaVersion);

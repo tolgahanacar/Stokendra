@@ -1,9 +1,12 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
 using StokTakip.Data.Interfaces;
 using StokTakip.Models;
 using System.Globalization;
 using System.Collections.Generic;
 using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace StokTakip.Data.Repositories;
 
@@ -15,65 +18,76 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
 
     public List<Not> GetAll()
     {
-        var list = new List<Not>();
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Id, Tarih, Baslik, Icerik FROM Notlar ORDER BY Tarih DESC, Id DESC";
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            list.Add(new Not
-            {
-                Id = reader.GetInt32(0),
-                Tarih = DateTime.Parse(reader.GetString(1), CultureInfo.InvariantCulture),
-                Baslik = reader.GetString(2),
-                Icerik = reader.IsDBNull(3) ? "" : reader.GetString(3)
-            });
-        }
-        return list;
+        var sql = "SELECT Id, Tarih, Baslik, Icerik, OlusturmaTarihi, GuncellenmeTarihi FROM Notlar ORDER BY OlusturmaTarihi DESC, Id DESC";
+        // SQLite Tarih formatları Dapper tarafından otomatik maplenir (ISO 8601 uyumlu kaydedildiğini varsayıyoruz).
+        return conn.Query<Not>(sql).ToList();
+    }
+
+    public async Task<List<Not>> GetAllAsync()
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        var sql = "SELECT Id, Tarih, Baslik, Icerik, OlusturmaTarihi, GuncellenmeTarihi FROM Notlar ORDER BY OlusturmaTarihi DESC, Id DESC";
+        var result = await conn.QueryAsync<Not>(sql);
+        return result.ToList();
     }
 
     public void Add(Not note)
     {
         if (string.IsNullOrWhiteSpace(note.Baslik)) throw new InvalidOperationException("Başlık boş olamaz.");
-        using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "INSERT INTO Notlar (Tarih, Baslik, Icerik) VALUES ($t, $b, $i)";
-        cmd.Parameters.AddWithValue("$t", note.Tarih.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        cmd.Parameters.AddWithValue("$b", note.Baslik);
-        cmd.Parameters.AddWithValue("$i", note.Icerik ?? "");
-        cmd.ExecuteNonQuery();
-        note.Id = GetLastId(conn);
-        LogAudit("Ekleme", "Notlar", note.Id, $"Başlık: {note.Baslik}");
-    }
+        note.OlusturmaTarihi = DateTime.Now;
+        note.GuncellenmeTarihi = DateTime.Now;
 
-    private int GetLastId(SqliteConnection conn)
-    {
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT last_insert_rowid()";
-        return Convert.ToInt32(cmd.ExecuteScalar());
+        using var conn = ConnectionFactory.CreateConnection();
+        var sql = @"INSERT INTO Notlar (Tarih, Baslik, Icerik, OlusturmaTarihi, GuncellenmeTarihi) 
+                    VALUES (@Tarih, @Baslik, @Icerik, @OlusturmaTarihi, @GuncellenmeTarihi);
+                    SELECT last_insert_rowid();";
+        
+        note.Id = conn.ExecuteScalar<int>(sql, new {
+            Tarih = note.Tarih.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            note.Baslik,
+            Icerik = note.Icerik ?? "",
+            OlusturmaTarihi = note.OlusturmaTarihi.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            GuncellenmeTarihi = note.GuncellenmeTarihi.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+        });
+        
+        LogAudit("Ekleme", "Notlar", note.Id, $"Başlık: {note.Baslik}");
     }
 
     public void Update(Not note)
     {
+        note.GuncellenmeTarihi = DateTime.Now;
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE Notlar SET Baslik=$b, Icerik=$i, Tarih=$t WHERE Id=$id";
-        cmd.Parameters.AddWithValue("$b", note.Baslik);
-        cmd.Parameters.AddWithValue("$i", note.Icerik ?? "");
-        cmd.Parameters.AddWithValue("$t", note.Tarih.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        cmd.Parameters.AddWithValue("$id", note.Id);
-        cmd.ExecuteNonQuery();
+        var sql = "UPDATE Notlar SET Baslik=@Baslik, Icerik=@Icerik, GuncellenmeTarihi=@GuncellenmeTarihi WHERE Id=@Id";
+        
+        conn.Execute(sql, new {
+            note.Baslik,
+            Icerik = note.Icerik ?? "",
+            GuncellenmeTarihi = note.GuncellenmeTarihi.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            note.Id
+        });
+        
         LogAudit("Guncelleme", "Notlar", note.Id, $"Başlık: {note.Baslik}");
     }
 
     public void Delete(int id)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM Notlar WHERE Id=$id";
-        cmd.Parameters.AddWithValue("$id", id);
-        cmd.ExecuteNonQuery();
+        conn.Execute("DELETE FROM Notlar WHERE Id=@Id", new { Id = id });
         LogAudit("Silme", "Notlar", id, "");
+    }
+
+    public void DeleteBulk(IEnumerable<int> ids)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return;
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try {
+            conn.Execute("DELETE FROM Notlar WHERE Id IN @Ids", new { Ids = idList }, trans);
+            trans.Commit();
+            LogAudit("Silme", "Notlar", 0, "Toplu Not Silme");
+        } catch { trans.Rollback(); throw; }
     }
 }

@@ -77,7 +77,8 @@ class Program
         services.AddSingleton<AppServices>();
 
         // ── ViewModels ────────────────────────────────────────────────────
-        services.AddSingleton<LoginViewModel>();
+        // Ana Sayfalar ve Kalıcı Durum Gerektirenler (Singleton)
+        services.AddSingleton<MainViewModel>();
         services.AddSingleton<DashboardViewModel>();
         services.AddSingleton<StockCardsViewModel>();
         services.AddSingleton<StockMovementsViewModel>();
@@ -87,8 +88,16 @@ class Program
         services.AddSingleton<StocksViewModel>();
         services.AddSingleton<DepartmentsViewModel>();
         services.AddSingleton<ReportsViewModel>();
-        services.AddSingleton<BulkMovementViewModel>();
-        services.AddSingleton<MainViewModel>();
+
+        // Geçici Pencereler ve Formlar (Transient)
+        services.AddTransient<LoginViewModel>();
+        services.AddTransient<BulkMovementViewModel>();
+        services.AddTransient<AddMovementViewModel>();
+        services.AddTransient<AddStockCardViewModel>();
+        services.AddTransient<AddServiceViewModel>();
+        services.AddTransient<StockCardDetailViewModel>();
+        services.AddTransient<PrintPreviewViewModel>();
+        services.AddTransient<PromptViewModel>();
 
         // ── Infrastructure ────────────────────────────────────────────────
         services.AddSingleton<IDialogService, DialogService>();

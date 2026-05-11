@@ -26,4 +26,10 @@ public interface IServiceRecordRepository
 
     /// <summary>Belirtilen ID'ye sahip servis kaydını siler.</summary>
     Task DeleteAsync(int id);
+
+    /// <summary>Sayfalanmış servis kayıtlarını getirir.</summary>
+    Task<List<ServisKaydi>> GetPagedAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchTerm = null);
+
+    /// <summary>Filtrelere uyan toplam kayıt sayısını getirir.</summary>
+    Task<int> GetCountAsync(DateTime? startDate = null, DateTime? endDate = null, string? searchTerm = null);
 }

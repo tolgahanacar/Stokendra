@@ -23,7 +23,7 @@ public class AppSettings
     public string AutoBackupPath { get; set; } = "";
     
     /// <summary>Yönetici güvenlik kodu.</summary>
-    public string MasterSecurityCode { get; set; } = "123456"; // Varsayılan kod, kullanıcı tarafından değiştirilmeli
+    public string MasterSecurityCode { get; set; } = "1951"; // Varsayılan kod
 
     /// <summary>Son başarılı yedekleme tarihi.</summary>
     public DateTime? LastBackupDate { get; set; }

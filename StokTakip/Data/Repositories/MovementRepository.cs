@@ -272,7 +272,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         return list;
     }
 
-    private string BuildQuery(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat)
+    private string BuildQuery(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search = null)
     {
         var sql = "SELECT h.*, s.Ad as StokKartAd, s.KodNo as StokKartKodNo FROM StokHareketleri h JOIN StokKartlari s ON h.StokKartId = s.Id WHERE 1=1";
         if(cardId.HasValue) sql += " AND h.StokKartId=$sk";
@@ -281,11 +281,12 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         if(!string.IsNullOrEmpty(dept)) sql += " AND h.Departman=$dp";
         if(!string.IsNullOrEmpty(type)) sql += " AND h.Tur=$tr";
         if(!string.IsNullOrEmpty(cat)) sql += " AND s.Kategori=$ct";
+        if(!string.IsNullOrEmpty(search)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
         sql += " ORDER BY h.Tarih DESC, h.Id DESC";
         return sql;
     }
 
-    private void BindQueryParams(SqliteCommand cmd, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat)
+    private void BindQueryParams(SqliteCommand cmd, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search = null)
     {
         if(cardId.HasValue) cmd.Parameters.AddWithValue("$sk", cardId.Value);
         if(start.HasValue) cmd.Parameters.AddWithValue("$ts", start.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
@@ -293,6 +294,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         if(!string.IsNullOrEmpty(dept)) cmd.Parameters.AddWithValue("$dp", dept);
         if(!string.IsNullOrEmpty(type)) cmd.Parameters.AddWithValue("$tr", type);
         if(!string.IsNullOrEmpty(cat)) cmd.Parameters.AddWithValue("$ct", cat);
+        if(!string.IsNullOrEmpty(search)) cmd.Parameters.AddWithValue("$q", $"%{search}%");
     }
 
     private void BindMovementParams(SqliteCommand cmd, StokHareketi m)
@@ -400,6 +402,40 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
             double balance = (result == null || result == DBNull.Value) ? 0 : Convert.ToDouble(result);
             if (balance < 0) throw new InvalidOperationException("Silme işlemi stok dengesini bozuyor (negatif stok).");
         }
+    }
+
+    public async Task<List<StokHareketi>> GetPagedAsync(int page, int pageSize, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search)
+    {
+        var list = new List<StokHareketi>();
+        using var conn = ConnectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        string baseQuery = BuildQuery(cardId, start, end, dept, type, cat, search);
+        cmd.CommandText = $"{baseQuery} LIMIT $limit OFFSET $offset";
+        BindQueryParams(cmd, cardId, start, end, dept, type, cat, search);
+        cmd.Parameters.AddWithValue("$limit", pageSize);
+        cmd.Parameters.AddWithValue("$offset", (page - 1) * pageSize);
+
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync()) list.Add(Read(reader));
+        return list;
+    }
+
+    public async Task<int> GetCountAsync(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        string sql = "SELECT COUNT(*) FROM StokHareketleri h JOIN StokKartlari s ON h.StokKartId = s.Id WHERE 1=1";
+        if(cardId.HasValue) sql += " AND h.StokKartId=$sk";
+        if(start.HasValue) sql += " AND h.Tarih >= $ts";
+        if(end.HasValue) sql += " AND h.Tarih < $te";
+        if(!string.IsNullOrEmpty(dept)) sql += " AND h.Departman=$dp";
+        if(!string.IsNullOrEmpty(type)) sql += " AND h.Tur=$tr";
+        if(!string.IsNullOrEmpty(cat)) sql += " AND s.Kategori=$ct";
+        if(!string.IsNullOrEmpty(search)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
+        
+        cmd.CommandText = sql;
+        BindQueryParams(cmd, cardId, start, end, dept, type, cat, search);
+        return Convert.ToInt32(await cmd.ExecuteScalarAsync());
     }
 
     private void ValidateUpdate(StokHareketi m, SqliteConnection conn)

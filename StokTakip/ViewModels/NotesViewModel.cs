@@ -27,14 +27,20 @@ public partial class NotesViewModel : ViewModelBase
     private int _editingId = 0;
 
     public ObservableCollection<Not> Notes { get; } = new();
+    public ObservableCollection<Not> SelectedNotes { get; } = new();
+
+    public bool HasSelection => SelectedNotes.Count > 0 || SelectedNote != null;
 
     public NotesViewModel(INoteRepository notes, IDialogService dialogService, ILogger logger)
     {
         _notes = notes;
         _dialogService = dialogService;
         _logger = logger;
+        SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
         _ = LoadAsync();
     }
+
+    partial void OnSelectedNoteChanged(Not? value) => OnPropertyChanged(nameof(HasSelection));
 
     public async Task LoadAsync()
     {
@@ -86,13 +92,13 @@ public partial class NotesViewModel : ViewModelBase
         {
             if (_editingId == 0)
             {
-                var n = new Not { Baslik = EditTitle.Trim(), Icerik = EditContent.Trim(), Tarih = DateTime.Now };
+                var n = new Not { Baslik = EditTitle.Trim(), Icerik = EditContent.Trim() };
                 await Task.Run(() => _notes.Add(n));
                 StatusText = "Yeni not kaydedildi.";
             }
             else
             {
-                var n = new Not { Id = _editingId, Baslik = EditTitle.Trim(), Icerik = EditContent.Trim(), Tarih = DateTime.Now };
+                var n = new Not { Id = _editingId, Baslik = EditTitle.Trim(), Icerik = EditContent.Trim() };
                 await Task.Run(() => _notes.Update(n));
                 StatusText = "Not güncellendi.";
             }
@@ -110,23 +116,19 @@ public partial class NotesViewModel : ViewModelBase
     public void CancelEdit() => IsEditing = false;
 
     [RelayCommand]
-    public async Task DeleteNoteAsync()
+    public async Task DeleteSelectedAsync(System.Collections.IList? items)
     {
-        if (SelectedNote == null) return;
+        var list = items?.Cast<Not>().ToList() ?? new List<Not>();
+        if (list.Count == 0 && SelectedNote != null) list.Add(SelectedNote);
+        if (list.Count == 0) return;
 
-        bool confirm = await _dialogService.ShowConfirmAsync("Silme Onayı", "Bu notu silmek istediğinize emin misiniz?");
+        bool confirm = await _dialogService.ShowConfirmAsync("Silme Onayı", "Seçili kayıtları silmek istediğinize emin misiniz?");
         if (!confirm) return;
 
-        try
-        {
-            await Task.Run(() => _notes.Delete(SelectedNote.Id));
+        try {
+            await Task.Run(() => _notes.DeleteBulk(list.Select(x => x.Id).ToList()));
             await LoadAsync();
-            StatusText = "Not silindi.";
-        }
-        catch (Exception ex) 
-        { 
-            _logger.LogError("Delete note error", ex);
-            await _dialogService.ShowMessageAsync("Hata", $"Silme hatası: {ex.Message}");
-        }
+            StatusText = "Seçilenler silindi.";
+        } catch (Exception ex) { await _dialogService.ShowMessageAsync("Hata", ex.Message); }
     }
 }
