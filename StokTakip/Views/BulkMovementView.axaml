@@ -3,25 +3,38 @@
         xmlns:vm="using:StokTakip.ViewModels"
         x:Class="StokTakip.Views.BulkMovementView"
         Title="Toplu Stok Hareketi"
-        Width="900" Height="700"
+        Width="900" Height="680"
+        MinWidth="700" MinHeight="500"
+        MaxHeight="960"
         WindowStartupLocation="CenterOwner"
-        Background="#0C0E14"
-        ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="-1">
+        Background="#0C0E14">
 
+    <!--
+        RowDefinitions="Auto,Auto,*,Auto"
+          Row 0 (Auto) → Header
+          Row 1 (Auto) → Filtre alanları
+          Row 2 (*)    → DataGrid — kalan tüm alan
+          Row 3 (Auto) → Footer — her zaman görünür
+    -->
     <Grid RowDefinitions="Auto,Auto,*,Auto">
-        
+
         <!-- Header -->
-        <Border Grid.Row="0" Background="#1C222E" Padding="24,40,24,16">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Toplu Stok Hareketi" FontSize="22" FontWeight="Bold" Foreground="#E8EEFF"/>
-                <TextBlock Text="Birden fazla stok kartı için tek seferde işlem yapın" FontSize="12" Foreground="#5A6987"/>
+        <Border Grid.Row="0" Background="#1C222E" Padding="24,16,24,14">
+            <StackPanel Spacing="3">
+                <TextBlock Text="Toplu Stok Hareketi"
+                           FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Birden fazla stok kartı için tek seferde işlem yapın"
+                           FontSize="12" Foreground="#5A6987"/>
             </StackPanel>
         </Border>
 
-        <!-- Ortak Alanlar & Filtre -->
-        <Border Grid.Row="1" Background="#161B27" Padding="24,16" BorderBrush="#1E2D45" BorderThickness="0,0,0,1">
-            <StackPanel Spacing="16">
+        <!-- Filtre Alanları -->
+        <Border Grid.Row="1"
+                Background="#161B27"
+                Padding="24,14"
+                BorderBrush="#1E2D45"
+                BorderThickness="0,0,0,1">
+            <StackPanel Spacing="12">
                 <Grid ColumnDefinitions="120,180,200,160,*">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="İşlem Türü" FontSize="11" Foreground="#94A3B8"/>
@@ -30,69 +43,80 @@
                             <ComboBoxItem Content="📤 Çıkış"/>
                         </ComboBox>
                     </StackPanel>
-                    
                     <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="Departman" FontSize="11" Foreground="#94A3B8"/>
-                        <ComboBox ItemsSource="{Binding Departments}" SelectedItem="{Binding SelectedDepartment}" HorizontalAlignment="Stretch"/>
+                        <ComboBox ItemsSource="{Binding Departments}"
+                                  SelectedItem="{Binding SelectedDepartment}"
+                                  HorizontalAlignment="Stretch"/>
                     </StackPanel>
-                    
                     <StackPanel Grid.Column="2" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="Teslim Edilen / Alınan" FontSize="11" Foreground="#94A3B8"/>
                         <TextBox Text="{Binding DeliveredTo}" Watermark="Kişi ismi..."/>
                     </StackPanel>
-                    
                     <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="Tarih" FontSize="11" Foreground="#94A3B8"/>
                         <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
                     </StackPanel>
-                    
                     <StackPanel Grid.Column="4" Spacing="4" VerticalAlignment="Bottom" HorizontalAlignment="Right">
-                         <TextBox Text="{Binding SearchText}" 
-                                 Watermark="🔍 Kartlarda ara..." 
+                        <TextBox Text="{Binding SearchText}"
+                                 Watermark="🔍 Kartlarda ara..."
                                  Width="200"
                                  Classes="SearchBox"/>
                     </StackPanel>
                 </Grid>
-                
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Button Content="✓ Tümünü Seç" Classes="Secondary" Command="{Binding SelectAllCommand}" Padding="8,4" FontSize="12"/>
-                    <Button Content="☐ Seçimleri Kaldır" Classes="Secondary" Command="{Binding DeselectAllCommand}" Padding="8,4" FontSize="12"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="✓ Tümünü Seç"
+                            Classes="Secondary"
+                            Command="{Binding SelectAllCommand}"
+                            Padding="8,4" FontSize="12"/>
+                    <Button Content="☐ Seçimleri Kaldır"
+                            Classes="Secondary"
+                            Command="{Binding DeselectAllCommand}"
+                            Padding="8,4" FontSize="12"/>
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <!-- Liste -->
-        <DataGrid Grid.Row="2" 
-                  ItemsSource="{Binding Items}" 
-                  IsReadOnly="False" 
-                  Background="Transparent"
-                  BorderThickness="0"
-                  Margin="0,0,0,0">
-            <DataGrid.Columns>
-                <DataGridCheckBoxColumn Header="✓" Binding="{Binding IsSelected}" Width="50"/>
-                <DataGridTextColumn Header="Kod" Binding="{Binding Card.KodNo}" Width="100" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding Card.Ad}" Width="250" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Mevcut" Binding="{Binding Card.MevcutStok}" Width="*" IsReadOnly="True"/>
-                <DataGridTemplateColumn Header="Miktar" Width="120">
-                    <DataTemplate>
-                        <NumericUpDown Value="{Binding Quantity}" 
-                                       Minimum="0" 
-                                       FormatString="N2" 
-                                       IsEnabled="{Binding IsSelected}"
-                                       Margin="4,2"/>
-                    </DataTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- DataGrid — * row, tüm kalan alanı alır -->
+        <Grid Grid.Row="2">
+            <DataGrid ItemsSource="{Binding Items}"
+                      IsReadOnly="False"
+                      Background="Transparent"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="✓" Binding="{Binding IsSelected}" Width="50"/>
+                    <DataGridTextColumn Header="Kod" Binding="{Binding Card.KodNo}" Width="100" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding Card.Ad}" Width="250" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Mevcut" Binding="{Binding Card.MevcutStok}" Width="*" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Miktar" Width="120">
+                        <DataTemplate>
+                            <NumericUpDown Value="{Binding Quantity}"
+                                           Minimum="0"
+                                           FormatString="N2"
+                                           IsEnabled="{Binding IsSelected}"
+                                           Margin="4,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <!-- Loading overlay — Grid.Row="2" içinde, DataGrid'in üstünde -->
+            <ProgressBar IsIndeterminate="True"
+                         VerticalAlignment="Top"
+                         IsVisible="{Binding IsLoading}"/>
+        </Grid>
 
-        <!-- Footer -->
-        <Border Grid.Row="3" Background="#1C222E" Padding="24,16" BorderBrush="#1E2D45" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12">
-                <Button Content="İptal" Classes="Secondary" Command="{Binding CancelCommand}" Width="100"/>
-                <Button Content="💾 Kaydet" Classes="Primary" Command="{Binding SaveCommand}" Width="120"/>
+        <!-- Footer — always visible -->
+        <Border Grid.Row="3"
+                Background="#1C222E"
+                Padding="24,14"
+                BorderBrush="#1E2D45"
+                BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                <Button Content="İptal"     Classes="Secondary" Command="{Binding CancelCommand}" Width="90"  MinHeight="36"/>
+                <Button Content="💾 Kaydet" Classes="Primary"   Command="{Binding SaveCommand}"   Width="110" MinHeight="36"/>
             </StackPanel>
         </Border>
 
-        <ProgressBar Grid.Row="2" IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
     </Grid>
 </Window>

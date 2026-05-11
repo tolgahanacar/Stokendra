@@ -66,23 +66,25 @@
         <!-- Grid -->
         <DataGrid Grid.Row="3"
                   x:Name="CardsGrid"
-                  Margin="40,24,40,24"
+                  Margin="28,16,28,16"
                   ItemsSource="{Binding Cards}"
                   SelectedItem="{Binding SelectedCard}"
                   IsReadOnly="True"
                   SelectionMode="Extended"
                   CanUserResizeColumns="True"
+                  HorizontalScrollBarVisibility="Visible"
                   SelectionChanged="CardsGrid_SelectionChanged">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Kod"       Binding="{Binding KodNo}"      Width="100"/>
-                <DataGridTextColumn Header="Ad"        Binding="{Binding Ad}"          Width="300"/>
-                <DataGridTextColumn Header="Tip"       Binding="{Binding KartTipi}"    Width="100"/>
-                <DataGridTextColumn Header="Üst Kart"  Binding="{Binding UstKartAd}"   Width="300"/>
-                <DataGridTextColumn Header="Kategori"  Binding="{Binding Kategori}"    Width="200"/>
-                <DataGridTextColumn Header="Mevcut"    Binding="{Binding MevcutStok}"  Width="100"/>
-                <DataGridTextColumn Header="Min"       Binding="{Binding MinStok}"     Width="100"/>
-                <DataGridTextColumn Header="Birim"     Binding="{Binding Birim}"       Width="150"/>
-                <DataGridTextColumn Header="Konum"     Binding="{Binding Konum}"       Width="200"/>
+                <DataGridTextColumn Header="Kod"      Binding="{Binding KodNo}"      Width="80"  MinWidth="60"/>
+                <DataGridTextColumn Header="Ad"       Binding="{Binding Ad}"          Width="2*"  MinWidth="120"/>
+                <DataGridTextColumn Header="Tip"      Binding="{Binding KartTipi}"    Width="70"  MinWidth="60"/>
+                <DataGridTextColumn Header="Üst Kart" Binding="{Binding UstKartAd}"   Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="Kategori" Binding="{Binding Kategori}"    Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="Mevcut"   Binding="{Binding MevcutStok}"  Width="75"  MinWidth="60"/>
+                <DataGridTextColumn Header="Min"      Binding="{Binding MinStok}"     Width="55"  MinWidth="45"/>
+                <DataGridTextColumn Header="Birim"    Binding="{Binding Birim}"       Width="70"  MinWidth="55"/>
+                <DataGridTextColumn Header="Konum"    Binding="{Binding Konum}"       Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="Barkod"   Binding="{Binding Barkod}"      Width="*"   MinWidth="100"/>
             </DataGrid.Columns>
         </DataGrid>
 

@@ -69,48 +69,48 @@
         <!-- DataGrid -->
         <DataGrid Grid.Row="3"
                   Name="MovementsGrid"
-                  Margin="40,16,40,16"
+                  Margin="28,12,28,12"
                   ItemsSource="{Binding Movements}"
                   SelectedItem="{Binding SelectedMovement}"
                   SelectionMode="Extended"
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
+                  HorizontalScrollBarVisibility="Visible"
                   Background="#0C0E14"
                   BorderThickness="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Kod"         Binding="{Binding StokKartKodNo}"  Width="80"/>
-                <DataGridTextColumn Header="Stok Adı"    Binding="{Binding StokKartAd}"     Width="250"/>
-                
-                <DataGridTemplateColumn Header="G/Ç" Width="80">
+                <DataGridTextColumn Header="Kod"      Binding="{Binding StokKartKodNo}" Width="75"  MinWidth="60"/>
+                <DataGridTextColumn Header="Stok Adı" Binding="{Binding StokKartAd}"    Width="2*"  MinWidth="120"/>
+
+                <DataGridTemplateColumn Header="G/Ç" Width="55" MinWidth="45">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:StokHareketi">
-                            <TextBlock Text="{Binding DisplayTur}" 
-                                       Foreground="{Binding DisplayColor}" 
-                                       FontWeight="Bold" 
-                                       HorizontalAlignment="Center" 
+                            <TextBlock Text="{Binding DisplayTur}"
+                                       Foreground="{Binding DisplayColor}"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTemplateColumn Header="Miktar" Width="100">
+                <DataGridTemplateColumn Header="Miktar" Width="85" MinWidth="65">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate x:DataType="models:StokHareketi">
-                            <TextBlock Text="{Binding Miktar}" 
-                                       Foreground="{Binding DisplayColor}" 
-                                       FontWeight="Bold" 
-                                       HorizontalAlignment="Right" 
+                            <TextBlock Text="{Binding Miktar}"
+                                       Foreground="{Binding DisplayColor}"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
-                                       Margin="0,0,10,0"/>
+                                       Margin="0,0,8,0"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn Header="Departman"   Binding="{Binding Departman}"       Width="180"/>
-                <DataGridTextColumn Header="Teslim"      Binding="{Binding TeslimEdilen}"    Width="210"/>
-                <DataGridTextColumn Header="Tarih"       Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="200"/>
-                <DataGridTextColumn Header="Açıklama"    Binding="{Binding Aciklama}"        Width="*"/>
-                
+                <DataGridTextColumn Header="Departman" Binding="{Binding Departman}"    Width="*"   MinWidth="100"/>
+                <DataGridTextColumn Header="Teslim"    Binding="{Binding TeslimEdilen}" Width="*"   MinWidth="100"/>
+                <DataGridTextColumn Header="Tarih"     Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="130" MinWidth="110"/>
+                <DataGridTextColumn Header="Açıklama"  Binding="{Binding Aciklama}"     Width="2*"  MinWidth="120"/>
             </DataGrid.Columns>
         </DataGrid>
 
