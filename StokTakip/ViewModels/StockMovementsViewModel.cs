@@ -98,6 +98,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     public async Task LoadMovementsAsync()
     {
         _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         var token = _cts.Token;
 
@@ -108,13 +109,13 @@ public partial class StockMovementsViewModel : ViewModelBase
             string? type = SelectedTypeIndex switch { 1 => "Giris", 2 => "Cikis", 3 => "Bos", _ => null };
             string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            var totalCount = await _movements.GetCountAsync(cardId, StartDate, EndDate.AddDays(1), null, type, null, search, token);
+            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate, endDate: EndDate.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
 
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, cardId, StartDate, EndDate.AddDays(1), null, type, null, search, token);
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate, endDate: EndDate.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
 
             token.ThrowIfCancellationRequested();
 
@@ -276,7 +277,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1); 
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
 
                 var movementsToImport = new List<StokHareketi>();
                 foreach (var row in rows)

@@ -59,9 +59,17 @@ public partial class SettingsViewModel : ViewModelBase
         var settings = AppServices.Current.Settings;
         settings.CompanyName = CompanyName.Trim();
         settings.AutoBackupPath = AutoBackupPath.Trim();
-        settings.Kaydet();
-        StatusMessage = "Ayarlar kaydedildi.";
-        IsSuccess     = true;
+        bool saved = settings.Kaydet();
+        if (saved)
+        {
+            StatusMessage = "Ayarlar kaydedildi.";
+            IsSuccess     = true;
+        }
+        else
+        {
+            StatusMessage = "Ayarlar kaydedilemedi. Disk alanını kontrol edin.";
+            IsSuccess     = false;
+        }
     }
 
     [RelayCommand]
@@ -75,7 +83,7 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void ChangePassword()
+    public async Task ChangePasswordAsync()
     {
         StatusMessage = "";
         IsSuccess     = false;
@@ -103,7 +111,9 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         var username = AppServices.Current.Session?.Username ?? "admin";
-        bool ok = _users.ChangePassword(username, OldPassword, NewPassword);
+
+        // PBKDF2 600k iterasyon — Task.Run ile UI thread'i bloklamadan çalıştır
+        bool ok = await Task.Run(() => _users.ChangePassword(username, OldPassword, NewPassword));
         if (ok)
         {
             StatusMessage   = "Şifre başarıyla değiştirildi.";

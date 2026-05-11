@@ -48,6 +48,7 @@ public sealed class AppServices : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        Database?.Dispose();
         _instance = null;
     }
 }

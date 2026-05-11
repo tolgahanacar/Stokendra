@@ -19,36 +19,23 @@ public sealed class UserRepository : IUserRepository
 
     public async Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        Console.WriteLine($"LOGIN ATTEMPT: {username}");
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = "SELECT SifreHash, Tuz, Rol FROM Kullanicilar WHERE KullaniciAdi = $u COLLATE NOCASE";
         cmd.Parameters.AddWithValue("$u", username);
         
         using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken)) 
-        {
-            Console.WriteLine("USER NOT FOUND");
+        if (!await reader.ReadAsync(cancellationToken))
             return (false, "");
-        }
         
-        string storedHash = reader.GetString(0);
-        string salt = reader.GetString(1);
+        string storedHash = reader.GetString(0).Trim();
+        string salt = reader.GetString(1).Trim();
         string role = reader.IsDBNull(2) ? "admin" : reader.GetString(2);
-        
-        // Trim stored values to avoid whitespace issues
-        storedHash = storedHash.Trim();
-        salt = salt.Trim();
 
         bool match = Verify(password, salt, storedHash, out bool upgrade);
         
         if (match && upgrade)
-        {
             Upgrade(username, password, conn);
-        }
-        
-        // Failsafe: if it's admin and match fails, let's try a direct comparison if it's 'admin'
-        // (Only for recovery, we will remove this later)
 
         return (match, role);
     }
@@ -77,7 +64,7 @@ public sealed class UserRepository : IUserRepository
     public string? ValidatePasswordPolicy(string password, string? username = null)
     {
         if (string.IsNullOrEmpty(password) || password.Length < 4) return "Şifre en az 4 karakter olmalıdır.";
-        if (username != null && password.Contains(username)) return "Şifre kullanıcı adını içeremez.";
+        if (username != null && password.Contains(username, StringComparison.OrdinalIgnoreCase)) return "Şifre kullanıcı adını içeremez.";
         return null;
     }
 
@@ -161,9 +148,14 @@ public sealed class UserRepository : IUserRepository
         catch { return false; }
     }
 
-    private bool FixedTimeEquals(string a, string b)
+    private static bool FixedTimeEquals(string a, string b)
     {
         if (a == null || b == null) return false;
-        return string.Equals(a.Trim(), b.Trim(), StringComparison.Ordinal);
+        // CryptographicOperations.FixedTimeEquals timing-safe karşılaştırma yapar.
+        // string.Equals timing-safe değildir — timing attack'a karşı savunmasızdır.
+        byte[] aBytes = System.Text.Encoding.UTF8.GetBytes(a.Trim());
+        byte[] bBytes = System.Text.Encoding.UTF8.GetBytes(b.Trim());
+        return aBytes.Length == bBytes.Length &&
+               System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
 }

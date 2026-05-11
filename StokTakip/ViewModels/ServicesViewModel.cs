@@ -183,7 +183,7 @@ public partial class ServicesViewModel : ViewModelBase
             await Task.Run(async () => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
                 var toImport = new List<ServisKaydi>();
                 foreach (var row in rows)
                 {

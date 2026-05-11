@@ -29,6 +29,9 @@ public partial class StocksViewModel : ViewModelBase
     public ObservableCollection<StokKarti> Stocks { get; } = new();
     private List<StokKarti> _allStocks = new();
 
+    // Debounce için — hızlı yazışta her tuşta filtre çalışmasını önler
+    private CancellationTokenSource? _filterCts;
+
     public StocksViewModel(IStockCardRepository stockCards, IDialogService dialogService, ILogger logger)
     {
         _stockCards = stockCards;
@@ -65,7 +68,22 @@ public partial class StocksViewModel : ViewModelBase
         finally { IsLoading = false; }
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnSearchTextChanged(string value) => ScheduleFilter();
+
+    private async void ScheduleFilter()
+    {
+        _filterCts?.Cancel();
+        _filterCts?.Dispose();
+        _filterCts = new CancellationTokenSource();
+        var token = _filterCts.Token;
+        try
+        {
+            // 250ms debounce — hızlı yazışta gereksiz render'ı önler
+            await Task.Delay(250, token);
+            ApplyFilter();
+        }
+        catch (OperationCanceledException) { }
+    }
 
     private void ApplyFilter()
     {

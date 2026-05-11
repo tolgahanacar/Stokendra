@@ -133,20 +133,25 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 
-    private class CardBalanceInfo { public string Name; public string Type; public double Balance; }
+    private class CardBalanceInfo { public string Name = ""; public string Type = ""; public double Balance; }
 
     private Dictionary<int, CardBalanceInfo> GetBalances(SqliteConnection conn, SqliteTransaction trans, List<int> ids)
     {
         var result = new Dictionary<int, CardBalanceInfo>();
         if (ids.Count == 0) return result;
 
+        // Parameterized IN clause — SQL injection'a karşı güvenli
         using var cmd = conn.CreateCommand();
         cmd.Transaction = trans;
-        string idList = string.Join(",", ids);
+
+        var paramNames = ids.Select((_, i) => $"$id{i}").ToList();
         cmd.CommandText = $@"
             SELECT s.Id, s.Ad, s.KartTipi,
             COALESCE((SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END) FROM StokHareketleri WHERE StokKartId=s.Id), 0)
-            FROM StokKartlari s WHERE s.Id IN ({idList})";
+            FROM StokKartlari s WHERE s.Id IN ({string.Join(",", paramNames)})";
+
+        for (int i = 0; i < ids.Count; i++)
+            cmd.Parameters.AddWithValue(paramNames[i], ids[i]);
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -195,15 +200,21 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
+            // Parameterized IN clause
+            var paramNames = list.Select((_, i) => $"$did{i}").ToList();
+            string paramList = string.Join(",", paramNames);
+
             // Var olmayan ID kontrolü
             using (var cmdExist = conn.CreateCommand()) {
                 cmdExist.Transaction = trans;
-                cmdExist.CommandText = $"SELECT COUNT(*) FROM StokHareketleri WHERE Id IN ({string.Join(",", list)})";
+                cmdExist.CommandText = $"SELECT COUNT(*) FROM StokHareketleri WHERE Id IN ({paramList})";
+                for (int i = 0; i < list.Count; i++) cmdExist.Parameters.AddWithValue(paramNames[i], list[i]);
                 var count = Convert.ToInt32(cmdExist.ExecuteScalar());
                 if (count != list.Count) throw new InvalidOperationException("Bazı hareketler bulunamadı.");
             }
 
             ValidateDeletion(list, conn, trans);
+
             foreach(var id in list) {
                 using var cmd = conn.CreateCommand();
                 cmd.Transaction = trans;
@@ -378,13 +389,16 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
     private void ValidateDeletion(IEnumerable<int> ids, SqliteConnection conn, SqliteTransaction? trans = null)
     {
         // Silme işlemi sonrası herhangi bir kartın stoku negatife düşüyor mu?
+        var idList = ids.ToList();
+        var paramNames = idList.Select((_, i) => $"$vid{i}").ToList();
+        string paramList = string.Join(",", paramNames);
+
         using var cmd = conn.CreateCommand();
         if (trans != null) cmd.Transaction = trans;
-        
-        var idList = string.Join(",", ids);
         cmd.CommandText = $@"
-            SELECT StokKartId FROM StokHareketleri WHERE Id IN ({idList}) GROUP BY StokKartId";
-        
+            SELECT StokKartId FROM StokHareketleri WHERE Id IN ({paramList}) GROUP BY StokKartId";
+        for (int i = 0; i < idList.Count; i++) cmd.Parameters.AddWithValue(paramNames[i], idList[i]);
+
         var cardIds = new List<int>();
         using (var reader = cmd.ExecuteReader())
             while (reader.Read()) cardIds.Add(reader.GetInt32(0));
@@ -393,25 +407,30 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         {
             using var cmdCheck = conn.CreateCommand();
             if (trans != null) cmdCheck.Transaction = trans;
-            cmdCheck.CommandText = @"
+
+            // Silinecek hareketler hariç kalan bakiyeyi hesapla — parameterized
+            var checkParamNames = idList.Select((_, i) => $"$cid{i}").ToList();
+            cmdCheck.CommandText = $@"
                 SELECT SUM(CASE WHEN Tur IN ('Giris', 'Giriş') THEN Miktar ELSE -Miktar END)
                 FROM StokHareketleri 
-                WHERE StokKartId=$cid AND Id NOT IN (" + idList + ")";
-            cmdCheck.Parameters.AddWithValue("$cid", cardId);
+                WHERE StokKartId=$cardId AND Id NOT IN ({string.Join(",", checkParamNames)})";
+            cmdCheck.Parameters.AddWithValue("$cardId", cardId);
+            for (int i = 0; i < idList.Count; i++) cmdCheck.Parameters.AddWithValue(checkParamNames[i], idList[i]);
+
             var result = cmdCheck.ExecuteScalar();
             double balance = (result == null || result == DBNull.Value) ? 0 : Convert.ToDouble(result);
             if (balance < 0) throw new InvalidOperationException("Silme işlemi stok dengesini bozuyor (negatif stok).");
         }
     }
 
-    public async Task<List<StokHareketi>> GetPagedAsync(int page, int pageSize, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, CancellationToken cancellationToken = default)
+    public async Task<List<StokHareketi>> GetPagedAsync(int page, int pageSize, int? stockCardId = null, DateTime? startDate = null, DateTime? endDate = null, string? department = null, string? movementType = null, string? category = null, string? searchTerm = null, CancellationToken cancellationToken = default)
     {
         var list = new List<StokHareketi>();
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
-        string baseQuery = BuildQuery(cardId, start, end, dept, type, cat, search);
+        string baseQuery = BuildQuery(stockCardId, startDate, endDate, department, movementType, category, searchTerm);
         cmd.CommandText = $"{baseQuery} LIMIT $limit OFFSET $offset";
-        BindQueryParams(cmd, cardId, start, end, dept, type, cat, search);
+        BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category, searchTerm);
         cmd.Parameters.AddWithValue("$limit", pageSize);
         cmd.Parameters.AddWithValue("$offset", (page - 1) * pageSize);
 
@@ -420,21 +439,21 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         return list;
     }
 
-    public async Task<int> GetCountAsync(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, CancellationToken cancellationToken = default)
+    public async Task<int> GetCountAsync(int? stockCardId = null, DateTime? startDate = null, DateTime? endDate = null, string? department = null, string? movementType = null, string? category = null, string? searchTerm = null, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
         string sql = "SELECT COUNT(*) FROM StokHareketleri h JOIN StokKartlari s ON h.StokKartId = s.Id WHERE 1=1";
-        if(cardId.HasValue) sql += " AND h.StokKartId=$sk";
-        if(start.HasValue) sql += " AND h.Tarih >= $ts";
-        if(end.HasValue) sql += " AND h.Tarih < $te";
-        if(!string.IsNullOrEmpty(dept)) sql += " AND h.Departman=$dp";
-        if(!string.IsNullOrEmpty(type)) sql += " AND h.Tur=$tr";
-        if(!string.IsNullOrEmpty(cat)) sql += " AND s.Kategori=$ct";
-        if(!string.IsNullOrEmpty(search)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
+        if(stockCardId.HasValue) sql += " AND h.StokKartId=$sk";
+        if(startDate.HasValue) sql += " AND h.Tarih >= $ts";
+        if(endDate.HasValue) sql += " AND h.Tarih < $te";
+        if(!string.IsNullOrEmpty(department)) sql += " AND h.Departman=$dp";
+        if(!string.IsNullOrEmpty(movementType)) sql += " AND h.Tur=$tr";
+        if(!string.IsNullOrEmpty(category)) sql += " AND s.Kategori=$ct";
+        if(!string.IsNullOrEmpty(searchTerm)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
         
         cmd.CommandText = sql;
-        BindQueryParams(cmd, cardId, start, end, dept, type, cat, search);
+        BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category, searchTerm);
         return Convert.ToInt32(await cmd.ExecuteScalarAsync(cancellationToken));
     }
 

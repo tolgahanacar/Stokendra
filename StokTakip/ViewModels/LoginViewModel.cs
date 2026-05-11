@@ -10,7 +10,7 @@ public partial class LoginViewModel : ViewModelBase
     private readonly IUserRepository _userRepository;
 
     [ObservableProperty]
-    private string _username = "admin";   // Geliştirme kolaylığı için varsayılan
+    private string _username = "";
 
     [ObservableProperty]
     private string _password = "";
@@ -112,6 +112,13 @@ public partial class LoginViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(NewPassword) || NewPassword.Length < 4)
         {
             ErrorMessage = "Yeni şifre en az 4 karakter olmalıdır.";
+            return;
+        }
+
+        // Şifre kullanıcı adını içermemeli
+        if (NewPassword.Contains(Username.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            ErrorMessage = "Şifre kullanıcı adını içeremez.";
             return;
         }
 

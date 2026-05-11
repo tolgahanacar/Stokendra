@@ -65,19 +65,8 @@ public partial class AddMovementViewModel : ViewModelBase
         {
             // Default Values
             SelectedTypeIndex = 1; // Çıkış
-            
-            // Prioritize cards starting with 015- as requested
-            SelectedCard = AllCards.FirstOrDefault(c => c.KodNo.StartsWith("015-")) 
-                        ?? AllCards.FirstOrDefault(c => c.KodNo.Contains("725") || c.KodNo.Contains("285"));
-            
-            if (string.IsNullOrEmpty(Department))
-            {
-                // Prioritize "Sicil Müdürlüğü" exactly, then fall back to others containing "Sicil"
-                var exactSicil = AllDepartments.FirstOrDefault(d => d.Equals("Sicil Müdürlüğü", StringComparison.OrdinalIgnoreCase));
-                var partialSicil = AllDepartments.FirstOrDefault(d => d.Contains("Sicil", StringComparison.OrdinalIgnoreCase));
-                
-                Department = exactSicil ?? partialSicil ?? (AllDepartments.Count > 0 ? AllDepartments[0] : "");
-            }
+            SelectedCard = AllCards.FirstOrDefault();
+            Department = AllDepartments.Count > 0 ? AllDepartments[0] : "";
         }
     }
 

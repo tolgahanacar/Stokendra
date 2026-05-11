@@ -69,7 +69,7 @@ public partial class BulkMovementViewModel : ViewModelBase
         {
             var depts = await _departments.GetAllAsync();
             foreach (var d in depts) Departments.Add(d);
-            SelectedDepartment = depts.FirstOrDefault(d => d.Contains("Sicil")) ?? depts.FirstOrDefault() ?? "";
+            SelectedDepartment = depts.FirstOrDefault() ?? "";
 
             var cards = await _stockCards.GetChildCardsAsync();
             _allItemViewModels = cards.Select(c => new BulkMovementItemViewModel(c)).ToList();
@@ -91,11 +91,9 @@ public partial class BulkMovementViewModel : ViewModelBase
             ? _allItemViewModels 
             : _allItemViewModels.Where(i => i.Card.Ad.ToLowerInvariant().Contains(term) || i.Card.KodNo.ToLowerInvariant().Contains(term)).ToList();
 
-        // UI donmalarını önlemek için sadece değişenleri güncellemek daha iyidir
-        // Ancak basitlik için Clear/Add yerine yeni bir liste ataması yapmak (seçiliyse)
-        // veya geçici bir değişkende tutup bir kerede eklemek Avalonia'da ItemsSource değiştirilerek yapılabilir.
-        // Şimdilik toplu ekleme simülasyonu yapıyoruz.
-        
+        // Toplu güncelleme: önce temizle, sonra tek seferde ekle
+        // Büyük listelerde her Add bir CollectionChanged tetikler.
+        // Avalonia'da bu pattern kabul edilebilir; gerçek virtualization DataGrid ile sağlanır.
         Items.Clear();
         foreach (var i in filtered) Items.Add(i);
     }

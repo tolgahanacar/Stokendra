@@ -59,7 +59,7 @@
                             <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Şifreyi tekrar girin"/>
                         </StackPanel>
                         <Button Content="Şifreyi Güncelle" Classes="Success"
-                                Command="{Binding ChangePasswordCommand}"
+                                Command="{Binding ChangePasswordAsyncCommand}"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
                     </StackPanel>
                 </Border>

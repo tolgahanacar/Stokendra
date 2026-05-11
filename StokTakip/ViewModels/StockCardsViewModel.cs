@@ -37,6 +37,9 @@ public partial class StockCardsViewModel : ViewModelBase
 
     private List<StokKarti> _allCards = new();
 
+    // Debounce için
+    private CancellationTokenSource? _filterCts;
+
     public StockCardsViewModel(
         IStockCardRepository stockCards,
         IMovementRepository movements,
@@ -87,7 +90,21 @@ public partial class StockCardsViewModel : ViewModelBase
         finally { IsLoading = false; }
     }
 
-    partial void OnSearchTextChanged(string value) => ApplySearch();
+    partial void OnSearchTextChanged(string value) => ScheduleFilter();
+
+    private async void ScheduleFilter()
+    {
+        _filterCts?.Cancel();
+        _filterCts?.Dispose();
+        _filterCts = new CancellationTokenSource();
+        var token = _filterCts.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            ApplySearch();
+        }
+        catch (OperationCanceledException) { }
+    }
 
     private void ApplySearch()
     {
@@ -211,7 +228,7 @@ public partial class StockCardsViewModel : ViewModelBase
             await Task.Run(() => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed().RowsUsed().Skip(1);
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
 
                 foreach (var row in rows)
                 {

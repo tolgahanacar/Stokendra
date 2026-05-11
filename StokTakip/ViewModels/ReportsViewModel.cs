@@ -84,24 +84,38 @@ public partial class ReportsViewModel : ViewModelBase
             string? cat = SelectedCategory == "Tümü" ? null : SelectedCategory;
             string? user = SelectedUser == "Tümü" ? null : SelectedUser;
 
-            var movements = await _movements.GetAllAsync(
-                startDate: StartDate,
-                endDate: EndDate.AddDays(1),
-                department: dept,
-                movementType: "Cikis",
-                category: cat);
+            // Büyük veri setlerinde bellek baskısını önlemek için sayfalı yükleme
+            const int batchSize = 5000;
+            int page = 1;
+            var allMovements = new List<StokHareketi>();
+
+            while (true)
+            {
+                var batch = await _movements.GetPagedAsync(
+                    page, batchSize,
+                    stockCardId: null,
+                    startDate: StartDate,
+                    endDate: EndDate.AddDays(1),
+                    department: dept,
+                    movementType: "Cikis",
+                    category: cat,
+                    searchTerm: null);
+
+                if (batch.Count == 0) break;
+                allMovements.AddRange(batch);
+                if (batch.Count < batchSize) break;
+                page++;
+            }
 
             if (user != null)
-            {
-                movements = movements.Where(m => m.TeslimEdilen == user).ToList();
-            }
+                allMovements = allMovements.Where(m => m.TeslimEdilen == user).ToList();
 
             ReportRows.Clear();
             double total = 0;
             var uniqueIds = new HashSet<int>();
             var totalsByCard = new Dictionary<string, double>();
 
-            foreach (var m in movements)
+            foreach (var m in allMovements)
             {
                 ReportRows.Add(m);
                 total += m.Miktar;
@@ -115,7 +129,7 @@ public partial class ReportsViewModel : ViewModelBase
 
             TotalConsumption = total;
             UniqueItemCount = uniqueIds.Count;
-            StatusText = $"{movements.Count} kayıt bulundu.";
+            StatusText = $"{allMovements.Count} kayıt bulundu.";
 
             ChartData = totalsByCard.OrderByDescending(x => x.Value).Take(10)
                 .Select(x => (x.Key, x.Value)).ToList();

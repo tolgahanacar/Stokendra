@@ -63,7 +63,8 @@ public class AppSettings
     /// <summary>
     /// Ayarları disk'e kaydeder. Atomik yazma için geçici dosya kullanır.
     /// </summary>
-    public void Kaydet()
+    /// <returns>Kayıt başarılıysa true, hata oluşursa false döner.</returns>
+    public bool Kaydet()
     {
         try
         {
@@ -78,10 +79,13 @@ public class AppSettings
                 File.Replace(tempFile, AppPaths.SettingsFilePath, null);
             else
                 File.Move(tempFile, AppPaths.SettingsFilePath);
+
+            return true;
         }
         catch (Exception ex)
         {
             AppLogger.LogError("AppSettings.Kaydet error: " + ex);
+            return false;
         }
     }
 }

@@ -6,7 +6,7 @@ namespace StokTakip.Data;
 
 public sealed partial class Database
 {
-    private static void EnsureSchema(SqliteConnection connection, SqliteTransaction transaction)
+    private static void EnsureSchema(SqliteConnection connection, SqliteTransaction? transaction)
     {
         string[] tables = {
             @"CREATE TABLE IF NOT EXISTS StokKartlari (
@@ -86,19 +86,19 @@ public sealed partial class Database
         }
     }
 
-    private static void MigrateToV1(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV1(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Aciklama TEXT DEFAULT ''");
         TryAlter(connection, transaction, "ALTER TABLE StokHareketleri ADD COLUMN Departman TEXT DEFAULT ''");
     }
 
-    private static void MigrateToV2(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV2(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Birim TEXT DEFAULT ''");
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN MinStok INTEGER DEFAULT 0");
     }
 
-    private static void MigrateToV3(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV3(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Kategori TEXT DEFAULT ''");
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Konum TEXT DEFAULT ''");
@@ -109,18 +109,18 @@ public sealed partial class Database
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN GuncellenmeTarihi TEXT DEFAULT ''");
     }
 
-    private static void MigrateToV4(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV4(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN KartTipi TEXT DEFAULT 'Alt'");
         TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN UstKartId INTEGER DEFAULT NULL");
     }
 
-    private static void MigrateToV5(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV5(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "UPDATE StokKartlari SET KartTipi='Alt' WHERE KartTipi IS NULL OR trim(KartTipi)=''");
     }
 
-    private static void MigrateToV6(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV6(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Hareket_StokKartId ON StokHareketleri(StokKartId)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Hareket_Tarih ON StokHareketleri(Tarih)");
@@ -129,7 +129,7 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_AuditLog_Tarih ON AuditLog(Tarih)");
     }
 
-    private static void MigrateToV7(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV7(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, @"CREATE TABLE IF NOT EXISTS ServisKayitlari (
             Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,18 +141,18 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_ServisKayit_Tarih ON ServisKayitlari(BakimTarihi)");
     }
 
-    private static void MigrateToV8(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV8(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Firma TEXT DEFAULT ''");
     }
 
-    private static void MigrateToV9(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV9(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Sorun TEXT DEFAULT ''");
         TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Sonuc TEXT DEFAULT ''");
     }
 
-    private static void MigrateToV10(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV10(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "UPDATE StokKartlari SET Birim='Adet' WHERE Birim IS NULL OR trim(Birim)=''");
         TryAlter(connection, transaction, "UPDATE StokKartlari SET MinStok=0 WHERE MinStok < 0");
@@ -160,13 +160,13 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE UNIQUE INDEX IF NOT EXISTS UX_StokKartlari_KodNo ON StokKartlari(KodNo COLLATE NOCASE)");
     }
 
-    private static void MigrateToV11(SqliteConnection connection, SqliteTransaction transaction)
+    private static void MigrateToV11(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN OlusturmaTarihi TEXT DEFAULT ''");
         TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN GuncellenmeTarihi TEXT DEFAULT ''");
     }
 
-    private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction transaction)
+    private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Hareket_StokKartId_Tarih ON StokHareketleri(StokKartId, Tarih DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Hareket_Departman_Tarih ON StokHareketleri(Departman, Tarih DESC)");
@@ -176,7 +176,7 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_AppConfig_Key ON AppConfig(Key)");
     }
 
-    private static void NormalizeLegacyData(SqliteConnection connection, SqliteTransaction transaction)
+    private static void NormalizeLegacyData(SqliteConnection connection, SqliteTransaction? transaction)
     {
         // WinForms'dan gelen verileri yeni standarda dönüştür (ş, ç, ü -> s, c, u)
         TryAlter(connection, transaction, "UPDATE StokHareketleri SET Tur='Giris' WHERE Tur='Giriş'");
@@ -185,7 +185,7 @@ public sealed partial class Database
         TryAlter(connection, transaction, "UPDATE StokKartlari SET KartTipi='Ust' WHERE KartTipi='Üst'");
     }
 
-    private static void ValidateDatabase(SqliteConnection connection, SqliteTransaction transaction)
+    private static void ValidateDatabase(SqliteConnection connection, SqliteTransaction? transaction)
     {
         using var command = CreateCommand(connection, transaction, "PRAGMA quick_check(1);");
         string result = command.ExecuteScalar()?.ToString() ?? "ok";
@@ -193,7 +193,7 @@ public sealed partial class Database
             throw new InvalidOperationException(L("db_integrity_failed", result));
     }
 
-    private static void SeedDefaults(SqliteConnection connection, SqliteTransaction transaction)
+    private static void SeedDefaults(SqliteConnection connection, SqliteTransaction? transaction)
     {
         try
         {

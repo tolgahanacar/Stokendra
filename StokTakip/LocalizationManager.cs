@@ -50,6 +50,7 @@ public static class LocalizationManager
 
     private static Dictionary<string, string> _strings = new();
     private static string _currentLang = "tr";
+    private static readonly object _initLock = new();
 
     public static string CurrentLanguage => _currentLang;
 
@@ -58,13 +59,17 @@ public static class LocalizationManager
 
     public static void Initialize(string language = "tr")
     {
-        _currentLang = language;
-        LoadLanguage(language);
+        lock (_initLock)
+        {
+            _currentLang = language;
+            LoadLanguage(language);
+        }
     }
 
     private static void LoadLanguage(string lang)
     {
-        _strings.Clear();
+        // lock(_initLock) çağıran tarafından zaten tutulmuş durumda
+        var newStrings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         string baseDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppDomain.CurrentDomain.BaseDirectory;
         string resDir = Path.Combine(baseDir, "Resources");
         string filePath = Path.Combine(resDir, $"lang_{lang}.json");
@@ -77,15 +82,19 @@ public static class LocalizationManager
             try
             {
                 var json = File.ReadAllText(filePath);
-                _strings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-                    ?? new Dictionary<string, string>();
+                newStrings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                    ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {
                 AppLogger.LogError("Localization load error for " + filePath + ": " + ex);
-                _strings = new Dictionary<string, string>();
+                newStrings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
         }
+
+        // Atomic assignment — okuyucular eski referansı görmeye devam edebilir ama
+        // yeni referans atandıktan sonra tutarlı bir snapshot görürler.
+        System.Threading.Volatile.Write(ref _strings, newStrings);
     }
 
     public static string L(string key)
@@ -102,7 +111,9 @@ public static class LocalizationManager
 
     private static bool TryGetText(string key, out string value)
     {
-        if (_strings.TryGetValue(key, out value!))
+        // Volatile.Read ile thread-safe snapshot al
+        var strings = System.Threading.Volatile.Read(ref _strings);
+        if (strings.TryGetValue(key, out value!))
             return true;
 
         return BuiltInFallbacks.TryGetValue(_currentLang, out var fallback)
