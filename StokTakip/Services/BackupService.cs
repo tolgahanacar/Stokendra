@@ -21,6 +21,7 @@ public class BackupService : IBackupService
     private readonly IServiceRecordRepository _serviceRecordRepository;
     private readonly INoteRepository _noteRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly IDbConnectionFactory _connectionFactory;
 
     public BackupService(
         AppSettings settings,
@@ -30,7 +31,8 @@ public class BackupService : IBackupService
         IMovementRepository movementRepository,
         IServiceRecordRepository serviceRecordRepository,
         INoteRepository noteRepository,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        IDbConnectionFactory connectionFactory)
     {
         _settings = settings;
         _configRepository = configRepository;
@@ -40,6 +42,7 @@ public class BackupService : IBackupService
         _serviceRecordRepository = serviceRecordRepository;
         _noteRepository = noteRepository;
         _departmentRepository = departmentRepository;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task CheckWeeklyBackupAsync()
@@ -74,7 +77,8 @@ public class BackupService : IBackupService
             await ExportServisKayitlariAsync(tempDir);
             await ExportNotlarAsync(tempDir);
             await ExportDepartmanlarAsync(tempDir);
-            ExportSql(tempDir);
+            await ExportBirimlerAsync(tempDir);
+            await ExportAuditLogAsync(tempDir);
 
             string zipFile = Path.Combine(destFolder, $"Stokendra_FullBackup_{timestamp}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
@@ -101,6 +105,8 @@ public class BackupService : IBackupService
             await ExportServisKayitlariAsync(tempDir);
             await ExportNotlarAsync(tempDir);
             await ExportDepartmanlarAsync(tempDir);
+            await ExportBirimlerAsync(tempDir);
+            await ExportAuditLogAsync(tempDir);
 
             string zipFile = Path.Combine(destFolder, $"Stokendra_ExcelExport_{timestamp}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
@@ -132,15 +138,7 @@ public class BackupService : IBackupService
         }
     }
 
-    private void ExportSql(string tempDir)
-    {
-        try
-        {
-            string sqlFile = Path.Combine(tempDir, "stokendra_backup.sql");
-            _reportRepository.ExportSqlBackup(sqlFile);
-        }
-        catch { }
-    }
+
 
     private async Task ExportStokKartlariAsync(string tempDir)
     {
@@ -311,5 +309,72 @@ public class BackupService : IBackupService
             if (r % 2 == 0)
                 ws.Range(r, 1, r, colCount).Style.Fill.BackgroundColor = XLColor.FromArgb(245, 247, 250);
         }
+    }
+
+    private async Task ExportBirimlerAsync(string tempDir)
+    {
+        var birimler = _configRepository.GetUnits();
+        if (birimler.Count == 0) return;
+
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("Birimler");
+
+        string[] headers = { "ID", "Birim Adı" };
+        SetHeaders(ws, headers);
+
+        for (int i = 0; i < birimler.Count; i++)
+        {
+            ws.Cell(i + 2, 1).Value = birimler[i].Id;
+            ws.Cell(i + 2, 2).Value = birimler[i].Ad;
+        }
+
+        ws.Columns().AdjustToContents();
+        ApplyTableStyle(ws, birimler.Count, headers.Length);
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Birimler.xlsx")));
+    }
+
+    private async Task ExportAuditLogAsync(string tempDir)
+    {
+        using var conn = _connectionFactory.CreateConnection();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT Id, Tarih, IslemTipi, TabloAdi, KayitId, Detay FROM AuditLog ORDER BY Id DESC LIMIT 10000";
+        
+        var rows = new List<(int Id, string Tarih, string Tip, string Tablo, int KayitId, string Detay)>();
+        using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            rows.Add((
+                reader.GetInt32(0),
+                reader.IsDBNull(1) ? "" : reader.GetString(1),
+                reader.IsDBNull(2) ? "" : reader.GetString(2),
+                reader.IsDBNull(3) ? "" : reader.GetString(3),
+                reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                reader.IsDBNull(5) ? "" : reader.GetString(5)
+            ));
+        }
+
+        if (rows.Count == 0) return;
+
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("AuditLog");
+
+        string[] headers = { "ID", "Tarih", "İşlem Tipi", "Tablo", "Kayıt ID", "Detay" };
+        SetHeaders(ws, headers);
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            int r = i + 2;
+            ws.Cell(r, 1).Value = rows[i].Id;
+            ws.Cell(r, 2).Value = rows[i].Tarih;
+            ws.Cell(r, 3).Value = rows[i].Tip;
+            ws.Cell(r, 4).Value = rows[i].Tablo;
+            ws.Cell(r, 5).Value = rows[i].KayitId;
+            ws.Cell(r, 6).Value = rows[i].Detay;
+        }
+
+        ws.Columns().AdjustToContents();
+        ApplyTableStyle(ws, rows.Count, headers.Length);
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "AuditLog.xlsx")));
     }
 }

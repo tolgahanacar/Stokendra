@@ -3,8 +3,8 @@
         xmlns:vm="using:StokTakip.ViewModels"
         x:Class="StokTakip.Views.BulkMovementView"
         Title="Toplu Stok Hareketi"
-        Width="900" Height="680"
-        MinWidth="700" MinHeight="500"
+        Width="1100" Height="700"
+        MinWidth="900" MinHeight="500"
         MaxHeight="960"
         WindowStartupLocation="CenterOwner"
         Background="#0C0E14">
@@ -35,7 +35,7 @@
                 BorderBrush="#1E2D45"
                 BorderThickness="0,0,0,1">
             <StackPanel Spacing="12">
-                <Grid ColumnDefinitions="120,180,200,160,*">
+                <Grid ColumnDefinitions="130,180,*,220,220">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="İşlem Türü" FontSize="11" Foreground="#94A3B8"/>
                         <ComboBox SelectedIndex="{Binding SelectedTypeIndex}" HorizontalAlignment="Stretch">
@@ -55,12 +55,14 @@
                     </StackPanel>
                     <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="Tarih" FontSize="11" Foreground="#94A3B8"/>
-                        <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
+                        <CalendarDatePicker SelectedDate="{Binding Date}" 
+                                            HorizontalAlignment="Stretch"
+                                            Watermark="Tarih seçin"/>
                     </StackPanel>
-                    <StackPanel Grid.Column="4" Spacing="4" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                    <StackPanel Grid.Column="4" Spacing="4" VerticalAlignment="Bottom">
                         <TextBox Text="{Binding SearchText}"
                                  Watermark="🔍 Kartlarda ara..."
-                                 Width="200"
+                                 HorizontalAlignment="Stretch"
                                  Classes="SearchBox"/>
                     </StackPanel>
                 </Grid>
@@ -70,7 +72,7 @@
                             Classes="Secondary"
                             Command="{Binding SelectAllCommand}"
                             Padding="8,4" FontSize="12"/>
-                    <Button Content="☐ Seçimleri Kaldır"
+                    <Button Content="X Seçimleri Kaldır"
                             Classes="Secondary"
                             Command="{Binding DeselectAllCommand}"
                             Padding="8,4" FontSize="12"/>
@@ -86,10 +88,10 @@
                       BorderThickness="0">
                 <DataGrid.Columns>
                     <DataGridCheckBoxColumn Header="✓" Binding="{Binding IsSelected}" Width="50"/>
-                    <DataGridTextColumn Header="Kod" Binding="{Binding Card.KodNo}" Width="100" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding Card.Ad}" Width="250" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Mevcut" Binding="{Binding Card.MevcutStok}" Width="*" IsReadOnly="True"/>
-                    <DataGridTemplateColumn Header="Miktar" Width="120">
+                    <DataGridTextColumn Header="Kod" Binding="{Binding Card.KodNo}" Width="200" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding Card.Ad}" Width="350" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Mevcut" Binding="{Binding Card.MevcutStok}" Width="150" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="Miktar" Width="150">
                         <DataTemplate>
                             <NumericUpDown Value="{Binding Quantity}"
                                            Minimum="0"

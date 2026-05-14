@@ -17,7 +17,7 @@ public sealed class ConfigRepository : RepositoryBase, IConfigRepository
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Değer FROM AppConfig WHERE Anahtar = $k";
+        cmd.CommandText = "SELECT Value FROM AppConfig WHERE Key = $k";
         cmd.Parameters.AddWithValue("$k", key);
         var res = cmd.ExecuteScalar();
         return res != null && res != DBNull.Value ? res.ToString()! : defaultValue;
@@ -27,7 +27,7 @@ public sealed class ConfigRepository : RepositoryBase, IConfigRepository
     {
         using var conn = ConnectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "INSERT INTO AppConfig (Anahtar, Değer) VALUES ($k, $v) ON CONFLICT(Anahtar) DO UPDATE SET Değer=$v";
+        cmd.CommandText = "INSERT INTO AppConfig (Key, Value) VALUES ($k, $v) ON CONFLICT(Key) DO UPDATE SET Value=$v";
         cmd.Parameters.AddWithValue("$k", key);
         cmd.Parameters.AddWithValue("$v", value ?? "");
         cmd.ExecuteNonQuery();

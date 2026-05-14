@@ -131,16 +131,6 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task DatabaseBackupAsync()
     {
-        var settings = AppServices.Current.Settings;
-        string dbPath = AppPaths.NormalizeDatabasePath(settings.DbPath);
-        
-        if (!System.IO.File.Exists(dbPath))
-        {
-            StatusMessage = "Veritabanı dosyası bulunamadı.";
-            IsSuccess = false;
-            return;
-        }
-
         string fileName = $"Stokendra_DB_{DateTime.Now:yyyyMMdd_HHmm}.db";
         string? destPath = await _dialogService.SaveFileAsync("Veritabanı Yedeği Kaydet", fileName, "SQLite Veritabanı (*.db)|*.db");
         
@@ -150,11 +140,13 @@ public partial class SettingsViewModel : ViewModelBase
         {
             StatusMessage = "Veritabanı yedekleniyor...";
             await Task.Run(() => {
-                System.IO.File.Copy(dbPath, destPath, true);
+                // SQLite backup API — WAL modunda güvenli kopya oluşturur.
+                // File.Copy WAL dosyasını dahil etmez ve bozuk yedek üretir.
+                _config.CreateBackup(destPath);
             });
             StatusMessage = "Veritabanı yedeği başarıyla oluşturuldu.";
             IsSuccess = true;
-            await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı dosyası kopyalandı.");
+            await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı güvenli şekilde yedeklendi.");
         }
         catch (Exception ex)
         {

@@ -328,14 +328,35 @@ public partial class StockMovementsViewModel : ViewModelBase
             await Task.Run(() => 
             {
                 using var workbook = new ClosedXML.Excel.XLWorkbook();
-                var ws = workbook.Worksheet(1);
+                var ws = workbook.AddWorksheet("Örnek");
                 string[] headers = { "Stok Kodu", "Stok Adı (Opsiyonel)", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
-                for (int i = 0; i < headers.Length; i++) ws.Cell(1, i + 1).Value = headers[i];
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    ws.Cell(1, i + 1).Value = headers[i];
+                    ws.Cell(1, i + 1).Style.Font.Bold = true;
+                    ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 37, 52);
+                    ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
+                }
                 
+                // Örnek Giriş satırı
                 ws.Cell(2, 1).Value = "001";
+                ws.Cell(2, 2).Value = "Örnek Malzeme";
+                ws.Cell(2, 3).Value = "Ahmet Yılmaz";
                 ws.Cell(2, 4).Value = "[G] Giriş";
                 ws.Cell(2, 5).Value = 10;
+                ws.Cell(2, 6).Value = "Bilgi İşlem";
                 ws.Cell(2, 7).Value = DateTime.Now.ToString("dd.MM.yyyy");
+                ws.Cell(2, 8).Value = "Yeni alım";
+
+                // Örnek Çıkış satırı
+                ws.Cell(3, 1).Value = "001";
+                ws.Cell(3, 2).Value = "Örnek Malzeme";
+                ws.Cell(3, 3).Value = "Mehmet Demir";
+                ws.Cell(3, 4).Value = "[Ç] Çıkış";
+                ws.Cell(3, 5).Value = 3;
+                ws.Cell(3, 6).Value = "Muhasebe";
+                ws.Cell(3, 7).Value = DateTime.Now.ToString("dd.MM.yyyy");
+                ws.Cell(3, 8).Value = "Departman talebi";
                 
                 ws.Columns().AdjustToContents();
                 workbook.SaveAs(path);

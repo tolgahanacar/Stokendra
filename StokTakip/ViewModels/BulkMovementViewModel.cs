@@ -35,7 +35,7 @@ public partial class BulkMovementViewModel : ViewModelBase
     [ObservableProperty] private int _selectedTypeIndex = 1; // 0: Giriş, 1: Çıkış
     [ObservableProperty] private string _selectedDepartment = "";
     [ObservableProperty] private string _deliveredTo = "";
-    [ObservableProperty] private DateTimeOffset _date = DateTimeOffset.Now;
+    [ObservableProperty] private DateTime? _date = DateTime.Now;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _isLoading;
 
@@ -117,6 +117,7 @@ public partial class BulkMovementViewModel : ViewModelBase
         try
         {
             string tur = SelectedTypeIndex == 0 ? "Giris" : "Cikis";
+            var targetDate = (Date ?? DateTime.Now).Date.Add(DateTime.Now.TimeOfDay);
             var movements = selected.Select(i => new StokHareketi
             {
                 StokKartId = i.Card.Id,
@@ -124,7 +125,7 @@ public partial class BulkMovementViewModel : ViewModelBase
                 Miktar = i.Quantity!.Value,
                 Departman = SelectedDepartment,
                 TeslimEdilen = DeliveredTo,
-                Tarih = Date.Date.Add(DateTime.Now.TimeOfDay),
+                Tarih = targetDate,
                 Aciklama = "Toplu İşlem"
             }).ToList();
 
