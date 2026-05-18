@@ -45,7 +45,7 @@ public class BackupService : IBackupService
         _connectionFactory = connectionFactory;
     }
 
-    public async Task CheckWeeklyBackupAsync()
+    public async Task CheckAutoBackupAsync()
     {
         try
         {
@@ -53,14 +53,36 @@ public class BackupService : IBackupService
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
 
             var lastBackup = _settings.LastBackupDate;
-            if (lastBackup.HasValue && (DateTime.Now - lastBackup.Value).TotalDays < 7) return;
+            if (lastBackup.HasValue && (DateTime.Now.Date - lastBackup.Value.Date).TotalDays < 3) return;
 
-            await PerformBackupAsync(path);
+            // Arka planda tam yedeklemeyi başlat (UI'ı kilitlememek için Task.Run kullanıyoruz)
+            await Task.Run(async () => 
+            {
+                await PerformBackupAsync(path);
+                CleanOldBackups(path, 7);
+            });
 
             _settings.LastBackupDate = DateTime.Now;
             _settings.Kaydet();
         }
         catch { } // Fail silently as it's a background task
+    }
+
+    private void CleanOldBackups(string destFolder, int keepDays)
+    {
+        try
+        {
+            var files = Directory.GetFiles(destFolder, "Stokendra_FullBackup_*.zip");
+            foreach (var file in files)
+            {
+                var fileInfo = new FileInfo(file);
+                if ((DateTime.Now - fileInfo.CreationTime).TotalDays > keepDays)
+                {
+                    fileInfo.Delete();
+                }
+            }
+        }
+        catch { }
     }
 
     public async Task<string> PerformBackupAsync(string destFolder)
@@ -143,32 +165,28 @@ public class BackupService : IBackupService
     private async Task ExportStokKartlariAsync(string tempDir)
     {
         var tumKartlar = await _stockCardRepository.GetAllAsync();
-        if (tumKartlar.Count == 0) return;
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("StokKartlari");
 
-        string[] headers = { "ID", "Kod No", "Ad", "Kart Tipi", "Üst Kart", "Kategori", "Birim", "Mevcut Stok", "Min Stok", "Konum", "Tedarikçi", "Barkod", "Birim Fiyat", "Açıklama" };
+        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
+        string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "Konum", "Tedarikçi", "Barkod", "BirimFiyat", "MinStok", "Açıklama" };
         SetHeaders(ws, headers);
 
         for (int i = 0; i < tumKartlar.Count; i++)
         {
             var k = tumKartlar[i];
             int r = i + 2;
-            ws.Cell(r, 1).Value = k.Id;
-            ws.Cell(r, 2).Value = k.KodNo;
-            ws.Cell(r, 3).Value = k.Ad;
-            ws.Cell(r, 4).Value = k.KartTipi;
-            ws.Cell(r, 5).Value = k.UstKartAd;
-            ws.Cell(r, 6).Value = k.Kategori;
-            ws.Cell(r, 7).Value = k.Birim;
-            ws.Cell(r, 8).Value = k.MevcutStok;
+            ws.Cell(r, 1).Value = k.KodNo;
+            ws.Cell(r, 2).Value = k.Ad;
+            ws.Cell(r, 3).Value = k.Kategori;
+            ws.Cell(r, 4).Value = k.Birim;
+            ws.Cell(r, 5).Value = k.Konum;
+            ws.Cell(r, 6).Value = k.Tedarikci;
+            ws.Cell(r, 7).Value = k.Barkod;
+            ws.Cell(r, 8).Value = k.BirimFiyat;
             ws.Cell(r, 9).Value = k.MinStok;
-            ws.Cell(r, 10).Value = k.Konum;
-            ws.Cell(r, 11).Value = k.Tedarikci;
-            ws.Cell(r, 12).Value = k.Barkod;
-            ws.Cell(r, 13).Value = k.BirimFiyat;
-            ws.Cell(r, 14).Value = k.Aciklama;
+            ws.Cell(r, 10).Value = k.Aciklama;
         }
 
         ws.Columns().AdjustToContents();
@@ -179,11 +197,11 @@ public class BackupService : IBackupService
     private async Task ExportStokHareketleriAsync(string tempDir)
     {
         var hareketler = await _movementRepository.GetAllAsync();
-        if (hareketler.Count == 0) return;
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("StokHareketleri");
 
+        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
         string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
         SetHeaders(ws, headers);
 
@@ -209,25 +227,24 @@ public class BackupService : IBackupService
     private async Task ExportServisKayitlariAsync(string tempDir)
     {
         var servisler = await _serviceRecordRepository.GetAllAsync();
-        if (servisler.Count == 0) return;
 
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet("ServisKayitlari");
 
-        string[] headers = { "ID", "Cihaz Adı", "Seri Numarası", "Firma", "Bakım Tarihi", "Sorun", "Sonuç" };
+        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
+        string[] headers = { "Bakım Tarihi", "Cihaz Adı", "Seri Numarası", "Firma", "Sorun", "Sonuç" };
         SetHeaders(ws, headers);
 
         for (int i = 0; i < servisler.Count; i++)
         {
             var s = servisler[i];
             int r = i + 2;
-            ws.Cell(r, 1).Value = s.Id;
+            ws.Cell(r, 1).Value = s.BakimTarihi.ToString("dd.MM.yyyy");
             ws.Cell(r, 2).Value = s.CihazAdi;
             ws.Cell(r, 3).Value = s.SeriNumarasi;
             ws.Cell(r, 4).Value = s.Firma;
-            ws.Cell(r, 5).Value = s.BakimTarihi.ToString("dd.MM.yyyy");
-            ws.Cell(r, 6).Value = s.Sorun;
-            ws.Cell(r, 7).Value = s.Sonuc;
+            ws.Cell(r, 5).Value = s.Sorun;
+            ws.Cell(r, 6).Value = s.Sonuc;
         }
 
         ws.Columns().AdjustToContents();

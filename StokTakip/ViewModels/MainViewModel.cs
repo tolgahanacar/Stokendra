@@ -48,19 +48,19 @@ public partial class MainViewModel : ViewModelBase
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         NavigateToDashboard();
         
-        // Haftalık yedekleme kontrolü (Arka planda)
-        SafeCheckBackupAsync();
+        // Günlük yedekleme kontrolü (Arka planda)
+        SafeCheckAutoBackupAsync();
     }
 
-    private async void SafeCheckBackupAsync()
+    private async void SafeCheckAutoBackupAsync()
     {
         try
         {
-            await _backupService.CheckWeeklyBackupAsync();
+            await _backupService.CheckAutoBackupAsync();
         }
         catch (System.Exception ex)
         {
-            AppLogger.LogError("Weekly backup check failed.", ex);
+            AppLogger.LogError("Auto backup check failed.", ex);
         }
     }
 
