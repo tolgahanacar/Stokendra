@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using static StokTakip.LocalizationManager;
 
@@ -86,33 +87,58 @@ public sealed partial class Database
         }
     }
 
+    private static bool ColumnExists(SqliteConnection connection, SqliteTransaction? transaction, string tableName, string columnName)
+    {
+        try
+        {
+            using var command = CreateCommand(connection, transaction, $"PRAGMA table_info({tableName})");
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var name = reader.GetString(1);
+                if (string.Equals(name, columnName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    private static void TryAddColumn(SqliteConnection connection, SqliteTransaction? transaction, string tableName, string columnName, string columnDef)
+    {
+        if (!ColumnExists(connection, transaction, tableName, columnName))
+        {
+            TryAlter(connection, transaction, $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDef}");
+        }
+    }
+
     private static void MigrateToV1(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Aciklama TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokHareketleri ADD COLUMN Departman TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "Aciklama", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokHareketleri", "Departman", "TEXT DEFAULT ''");
     }
 
     private static void MigrateToV2(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Birim TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN MinStok INTEGER DEFAULT 0");
+        TryAddColumn(connection, transaction, "StokKartlari", "Birim", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "MinStok", "INTEGER DEFAULT 0");
     }
 
     private static void MigrateToV3(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Kategori TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Konum TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Tedarikci TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN Barkod TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN BirimFiyat REAL DEFAULT 0");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN OlusturmaTarihi TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN GuncellenmeTarihi TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "Kategori", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "Konum", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "Tedarikci", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "Barkod", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "BirimFiyat", "REAL DEFAULT 0");
+        TryAddColumn(connection, transaction, "StokKartlari", "OlusturmaTarihi", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "StokKartlari", "GuncellenmeTarihi", "TEXT DEFAULT ''");
     }
 
     private static void MigrateToV4(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN KartTipi TEXT DEFAULT 'Alt'");
-        TryAlter(connection, transaction, "ALTER TABLE StokKartlari ADD COLUMN UstKartId INTEGER DEFAULT NULL");
+        TryAddColumn(connection, transaction, "StokKartlari", "KartTipi", "TEXT DEFAULT 'Alt'");
+        TryAddColumn(connection, transaction, "StokKartlari", "UstKartId", "INTEGER DEFAULT NULL");
     }
 
     private static void MigrateToV5(SqliteConnection connection, SqliteTransaction? transaction)
@@ -143,13 +169,13 @@ public sealed partial class Database
 
     private static void MigrateToV8(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Firma TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "ServisKayitlari", "Firma", "TEXT DEFAULT ''");
     }
 
     private static void MigrateToV9(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Sorun TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari ADD COLUMN Sonuc TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "ServisKayitlari", "Sorun", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "ServisKayitlari", "Sonuc", "TEXT DEFAULT ''");
     }
 
     private static void MigrateToV10(SqliteConnection connection, SqliteTransaction? transaction)
@@ -162,8 +188,8 @@ public sealed partial class Database
 
     private static void MigrateToV11(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN OlusturmaTarihi TEXT DEFAULT ''");
-        TryAlter(connection, transaction, "ALTER TABLE Notlar ADD COLUMN GuncellenmeTarihi TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "Notlar", "OlusturmaTarihi", "TEXT DEFAULT ''");
+        TryAddColumn(connection, transaction, "Notlar", "GuncellenmeTarihi", "TEXT DEFAULT ''");
     }
 
     private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction? transaction)
@@ -227,6 +253,29 @@ public sealed partial class Database
         {
             AppLogger.LogError("Seed Kullanicilar error: " + ex);
         }
+    }
+
+    private static string GenerateSalt()
+    {
+        byte[] salt = RandomNumberGenerator.GetBytes(16);
+        return Convert.ToBase64String(salt);
+    }
+
+    private static string HashPasswordV3(string password, string salt)
+    {
+        byte[] saltBytes = Convert.FromBase64String(salt);
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, PasswordIterationsV3, HashAlgorithmName.SHA512);
+        byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
+        return "v3:" + Convert.ToBase64String(hash);
+    }
+
+    private static SqliteCommand CreateCommand(SqliteConnection connection, SqliteTransaction? transaction, string sql)
+    {
+        var command = connection.CreateCommand();
+        command.CommandText = sql;
+        if (transaction != null)
+            command.Transaction = transaction;
+        return command;
     }
 }
 

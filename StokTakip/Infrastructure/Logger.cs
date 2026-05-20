@@ -10,19 +10,16 @@ public class Logger : ILogger
 {
     public void LogInfo(string message)
     {
-        // Info seviyesi dosyaya yazılır — production'da Debug.WriteLine kaybolur
-        AppLogger.LogError($"INFO: {message}");
-        System.Diagnostics.Debug.WriteLine($"INFO: {message}");
+        AppLogger.Log("INFO", message);
     }
 
     public void LogWarning(string message)
     {
-        AppLogger.LogError($"WARN: {message}");
-        System.Diagnostics.Debug.WriteLine($"WARN: {message}");
+        AppLogger.Log("WARN", message);
     }
 
     public void LogError(string message, Exception? ex = null)
     {
-        AppLogger.LogError(message, ex);
+        AppLogger.Log("ERROR", message, ex);
     }
 }

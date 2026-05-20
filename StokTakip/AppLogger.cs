@@ -17,10 +17,10 @@ public static class AppLogger
     private const long MaxLogSizeBytes = 5 * 1024 * 1024; // 5 MB
 
     /// <summary>
-    /// Hata mesajını ve opsiyonel exception'ı günlük dosyasına yazar.
+    /// Belirtilen seviyede günlük girdisini dosyaya yazar.
     /// Dosya 5MB'ı aşarsa otomatik olarak arşivlenir.
     /// </summary>
-    public static void LogError(string message, Exception? ex = null)
+    public static void Log(string level, string message, Exception? ex = null)
     {
         lock (_lock)
         {
@@ -29,13 +29,11 @@ public static class AppLogger
                 string logPath = ErrorLogPath;
                 RotateIfNeeded(logPath);
 
-                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] ERROR: {message}";
+                string logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {level.ToUpperInvariant()}: {message}";
                 if (ex != null)
                     logEntry += $"\r\nException: {ex}";
                 logEntry += "\r\n";
 
-                // StreamWriter ile append — her çağrıda dosya açılıp kapanır ama
-                // lock sayesinde thread-safe, rotation sonrası da güvenli.
                 using var writer = new StreamWriter(logPath, append: true, System.Text.Encoding.UTF8);
                 writer.Write(logEntry);
 
@@ -46,6 +44,14 @@ public static class AppLogger
                 // Günlük yazma başarısız olursa sessizce geç
             }
         }
+    }
+
+    /// <summary>
+    /// Hata mesajını ve opsiyonel exception'ı günlük dosyasına yazar.
+    /// </summary>
+    public static void LogError(string message, Exception? ex = null)
+    {
+        Log("ERROR", message, ex);
     }
 
     /// <summary>

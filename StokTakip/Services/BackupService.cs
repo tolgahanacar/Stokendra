@@ -58,14 +58,25 @@ public class BackupService : IBackupService
             // Arka planda tam yedeklemeyi başlat (UI'ı kilitlememek için Task.Run kullanıyoruz)
             await Task.Run(async () => 
             {
-                await PerformBackupAsync(path);
-                CleanOldBackups(path, 7);
+                try
+                {
+                    await PerformBackupAsync(path);
+                    CleanOldBackups(path, 7);
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.LogError("Auto backup execution failed.", ex);
+                    throw; // Re-throw to prevent updating LastBackupDate
+                }
             });
 
             _settings.LastBackupDate = DateTime.Now;
             _settings.Kaydet();
         }
-        catch { } // Fail silently as it's a background task
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Auto backup background check failed.", ex);
+        }
     }
 
     private void CleanOldBackups(string destFolder, int keepDays)
@@ -110,6 +121,8 @@ public class BackupService : IBackupService
         }
         finally
         {
+            // Veritabanı ve geçici kopyalar üzerindeki kilitleri kaldırmak için SQLite havuzlarını temizle
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }

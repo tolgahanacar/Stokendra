@@ -50,7 +50,7 @@ public sealed class ConfigRepository : RepositoryBase, IConfigRepository
     public void CreateBackup(string destinationPath)
     {
         using var source = ConnectionFactory.CreateConnection();
-        using var destination = new SqliteConnection($"Data Source={destinationPath}");
+        using var destination = new SqliteConnection($"Data Source={destinationPath};Pooling=False");
         destination.Open();
         source.BackupDatabase(destination);
     }

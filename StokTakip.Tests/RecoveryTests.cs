@@ -7,6 +7,11 @@ using StokTakip.Models;
 using StokTakip.Infrastructure;
 using System.IO;
 using Xunit;
+using System.IO.Compression;
+using System.Linq;
+using StokTakip.Services;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace StokTakip.Tests;
 
@@ -105,4 +110,87 @@ public class RecoveryTests : TestBase
         SqliteConnection.ClearAllPools();
         if (File.Exists(dbPath)) try { File.Delete(dbPath); } catch { }
     }
-}
+
+    [Fact]
+    public async Task BackupService_PerformBackup_ShouldCreateAllFiles()
+    {
+        var settings = new AppSettings { DbPath = Database.DatabasePath };
+        var backupService = new BackupService(
+            settings,
+            ServiceProvider.GetRequiredService<IConfigRepository>(),
+            ServiceProvider.GetRequiredService<IReportRepository>(),
+            ServiceProvider.GetRequiredService<IStockCardRepository>(),
+            ServiceProvider.GetRequiredService<IMovementRepository>(),
+            ServiceProvider.GetRequiredService<IServiceRecordRepository>(),
+            ServiceProvider.GetRequiredService<INoteRepository>(),
+            ServiceProvider.GetRequiredService<IDepartmentRepository>(),
+            ServiceProvider.GetRequiredService<IDbConnectionFactory>()
+        );
+
+        // Add some data
+        var cardRepo = ServiceProvider.GetRequiredService<IStockCardRepository>();
+        var moveRepo = ServiceProvider.GetRequiredService<IMovementRepository>();
+        var deptRepo = ServiceProvider.GetRequiredService<IDepartmentRepository>();
+        var serviceRepo = ServiceProvider.GetRequiredService<IServiceRecordRepository>();
+        var noteRepo = ServiceProvider.GetRequiredService<INoteRepository>();
+
+        var c = new StokKarti { KodNo = "T-001", Ad = "Test Card", KartTipi = "Alt" };
+        cardRepo.Add(c);
+
+        moveRepo.Add(new StokHareketi { StokKartId = c.Id, Tur = "Giris", Miktar = 10, Tarih = DateTime.Now });
+
+        await deptRepo.AddAsync("TestDept");
+        await serviceRepo.AddAsync(new ServisKaydi { CihazAdi = "Test Device", BakimTarihi = DateTime.Now });
+        noteRepo.Add(new Not { Baslik = "Test Note", Tarih = DateTime.Now });
+
+        string backupDir = Path.Combine(Path.GetTempPath(), $"backup_test_dir_{Guid.NewGuid()}");
+        Directory.CreateDirectory(backupDir);
+
+        try
+        {
+            string zipFile = await backupService.PerformBackupAsync(backupDir);
+            File.Exists(zipFile).Should().BeTrue();
+
+            using var archive = ZipFile.OpenRead(zipFile);
+            var entryNames = archive.Entries.Select(e => e.Name).ToList();
+
+            entryNames.Should().Contain("stok.db");
+            entryNames.Should().Contain("StokKartlari.xlsx");
+            entryNames.Should().Contain("StokHareketleri.xlsx");
+            entryNames.Should().Contain("ServisKayitlari.xlsx");
+            entryNames.Should().Contain("Notlar.xlsx");
+            entryNames.Should().Contain("Departmanlar.xlsx");
+            entryNames.Should().Contain("Birimler.xlsx");
+            entryNames.Should().Contain("AuditLog.xlsx");
+        }
+        finally
+        {
+            if (Directory.Exists(backupDir)) Directory.Delete(backupDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task BackupService_TestWithUserDb_ShouldNotThrow()
+    {
+        string userDbPath = @"D:\stok.db";
+        if (!File.Exists(userDbPath)) return;
+
+        string tempDbPath = Path.Combine(Path.GetTempPath(), $"user_stok_temp_{Guid.NewGuid()}.db");
+        File.Copy(userDbPath, tempDbPath, true);
+
+        try
+        {
+            var factory = new TestDbFactory(tempDbPath);
+            IMovementRepository moveRepo = new MovementRepository(factory);
+            
+            var movements = await moveRepo.GetAllAsync();
+            movements.Should().NotBeNull();
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            if (File.Exists(tempDbPath)) try { File.Delete(tempDbPath); } catch { }
+        }
+    }}
+
+
