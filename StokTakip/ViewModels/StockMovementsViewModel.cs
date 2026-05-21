@@ -277,27 +277,85 @@ public partial class StockMovementsViewModel : ViewModelBase
             {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
-                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
+                
+                var firstRow = worksheet.FirstRowUsed();
+                if (firstRow == null) return;
 
+                int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
+                
+                // Başlıklara göre sütun indekslerini bul (1-based)
+                int colKod = 0, colTeslimEdilen = 0, colTur = 0, colMiktar = 0, colDepartman = 0, colTarih = 0, colAciklama = 0;
+
+                for (int i = 1; i <= colCount; i++)
+                {
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    if (header == "stok kodu" || header == "kod" || header == "stokkodu" || header == "kodno" || header == "stokkodu")
+                        colKod = i;
+                    else if (header == "teslim edilen" || header == "teslim edilen" || header == "teslim alan" || header == "teslim edılen" || header == "personel" || header == "kisi" || header == "kişi")
+                        colTeslimEdilen = i;
+                    else if (header == "tür" || header == "tur" || header == "işlem" || header == "islem" || header == "tip" || header == "islem tipi")
+                        colTur = i;
+                    else if (header == "miktar" || header == "adet" || header == "sayı" || header == "sayi")
+                        colMiktar = i;
+                    else if (header == "departman" || header == "bölüm" || header == "bolum")
+                        colDepartman = i;
+                    else if (header == "tarih" || header == "işlem tarihi" || header == "islem tarihi")
+                        colTarih = i;
+                    else if (header == "açıklama" || header == "aciklama" || header == "not")
+                        colAciklama = i;
+                }
+
+                // Eşleşme yoksa yedek plan (fallback - klasik yedek/şablon yapısı)
+                if (colKod == 0 && colTur == 0)
+                {
+                    colKod = 1;
+                    colTeslimEdilen = 3;
+                    colTur = 4;
+                    colMiktar = 5;
+                    colDepartman = 6;
+                    colTarih = 7;
+                    colAciklama = 8;
+                }
+
+                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
                 var movementsToImport = new List<StokHareketi>();
+                
                 foreach (var row in rows)
                 {
-                    string kod = row.Cell(1).GetValue<string>();
+                    string kod = colKod > 0 ? (row.Cell(colKod).GetValue<string>() ?? "").Trim() : "";
+                    if (string.IsNullOrEmpty(kod)) continue;
+
                     var card = _allCards.FirstOrDefault(c => c.KodNo == kod);
                     if (card == null) continue;
 
-                    string turRaw = row.Cell(4).GetValue<string>();
-                    string tur = turRaw.Contains("[G]") || turRaw.ToLower().Contains("giris") ? "Giris" : "Cikis";
+                    string turRaw = colTur > 0 ? (row.Cell(colTur).GetValue<string>() ?? "").Trim() : "";
+                    string tur = turRaw.Contains("[G]") || turRaw.ToLowerInvariant().Contains("giri") || turRaw.ToLowerInvariant().Contains("giris") ? "Giris" : "Cikis";
+
+                    double miktar = colMiktar > 0 ? (row.Cell(colMiktar).TryGetValue<double>(out double m) ? m : 1.0) : 1.0;
+                    string departman = colDepartman > 0 ? (row.Cell(colDepartman).GetValue<string>() ?? "").Trim() : "";
+                    string teslimEdilen = colTeslimEdilen > 0 ? (row.Cell(colTeslimEdilen).GetValue<string>() ?? "").Trim() : "";
+                    
+                    DateTime tarih = DateTime.Now;
+                    if (colTarih > 0)
+                    {
+                        var cellVal = row.Cell(colTarih).GetValue<string>();
+                        if (DateTime.TryParse(cellVal, out var dt))
+                        {
+                            tarih = dt;
+                        }
+                    }
+                    
+                    string aciklama = colAciklama > 0 ? (row.Cell(colAciklama).GetValue<string>() ?? "").Trim() : "";
 
                     movementsToImport.Add(new StokHareketi
                     {
                         StokKartId = card.Id,
                         Tur = tur,
-                        Miktar = row.Cell(5).GetValue<double>(),
-                        Departman = row.Cell(6).GetValue<string>(),
-                        TeslimEdilen = row.Cell(3).GetValue<string>(),
-                        Tarih = DateTime.TryParse(row.Cell(7).GetValue<string>(), out var dt) ? dt : DateTime.Now,
-                        Aciklama = row.Cell(8).GetValue<string>()
+                        Miktar = miktar,
+                        Departman = departman,
+                        TeslimEdilen = teslimEdilen,
+                        Tarih = tarih,
+                        Aciklama = aciklama
                     });
                 }
 

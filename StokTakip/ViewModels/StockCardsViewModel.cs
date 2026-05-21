@@ -228,23 +228,78 @@ public partial class StockCardsViewModel : ViewModelBase
             await Task.Run(() => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
+                
+                var firstRow = worksheet.FirstRowUsed();
+                if (firstRow == null) return;
+
+                int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
+                
+                // Sütun indekslerini başlığa göre dinamik bul (1-based)
+                int colKodNo = 0, colAd = 0, colKategori = 0, colBirim = 0, colKonum = 0;
+                int colTedarikci = 0, colBarkod = 0, colBirimFiyat = 0, colMinStok = 0, colAciklama = 0;
+
+                for (int i = 1; i <= colCount; i++)
+                {
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    if (header == "kodno" || header == "kod" || header == "stok kodu" || header == "stokkodu")
+                        colKodNo = i;
+                    else if (header == "stok adı" || header == "stok adi" || header == "ad" || header == "adi")
+                        colAd = i;
+                    else if (header == "kategori")
+                        colKategori = i;
+                    else if (header == "birim")
+                        colBirim = i;
+                    else if (header == "konum")
+                        colKonum = i;
+                    else if (header == "tedarikçi" || header == "tedarikci")
+                        colTedarikci = i;
+                    else if (header == "barkod")
+                        colBarkod = i;
+                    else if (header == "birimfiyat" || header == "birim fiyat" || header == "fiyat" || header == "fiyati")
+                        colBirimFiyat = i;
+                    else if (header == "minstok" || header == "min stok" || header == "minimum stok" || header == "min")
+                        colMinStok = i;
+                    else if (header == "açıklama" || header == "aciklama")
+                        colAciklama = i;
+                }
+
+                // Eşleşme bulunamadıysa klasik sıralamayı yedek plan (fallback) olarak kullan
+                if (colKodNo == 0 && colAd == 0)
+                {
+                    colKodNo = 1;
+                    colAd = 2;
+                    colKategori = 3;
+                    colBirim = 4;
+                    colKonum = 5;
+                    colTedarikci = 6;
+                    colBarkod = 7;
+                    colBirimFiyat = 8;
+                    colMinStok = 9;
+                    colAciklama = 10;
+                }
+
                 var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
 
                 foreach (var row in rows)
                 {
+                    string kodNo = colKodNo > 0 ? (row.Cell(colKodNo).GetValue<string>() ?? "").Trim() : "";
+                    string ad = colAd > 0 ? (row.Cell(colAd).GetValue<string>() ?? "").Trim() : "";
+
+                    if (string.IsNullOrEmpty(kodNo) && string.IsNullOrEmpty(ad)) continue;
+
                     var k = new StokKarti
                     {
-                        KodNo = row.Cell(1).GetValue<string>().Trim(),
-                        Ad = row.Cell(2).GetValue<string>().Trim(),
-                        Kategori = row.Cell(3).GetValue<string>().Trim(),
-                        Birim = row.Cell(4).GetValue<string>().Trim() ?? "Adet",
-                        Konum = row.Cell(5).GetValue<string>().Trim(),
-                        Tedarikci = row.Cell(6).GetValue<string>().Trim(),
-                        Barkod = row.Cell(7).GetValue<string>().Trim(),
-                        BirimFiyat = row.Cell(8).GetValue<double>(),
-                        MinStok = row.Cell(9).GetValue<int>(),
+                        KodNo = kodNo,
+                        Ad = ad,
+                        Kategori = colKategori > 0 ? (row.Cell(colKategori).GetValue<string>() ?? "").Trim() : "",
+                        Birim = colBirim > 0 ? (row.Cell(colBirim).GetValue<string>() ?? "Adet").Trim() : "Adet",
+                        Konum = colKonum > 0 ? (row.Cell(colKonum).GetValue<string>() ?? "").Trim() : "",
+                        Tedarikci = colTedarikci > 0 ? (row.Cell(colTedarikci).GetValue<string>() ?? "").Trim() : "",
+                        Barkod = colBarkod > 0 ? (row.Cell(colBarkod).GetValue<string>() ?? "").Trim() : "",
+                        BirimFiyat = colBirimFiyat > 0 ? (row.Cell(colBirimFiyat).TryGetValue<double>(out double valFiyat) ? valFiyat : 0.0) : 0.0,
+                        MinStok = colMinStok > 0 ? (row.Cell(colMinStok).TryGetValue<int>(out int valMin) ? valMin : 0) : 0,
                         KartTipi = "Alt",
-                        Aciklama = row.Cell(10).GetValue<string>().Trim()
+                        Aciklama = colAciklama > 0 ? (row.Cell(colAciklama).GetValue<string>() ?? "").Trim() : ""
                     };
 
                     if (!string.IsNullOrEmpty(k.KodNo) && !string.IsNullOrEmpty(k.Ad))

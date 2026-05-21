@@ -183,19 +183,76 @@ public partial class ServicesViewModel : ViewModelBase
             await Task.Run(async () => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
+                
+                var firstRow = worksheet.FirstRowUsed();
+                if (firstRow == null) return;
+
+                int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
+
+                // Başlıklara göre sütun indekslerini bul (1-based)
+                int colTarih = 0, colCihaz = 0, colSeri = 0, colFirma = 0, colSorun = 0, colSonuc = 0;
+
+                for (int i = 1; i <= colCount; i++)
+                {
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    if (header == "bakım tarihi" || header == "bakim tarihi" || header == "tarih" || header == "bakimtarihi")
+                        colTarih = i;
+                    else if (header == "cihaz adı" || header == "cihaz adi" || header == "cihaz" || header == "cihazadi")
+                        colCihaz = i;
+                    else if (header == "seri numarası" || header == "seri numarasi" || header == "seri no" || header == "serino")
+                        colSeri = i;
+                    else if (header == "firma" || header == "şirket" || header == "sirket")
+                        colFirma = i;
+                    else if (header == "sorun" || header == "arıza" || header == "ariza")
+                        colSorun = i;
+                    else if (header == "sonuç" || header == "sonuc" || header == "durum")
+                        colSonuc = i;
+                }
+
+                // Eşleşme yoksa yedek plan (fallback)
+                if (colTarih == 0 && colCihaz == 0)
+                {
+                    colTarih = 1;
+                    colCihaz = 2;
+                    colSeri = 3;
+                    colFirma = 4;
+                    colSorun = 5;
+                    colSonuc = 6;
+                }
+
                 var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
                 var toImport = new List<ServisKaydi>();
+                
                 foreach (var row in rows)
                 {
+                    string cihaz = colCihaz > 0 ? (row.Cell(colCihaz).GetValue<string>() ?? "").Trim() : "";
+                    if (string.IsNullOrEmpty(cihaz)) continue;
+
+                    DateTime tarih = DateTime.Now;
+                    if (colTarih > 0)
+                    {
+                        var cellVal = row.Cell(colTarih).GetValue<string>();
+                        if (DateTime.TryParse(cellVal, out var dt))
+                        {
+                            tarih = dt;
+                        }
+                    }
+
+                    string seri = colSeri > 0 ? (row.Cell(colSeri).GetValue<string>() ?? "").Trim() : "";
+                    string firma = colFirma > 0 ? (row.Cell(colFirma).GetValue<string>() ?? "").Trim() : "";
+                    string sorun = colSorun > 0 ? (row.Cell(colSorun).GetValue<string>() ?? "").Trim() : "";
+                    string sonuc = colSonuc > 0 ? (row.Cell(colSonuc).GetValue<string>() ?? "").Trim() : "";
+
                     toImport.Add(new ServisKaydi {
-                        BakimTarihi = DateTime.TryParse(row.Cell(1).GetValue<string>(), out var dt) ? dt : DateTime.Now,
-                        CihazAdi = row.Cell(2).GetValue<string>(),
-                        SeriNumarasi = row.Cell(3).GetValue<string>(),
-                        Firma = row.Cell(4).GetValue<string>(),
-                        Sorun = row.Cell(5).GetValue<string>(),
-                        Sonuc = row.Cell(6).GetValue<string>()
+                        BakimTarihi = tarih,
+                        CihazAdi = cihaz,
+                        SeriNumarasi = seri,
+                        Firma = firma,
+                        Sorun = sorun,
+                        Sonuc = sonuc
                     });
                 }
+                
                 if (toImport.Count > 0) await _services.AddBulkAsync(toImport);
             });
             await LoadAsync();
