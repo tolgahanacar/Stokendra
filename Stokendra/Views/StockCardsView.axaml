@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:infra="using:Stokendra.Infrastructure"
+             x:Class="Stokendra.Views.StockCardsView"
+             Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="40,40,40,0" Spacing="8">
+            <TextBlock Text="{infra:L stock_cards}" FontSize="32" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="{infra:L dashboard_subtitle}" FontSize="14" Foreground="#94A3B8"/>
+        </StackPanel>
+
+        <!-- Search -->
+        <Border Grid.Row="1" Background="#161B27" Margin="28,16,28,0" CornerRadius="10" Padding="16,12">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBox Text="{Binding SearchText}"
+                          Watermark="{infra:L search_placeholder}"
+                          Width="320"/>
+                <Button Content="{infra:L clear_filter}" Classes="Secondary"
+                        Command="{Binding ClearSearchCommand}"/>
+                <Button Content="↺" Classes="Secondary"
+                        Command="{Binding RefreshCommand}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="28,12,28,0">
+            <Button Content="{infra:L new_card}" Classes="Primary"
+                    Command="{Binding AddCardCommand}"/>
+            
+            <Button Content="{infra:L edit}" Classes="Secondary"
+                    Command="{Binding EditCardCommand}"
+                    IsEnabled="{Binding IsCardSelected}"/>
+            
+            <Button Content="{infra:L delete}" Classes="Danger"
+                    Command="{Binding DeleteCardCommand}"
+                    IsEnabled="{Binding IsCardSelected}"/>
+
+            <Button Content="{infra:L bulk_delete}" Classes="Danger"
+                    Command="{Binding BulkDeleteCommand}"
+                    IsEnabled="{Binding IsMultipleSelected}"/>
+
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+
+            <Button Content="{infra:L detail}" Classes="Success"
+                    Command="{Binding ShowDetailCommand}"
+                    IsEnabled="{Binding IsCardSelected}"/>
+            
+            <Button Content="{infra:L bulk_entry}" Classes="Secondary"
+                    Command="{Binding BulkEntryCommand}"/>
+
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+
+            <Button Content="{infra:L export_excel}" Classes="Secondary"
+                    Command="{Binding ExportExcelCommand}"/>
+            
+            <Button Content="{infra:L import_excel}" Classes="Secondary"
+                    Command="{Binding ImportExcelCommand}"/>
+            
+            <Button Content="{infra:L sample_file}" Classes="Secondary"
+                    Command="{Binding DownloadSampleCommand}"/>
+        </StackPanel>
+
+        <!-- Grid -->
+        <DataGrid Grid.Row="3"
+                  x:Name="CardsGrid"
+                  Margin="28,16,28,16"
+                  ItemsSource="{Binding Cards}"
+                  SelectedItem="{Binding SelectedCard}"
+                  IsReadOnly="True"
+                  SelectionMode="Extended"
+                  CanUserResizeColumns="True"
+                  HorizontalScrollBarVisibility="Visible"
+                  SelectionChanged="CardsGrid_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"        Width="80"  MinWidth="60"/>
+                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"        Width="2*"  MinWidth="120"/>
+                <DataGridTextColumn Header="{infra:L card_type}"     Binding="{Binding CardType}"    Width="100" MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L parent_card}"   Binding="{Binding ParentName}"  Width="*"   MinWidth="150"/>
+                <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"    Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding CurrentStock}" Width="100" MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}"     Width="100" MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L unit}"          Binding="{Binding Unit}"         Width="100" MinWidth="70"/>
+                <DataGridTextColumn Header="{infra:L location}"      Binding="{Binding Location}"     Width="*"   MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L barcode}"       Binding="{Binding Barcode}"      Width="*"   MinWidth="100"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status -->
+        <Border Grid.Row="4" Background="#161B27" Padding="28,8">
+            <TextBlock Text="{Binding StatusText}" Foreground="#5A6987" FontSize="12"/>
+        </Border>
+
+    </Grid>
+</UserControl>

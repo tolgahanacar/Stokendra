@@ -1,0 +1,118 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        x:Class="Stokendra.Views.LoginView"
+        Title="Stokendra - Giriş"
+        Width="420" Height="520"
+        WindowStartupLocation="CenterScreen"
+        CanResize="False"
+        Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#0E1119" Padding="0,32,0,24">
+            <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <TextBlock Text="STOKENDRA"
+                           FontSize="26" FontWeight="Bold"
+                           Foreground="#38AEFF"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="Stok Takip Sistemi"
+                           FontSize="11"
+                           Foreground="#5A6987"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Form -->
+        <Border Grid.Row="1" Padding="40,24,40,24">
+            <StackPanel Spacing="0">
+                <!-- Giriş Formu -->
+                <StackPanel IsVisible="{Binding !IsForgotMode}" Spacing="0">
+                    <!-- Kullanıcı Adı -->
+                    <TextBlock Text="Kullanıcı Adı"
+                               Foreground="#B9C3DC"
+                               FontSize="12" FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+                    <TextBox Text="{Binding Username, Mode=TwoWay}"
+                             Watermark="Kullanıcı adınızı girin"
+                             Margin="0,0,0,18"/>
+
+                    <!-- Şifre -->
+                    <TextBlock Text="Şifre"
+                               Foreground="#B9C3DC"
+                               FontSize="12" FontWeight="SemiBold"
+                               Margin="0,0,0,6"/>
+                    <TextBox Text="{Binding Password, Mode=TwoWay}"
+                             PasswordChar="●"
+                             Watermark="Şifrenizi girin"
+                             Margin="0,0,0,18"/>
+
+                    <Button Content="Giriş Yap"
+                            Command="{Binding DoLoginCommand}"
+                            IsDefault="True"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Height="44"
+                            FontSize="13" FontWeight="SemiBold"/>
+                    
+                    <Button Content="Şifremi Unuttum?"
+                            Classes="MenuButton"
+                            Command="{Binding ToggleForgotModeCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="11"
+                            Margin="0,8,0,0"/>
+                </StackPanel>
+
+                <!-- Şifre Sıfırlama Formu -->
+                <StackPanel IsVisible="{Binding IsForgotMode}" Spacing="0">
+                    <TextBlock Text="Şifre Sıfırlama"
+                               Foreground="#38AEFF"
+                               FontSize="16" FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,20"/>
+
+                    <TextBlock Text="Kullanıcı Adı" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Username}" Watermark="Kullanıcı adınız" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Güvenlik Kodu (4 Hane)" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding SecurityCode}" PasswordChar="●" Watermark="****" MaxLength="4" Margin="0,0,0,12"/>
+
+                    <TextBlock Text="Yeni Şifre" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="Yeni şifreniz" Margin="0,0,0,20"/>
+
+                    <Button Content="Şifreyi Sıfırla"
+                            Classes="Success"
+                            Command="{Binding DoResetPasswordCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Height="44"/>
+                    
+                    <Button Content="← Girişe Dön"
+                            Classes="MenuButton"
+                            Command="{Binding ToggleForgotModeCommand}"
+                            HorizontalAlignment="Center"
+                            FontSize="11"
+                            Margin="0,8,0,0"/>
+                </StackPanel>
+
+                <!-- Hata mesajı -->
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#FF4B4B"
+                           FontSize="11"
+                           HorizontalAlignment="Center"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Margin="0,12,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Footer -->
+        <TextBlock Grid.Row="2"
+                   Text="© 2026 Tolgahan Acar"
+                   Foreground="#3A4560"
+                   FontSize="10"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,16"/>
+    </Grid>
+</Window>

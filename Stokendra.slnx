@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="StokTakip/StokTakip.csproj" />
+  <Project Path="Stokendra/Stokendra.csproj" />
+  <Project Path="Stokendra.Tests/Stokendra.Tests.csproj" />
 </Solution>

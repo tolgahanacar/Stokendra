@@ -1,0 +1,159 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
+        x:Class="Stokendra.Views.AddStockCardWindow"
+        Title="{Binding Title}"
+        Width="520" Height="680"
+        MinWidth="460" MinHeight="480"
+        MaxHeight="900"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#161B27">
+
+    <Design.DataContext>
+        <vm:AddStockCardViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                 Background="#1C222E"
+                 Padding="20,16,20,14">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{Binding Title}"
+                            FontSize="18" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="{infra:L new_stock_card}"
+                            FontSize="12" Foreground="#5A6987"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Scrollable Content -->
+        <ScrollViewer Grid.Row="1"
+                       VerticalScrollBarVisibility="Auto"
+                       HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="14"
+                         Margin="20,16,20,16">
+
+                <!-- Card Type + Stock Code -->
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
+                        <TextBlock Text="{infra:L card_type_label}" FontSize="12" Foreground="#8A9BBF"/>
+                        <ComboBox SelectedIndex="{Binding SelectedTypeIndex}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="{infra:L child_card}"/>
+                            <ComboBoxItem Content="{infra:L parent_card}"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
+                        <TextBlock Text="{infra:L code_no_auto}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Code}" Watermark="{infra:L code_no}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Stock Name -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{infra:L stock_name_required}" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Name}" Watermark="{infra:L stock_name}"/>
+                </StackPanel>
+
+                <!-- Linked Parent Card -->
+                <StackPanel Spacing="5" IsVisible="{Binding IsChildCard}">
+                    <TextBlock Text="{infra:L parent_card_label}" FontSize="12" Foreground="#8A9BBF"/>
+                    <ComboBox ItemsSource="{Binding ParentCards}"
+                               SelectedItem="{Binding SelectedParent}"
+                               HorizontalAlignment="Stretch"
+                               PlaceholderText="{infra:L no_parent}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Category + Unit -->
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
+                        <TextBlock Text="{infra:L category}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Category}" Watermark="{infra:L category}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
+                        <TextBlock Text="{infra:L unit}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Unit}" Watermark="{infra:L unit}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Min Stock + Unit Price -->
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
+                        <TextBlock Text="{infra:L min_stock}" FontSize="12" Foreground="#8A9BBF"/>
+                        <NumericUpDown Value="{Binding MinStock}"
+                                       Minimum="0"
+                                       HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
+                        <TextBlock Text="{infra:L unit_price}" FontSize="12" Foreground="#8A9BBF"/>
+                        <NumericUpDown Value="{Binding UnitPrice}"
+                                       Minimum="0"
+                                       FormatString="N2"
+                                       HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Description -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{infra:L description_label}" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Description}"
+                              Watermark="{infra:L note_content_placeholder}"
+                              Height="60"
+                              AcceptsReturn="True"
+                              TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Location + Supplier -->
+                <Grid ColumnDefinitions="*,*">
+                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
+                        <TextBlock Text="{infra:L location}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Location}" Watermark="{infra:L location}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
+                        <TextBlock Text="{infra:L supplier}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Supplier}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Barcode -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{infra:L barcode}" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding Barcode}"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2"
+                Background="#1C222E"
+                Padding="20,14,20,14"
+                BorderBrush="#252D3D"
+                BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+                <Button Content="{infra:L cancel}"
+                        Classes="Secondary"
+                        Command="{Binding CancelCommand}"
+                        Width="90" MinHeight="36"/>
+                <Button Content="{infra:L save}"
+                        Classes="Primary"
+                        Command="{Binding SaveCommand}"
+                        IsEnabled="{Binding Name,
+                            Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        Width="90" MinHeight="36"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>

@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        x:Class="Stokendra.Views.PromptView"
+        Title="{Binding Title}"
+        Width="360" Height="180"
+        MinHeight="160"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        Background="#161B27">
+
+    <!--
+        PromptView: küçük input dialog.
+        ExtendClientAreaToDecorationsHint kaldırıldı —
+        200px window'da title bar yüksekliği içeriği eziyordu.
+        Grid RowDefinitions="Auto,*,Auto" ile footer garantili.
+    -->
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20,16,20,16">
+
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Message}"
+                   Foreground="#94A3B8"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,10"/>
+
+        <TextBox Grid.Row="1"
+                 Text="{Binding InputText}"
+                 Watermark="Değer giriniz..."
+                 VerticalAlignment="Stretch"/>
+
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,12,0,0">
+            <Button Content="İptal" Command="{Binding CancelCommand}" Classes="Secondary" MinHeight="34"/>
+            <Button Content="Tamam" Command="{Binding OkCommand}"     Classes="Primary"   MinHeight="34"/>
+        </StackPanel>
+
+    </Grid>
+</Window>

@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:models="using:Stokendra.Models"
+             xmlns:infra="using:Stokendra.Infrastructure"
+             x:Class="Stokendra.Views.StockMovementsView"
+             x:DataType="vm:StockMovementsViewModel"
+             Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="40,32,40,0" Spacing="6">
+            <TextBlock Text="{infra:L stock_movements}" FontSize="28" FontWeight="Bold" Foreground="#F1F5F9"/>
+            <TextBlock Text="{infra:L menu_stock_movements}" FontSize="13" Foreground="#64748B" IsVisible="False"/> <!-- Hidden legacy label -->
+            <TextBlock Text="{infra:L recent_movements}" FontSize="13" Foreground="#64748B"/>
+        </StackPanel>
+
+        <!-- Filters -->
+        <Border Grid.Row="1" Background="#161B27" Margin="40,20,40,0"
+                 CornerRadius="12" Padding="20,14"
+                 BorderBrush="#1E2D45" BorderThickness="1">
+            <WrapPanel Orientation="Horizontal">
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,12,8">
+                    <TextBlock Text="{infra:L stock_filter}" VerticalAlignment="Center" Foreground="#64748B" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding StockItems}"
+                               SelectedIndex="{Binding SelectedStockIndex}"
+                               Width="200"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,12,8">
+                    <TextBlock Text="{infra:L type_filter}" VerticalAlignment="Center" Foreground="#64748B" FontSize="12"/>
+                    <ComboBox ItemsSource="{Binding TypeItems}"
+                               SelectedIndex="{Binding SelectedTypeIndex}"
+                               Width="110"/>
+                </StackPanel>
+
+                <TextBox Text="{Binding SearchText, Mode=TwoWay}"
+                          Watermark="{infra:L search_placeholder}"
+                          Width="230" Margin="0,0,10,8"/>
+
+                <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L start_date}"/>
+                <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L end_date}"/>
+
+                <Button Content="{infra:L filter}" Classes="Primary"
+                        Command="{Binding LoadMovementsCommand}"
+                        Margin="0,0,8,8"/>
+                <Button Content="{infra:L clear_filter}" Classes="Secondary"
+                        Command="{Binding ClearFiltersCommand}"
+                        Margin="0,0,8,8"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- Toolbar -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="40,14,40,0">
+            <Button Content="{infra:L new_movement}" Classes="Primary" Command="{Binding AddMovementCommand}"/>
+            <Button Content="{infra:L bulk_movement}" Classes="Secondary" Command="{Binding BulkMovementCommand}"/>
+            <Button Content="{infra:L edit}" Classes="Secondary" Command="{Binding EditMovementCommand}" IsEnabled="{Binding IsMovementSelected}"/>
+            <Button Content="{infra:L delete}" Classes="Danger" Command="{Binding DeleteMovementCommand}" IsEnabled="{Binding IsMovementSelected}"/>
+            <Button Content="{infra:L bulk_delete}" Classes="Danger" Command="{Binding DeleteBulkCommand}" IsEnabled="{Binding IsMultipleSelected}"/>
+            
+            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0"/>
+            
+            <Button Content="{infra:L import_excel}" Classes="Secondary" Command="{Binding ImportXlsxCommand}"/>
+            <Button Content="{infra:L sample_file}" Classes="Secondary" Command="{Binding ExportSampleCommand}"/>
+            <Button Content="{infra:L print}" Classes="Secondary" Command="{Binding PrintCommand}"/>
+            <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportExcelCommand}"/>
+        </StackPanel>
+
+        <!-- DataGrid -->
+        <DataGrid Grid.Row="3"
+                  Name="MovementsGrid"
+                  Margin="28,12,28,12"
+                  ItemsSource="{Binding Movements}"
+                  SelectedItem="{Binding SelectedMovement}"
+                  SelectionMode="Extended"
+                  IsReadOnly="True"
+                  CanUserResizeColumns="True"
+                  HorizontalScrollBarVisibility="Visible"
+                  Background="#0C0E14"
+                  BorderThickness="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding StockCardCode}" Width="75"  MinWidth="60"/>
+                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding StockCardName}" Width="2*"  MinWidth="120"/>
+
+                <DataGridTemplateColumn Header="{infra:L type}" Width="100" MinWidth="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:StockMovement">
+                            <TextBlock Text="{Binding DisplayType}"
+                                       Foreground="{Binding DisplayColor}"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTemplateColumn Header="{infra:L quantity}" Width="85" MinWidth="65">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate x:DataType="models:StockMovement">
+                            <TextBlock Text="{Binding Quantity}"
+                                       Foreground="{Binding DisplayColor}"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       Margin="0,0,8,0"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="{infra:L department}"   Binding="{Binding Department}"    Width="*"   MinWidth="100"/>
+                <DataGridTextColumn Header="{infra:L delivered_to}"  Binding="{Binding Recipient}"     Width="200" MinWidth="120"/>
+                <DataGridTextColumn Header="{infra:L date}"          Binding="{Binding Date, StringFormat=dd.MM.yyyy HH:mm}" Width="200" MinWidth="150"/>
+                <DataGridTextColumn Header="{infra:L description}"   Binding="{Binding Description}"   Width="2*"  MinWidth="120"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="4" Background="#0E1119" Padding="40,8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StatusText}" Foreground="#475569" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Content="◀" Command="{Binding PrevPageCommand}" Classes="Secondary" Padding="8,2"/>
+                    <TextBlock Text="{Binding CurrentPage}" Foreground="#F1F5F9" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <TextBlock Text="/" Foreground="#475569" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalPages}" Foreground="#475569" VerticalAlignment="Center"/>
+                    <Button Content="▶" Command="{Binding NextPageCommand}" Classes="Secondary" Padding="8,2"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Stokendra.Views.MessageBoxWindow"
+        Title="Bilgi"
+        Width="400"
+        SizeToContent="Height"
+        MinWidth="300"
+        MaxWidth="600"
+        WindowStartupLocation="CenterOwner"
+        Background="#161B27"
+        CanResize="False">
+
+    <!--
+        MessageBoxWindow: SizeToContent="Height" ile yükseklik içeriğe göre ayarlanır.
+        ExtendClientAreaToDecorationsHint kaldırıldı — SizeToContent ile birlikte
+        kullanıldığında title bar yüksekliği hesaba katılmıyor, butonlar kesilebiliyordu.
+    -->
+    <Border BorderBrush="#1E2D45" BorderThickness="1" Padding="24">
+        <Grid RowDefinitions="Auto,Auto,Auto">
+
+            <TextBlock Grid.Row="0"
+                       Name="TitleText"
+                       Text="Bilgi"
+                       FontSize="17" FontWeight="Bold"
+                       Foreground="#3B82F6"
+                       Margin="0,0,0,12"/>
+
+            <TextBlock Grid.Row="1"
+                       Name="MessageText"
+                       Text="Mesaj içeriği..."
+                       Foreground="#F8FAFC"
+                       TextWrapping="Wrap"
+                       FontSize="14"
+                       Margin="0,0,0,20"/>
+
+            <StackPanel Grid.Row="2"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="10">
+                <Button Name="CancelBtn"
+                        Content="İptal"
+                        Classes="Secondary"
+                        Width="90" MinHeight="36"
+                        IsVisible="False"/>
+                <Button Name="OkBtn"
+                        Content="Tamam"
+                        Classes="Primary"
+                        Width="90" MinHeight="36"/>
+            </StackPanel>
+
+        </Grid>
+    </Border>
+</Window>

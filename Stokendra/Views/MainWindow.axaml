@@ -1,0 +1,136 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        x:Class="Stokendra.Views.MainWindow"
+        Title="Stokendra"
+        Width="1280" Height="800"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="#0C0E14"
+        Icon="/Stokendra.ico">
+
+    <Grid ColumnDefinitions="250,*">
+
+        <!-- ═══ SIDEBAR ═══ -->
+        <Border Grid.Column="0"
+                Background="#0F172A"
+                BorderBrush="#1E293B"
+                BorderThickness="0,0,1,0">
+            <Grid RowDefinitions="Auto,*,Auto">
+
+                <!-- Logo -->
+                <Border Grid.Row="0" Padding="24,32,24,24">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="STOKENDRA"
+                                   FontSize="22" FontWeight="Black"
+                                   Foreground="#3B82F6"
+                                   LetterSpacing="1"/>
+                        <TextBlock Text="Yönetim Paneli"
+                                   FontSize="11"
+                                   FontWeight="Medium"
+                                   Foreground="#64748B"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Menü -->
+                <StackPanel Grid.Row="1" Margin="10,16,10,0" Spacing="2">
+
+                    <TextBlock Text="MENÜ" FontSize="9" FontWeight="Bold"
+                               Foreground="#3A4560" LetterSpacing="2"
+                               Margin="16,0,0,8"/>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToDashboardCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📊" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Dashboard" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToReportsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📈" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Raporlar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToStockCardsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📇" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Stok Kartları" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToMovementsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="🔄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Stok Hareketleri" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToStocksCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📦" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Stoklar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToServicesCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="🛠" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Servis Kayıtları" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToDepartmentsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="🏢" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Departmanlar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToNotesCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="📝" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Notlar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                    <Border Height="1" Background="#1A2035" Margin="10,8"/>
+
+                    <Button Classes="MenuButton"
+                            Command="{Binding NavigateToSettingsCommand}">
+                        <Grid ColumnDefinitions="40,*">
+                            <TextBlock Grid.Column="0" Text="⚙" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="Ayarlar" VerticalAlignment="Center" FontWeight="Medium"/>
+                        </Grid>
+                    </Button>
+
+                </StackPanel>
+
+                <!-- Alt bilgi -->
+                <Border Grid.Row="2" Padding="16,12" BorderBrush="#1A2035" BorderThickness="0,1,0,0">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{Binding CurrentUser, StringFormat='👤 {0}'}"
+                                   FontSize="12" Foreground="#5A6987"/>
+                        <TextBlock Text="© 2026 Tolgahan Acar"
+                                   FontSize="10" Foreground="#2A3550"/>
+                    </StackPanel>
+                </Border>
+
+            </Grid>
+        </Border>
+
+        <!-- ═══ İÇERİK ═══ -->
+        <ContentControl Grid.Column="1"
+                        Content="{Binding CurrentPage}"/>
+
+    </Grid>
+</Window>

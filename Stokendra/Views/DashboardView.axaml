@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:infra="using:Stokendra.Infrastructure"
+             x:Class="Stokendra.Views.DashboardView"
+             Background="#0C0E14">
+
+    <ScrollViewer>
+        <StackPanel Margin="28,24,28,24" Spacing="24">
+
+            <!-- Title -->
+            <StackPanel Spacing="4">
+                <TextBlock Text="{infra:L dashboard}" FontSize="26" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="{infra:L dashboard_subtitle}" FontSize="13" Foreground="#5A6987"/>
+            </StackPanel>
+
+            <!-- Loading -->
+            <TextBlock Text="{infra:L loading}"
+                       FontSize="14" Foreground="#5A6987"
+                       IsVisible="{Binding IsLoading}"
+                       HorizontalAlignment="Center"/>
+
+            <!-- Stat Cards -->
+            <WrapPanel IsVisible="{Binding !IsLoading}">
+                <Border Classes="StatCard" Width="180" Margin="0,0,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L total_stock_cards}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding TotalCards}" FontSize="32" FontWeight="Bold" Foreground="#38AEFF"/>
+                        <TextBlock Text="{infra:L total_stock_cards_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="StatCard" Width="180" Margin="0,0,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L total_stock_qty}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding TotalStock}" FontSize="32" FontWeight="Bold" Foreground="#00DC82"/>
+                        <TextBlock Text="{infra:L total_stock_qty_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="StatCard" Width="180" Margin="0,0,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L low_stock}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding LowStock}" FontSize="32" FontWeight="Bold" Foreground="#F39C12"/>
+                        <TextBlock Text="{infra:L low_stock_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="StatCard" Width="180" Margin="0,0,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L depleted_stock}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding DepletedStock}" FontSize="32" FontWeight="Bold" Foreground="#E74C3C"/>
+                        <TextBlock Text="{infra:L depleted_stock_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="StatCard" Width="180" Margin="0,0,12,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L total_movements}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding TotalMovements}" FontSize="32" FontWeight="Bold" Foreground="#9B59B6"/>
+                        <TextBlock Text="{infra:L total_movements_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+                <Border Classes="StatCard" Width="180" Margin="0,0,0,12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L today_movements}" FontSize="10" FontWeight="Bold" Foreground="#5A6987"/>
+                        <TextBlock Text="{Binding TodayMovements}" FontSize="32" FontWeight="Bold" Foreground="#E67E22"/>
+                        <TextBlock Text="{infra:L today_movements_sub}" FontSize="11" Foreground="#3A4560"/>
+                    </StackPanel>
+                </Border>
+            </WrapPanel>
+
+            <!-- Low Stock Alerts -->
+            <Border Classes="Card" IsVisible="{Binding !IsLoading}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{infra:L low_stock_alerts}"
+                               FontSize="15" FontWeight="Bold" Foreground="#F39C12"/>
+
+                    <DataGrid ItemsSource="{Binding LowStockItems}"
+                               Height="220"
+                               IsReadOnly="True"
+                               CanUserResizeColumns="True"
+                               Background="#0C0E14"
+                               BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"     Width="150"/>
+                            <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"     Width="200"/>
+                            <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding Current}"  Width="150"/>
+                            <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}" Width="150"/>
+                            <DataGridTextColumn Header="{infra:L status}"        Binding="{Binding Status}"    Width="200"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

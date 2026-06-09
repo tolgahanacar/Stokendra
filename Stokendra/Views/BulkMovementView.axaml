@@ -1,0 +1,118 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
+        x:Class="Stokendra.Views.BulkMovementView"
+        Title="{infra:L bulk_movement}"
+        Width="1100" Height="700"
+        MinWidth="900" MinHeight="500"
+        MaxHeight="960"
+        WindowStartupLocation="CenterOwner"
+        Background="#0C0E14">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#1C222E" Padding="24,16,24,14">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{infra:L bulk_movement}"
+                            FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="{infra:L bulk_movement_desc}"
+                            FontSize="12" Foreground="#5A6987"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter Fields -->
+        <Border Grid.Row="1"
+                 Background="#161B27"
+                 Padding="24,14"
+                 BorderBrush="#1E2D45"
+                 BorderThickness="0,0,0,1">
+            <StackPanel Spacing="12">
+                <Grid ColumnDefinitions="130,180,*,220,220">
+                    <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                        <TextBlock Text="{infra:L operation_type}" FontSize="11" Foreground="#94A3B8"/>
+                        <ComboBox SelectedIndex="{Binding SelectedTypeIndex}" HorizontalAlignment="Stretch">
+                            <ComboBoxItem Content="{infra:L entry}"/>
+                            <ComboBoxItem Content="{infra:L exit}"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4" Margin="0,0,12,0">
+                        <TextBlock Text="{infra:L department}" FontSize="11" Foreground="#94A3B8"/>
+                        <ComboBox ItemsSource="{Binding Departments}"
+                                   SelectedItem="{Binding SelectedDepartment}"
+                                   HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4" Margin="0,0,12,0">
+                        <TextBlock Text="{infra:L delivered_to_label}" FontSize="11" Foreground="#94A3B8"/>
+                        <TextBox Text="{Binding DeliveredTo}" Watermark="{infra:L select_user}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,12,0">
+                        <TextBlock Text="{infra:L date_label}" FontSize="11" Foreground="#94A3B8"/>
+                        <CalendarDatePicker SelectedDate="{Binding Date}" 
+                                             HorizontalAlignment="Stretch"
+                                             Watermark="{infra:L date_label}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Spacing="4" VerticalAlignment="Bottom">
+                        <TextBox Text="{Binding SearchText}"
+                                 Watermark="{infra:L search_placeholder}"
+                                 HorizontalAlignment="Stretch"
+                                 Classes="SearchBox"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="{infra:L select_all}"
+                             Classes="Secondary"
+                             Command="{Binding SelectAllCommand}"
+                             Padding="8,4" FontSize="12"/>
+                    <Button Content="{infra:L deselect_all}"
+                             Classes="Secondary"
+                             Command="{Binding DeselectAllCommand}"
+                             Padding="8,4" FontSize="12"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- DataGrid -->
+        <Grid Grid.Row="2">
+            <DataGrid ItemsSource="{Binding Items}"
+                       IsReadOnly="False"
+                       Background="Transparent"
+                       BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="✓" Binding="{Binding IsSelected}" Width="50"/>
+                    <DataGridTextColumn Header="{infra:L code_no}" Binding="{Binding Card.Code}" Width="200" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="{infra:L stock_name}" Binding="{Binding Card.Name}" Width="350" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding Card.CurrentStock}" Width="150" IsReadOnly="True"/>
+                    <DataGridTemplateColumn Header="{infra:L quantity}" Width="150">
+                        <DataTemplate>
+                            <NumericUpDown Value="{Binding Quantity}"
+                                           Minimum="0"
+                                           FormatString="N2"
+                                           IsEnabled="{Binding IsSelected}"
+                                           Margin="4,2"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <!-- Loading overlay -->
+            <ProgressBar IsIndeterminate="True"
+                          VerticalAlignment="Top"
+                          IsVisible="{Binding IsLoading}"/>
+        </Grid>
+
+        <!-- Footer -->
+        <Border Grid.Row="3"
+                Background="#1C222E"
+                Padding="24,14"
+                BorderBrush="#1E2D45"
+                BorderThickness="0,1,0,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                <Button Content="{infra:L cancel}"     Classes="Secondary" Command="{Binding CancelCommand}" Width="90"  MinHeight="36"/>
+                <Button Content="{infra:L save}" Classes="Primary"   Command="{Binding SaveCommand}"   Width="110" MinHeight="36"/>
+            </StackPanel>
+        </Border>
+
+    </Grid>
+</Window>
