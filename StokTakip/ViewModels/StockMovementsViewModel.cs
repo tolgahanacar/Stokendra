@@ -24,6 +24,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private int      _selectedTypeIndex  = 0;
     
     private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _searchCts;
 
     // Durum
     [ObservableProperty]
@@ -151,7 +152,24 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadMovementsAsync(); } }
     [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadMovementsAsync(); } }
 
-    partial void OnSearchTextChanged(string value) => _ = LoadMovementsAsync();
+    partial void OnSearchTextChanged(string value) => ScheduleSearch();
+
+    private async void ScheduleSearch()
+    {
+        _cts?.Cancel();
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(300, token);
+            CurrentPage = 1;
+            await LoadMovementsAsync();
+        }
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
+    }
 
     [RelayCommand]
     public async Task DeleteMovementAsync()
@@ -288,7 +306,7 @@ public partial class StockMovementsViewModel : ViewModelBase
 
                 for (int i = 1; i <= colCount; i++)
                 {
-                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
                     if (header == "stok kodu" || header == "kod" || header == "stokkodu" || header == "kodno" || header == "stokkodu")
                         colKod = i;
                     else if (header == "teslim edilen" || header == "teslim edilen" || header == "teslim alan" || header == "teslim edılen" || header == "personel" || header == "kisi" || header == "kişi")
@@ -329,7 +347,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                     if (card == null) continue;
 
                     string turRaw = colTur > 0 ? (row.Cell(colTur).GetValue<string>() ?? "").Trim() : "";
-                    string tur = turRaw.Contains("[G]") || turRaw.ToLowerInvariant().Contains("giri") || turRaw.ToLowerInvariant().Contains("giris") ? "Giris" : "Cikis";
+                    string tur = turRaw.Contains("[G]") || turRaw.ToTurkishLower().Contains("giri") || turRaw.ToTurkishLower().Contains("giris") ? "Giris" : "Cikis";
 
                     double miktar = colMiktar > 0 ? (row.Cell(colMiktar).TryGetValue<double>(out double m) ? m : 1.0) : 1.0;
                     string departman = colDepartman > 0 ? (row.Cell(colDepartman).GetValue<string>() ?? "").Trim() : "";

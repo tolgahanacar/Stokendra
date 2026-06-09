@@ -108,13 +108,13 @@ public partial class StockCardsViewModel : ViewModelBase
 
     private void ApplySearch()
     {
-        var term = SearchText.Trim().ToLowerInvariant();
+        var term = SearchText.Trim().ToTurkishLower();
         var data = string.IsNullOrEmpty(term)
             ? _allCards
             : _allCards.Where(k =>
-                k.Ad.ToLowerInvariant().Contains(term) ||
-                k.KodNo.ToLowerInvariant().Contains(term) ||
-                k.Kategori.ToLowerInvariant().Contains(term)).ToList();
+                k.Ad.ToTurkishLower().Contains(term) ||
+                k.KodNo.ToTurkishLower().Contains(term) ||
+                k.Kategori.ToTurkishLower().Contains(term)).ToList();
 
         Cards.Clear();
         foreach (var k in data) Cards.Add(k);
@@ -240,7 +240,7 @@ public partial class StockCardsViewModel : ViewModelBase
 
                 for (int i = 1; i <= colCount; i++)
                 {
-                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
                     if (header == "kodno" || header == "kod" || header == "stok kodu" || header == "stokkodu")
                         colKodNo = i;
                     else if (header == "stok adı" || header == "stok adi" || header == "ad" || header == "adi")

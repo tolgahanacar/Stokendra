@@ -34,7 +34,7 @@
                               Width="110"/>
                 </StackPanel>
 
-                <TextBox Text="{Binding SearchText}"
+                <TextBox Text="{Binding SearchText, Mode=TwoWay}"
                          Watermark="🔍 Stok adı, departman, kişi..."
                          Width="230" Margin="0,0,10,8"/>
 

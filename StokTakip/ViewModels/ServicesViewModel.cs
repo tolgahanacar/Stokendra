@@ -16,6 +16,9 @@ public partial class ServicesViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly ILogger _logger;
 
+    private System.Threading.CancellationTokenSource? _cts;
+    private System.Threading.CancellationTokenSource? _searchCts;
+
     [ObservableProperty] private string      _searchText  = "";
     [ObservableProperty] private DateTime    _startDate   = new DateTime(2024, 1, 1);
     [ObservableProperty] private DateTime    _endDate     = DateTime.Today;
@@ -60,22 +63,33 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new System.Threading.CancellationTokenSource();
+        var token = _cts.Token;
+
         IsLoading = true;
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             
-            var totalCount = await _services.GetCountAsync(StartDate, EndDate.AddDays(1), term);
+            var totalCount = await _services.GetCountAsync(StartDate, EndDate.AddDays(1), term, token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
             
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate, EndDate.AddDays(1), term);
+            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate, EndDate.AddDays(1), term, token);
+
+            token.ThrowIfCancellationRequested();
 
             Records.Clear();
             foreach (var r in data) Records.Add(r);
             StatusText = $"{totalCount} kayıttan {Records.Count} tanesi listeleniyor (Sayfa {CurrentPage}/{TotalPages})";
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored
         }
         catch (Exception ex) 
         { 
@@ -100,6 +114,25 @@ public partial class ServicesViewModel : ViewModelBase
 
     [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadAsync(); } }
     [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadAsync(); } }
+
+    partial void OnSearchTextChanged(string value) => ScheduleSearch();
+
+    private async void ScheduleSearch()
+    {
+        _cts?.Cancel();
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(300, token);
+            CurrentPage = 1;
+            await LoadAsync();
+        }
+        catch (TaskCanceledException) { }
+        catch (OperationCanceledException) { }
+    }
 
     [RelayCommand]
     public async Task DeleteAsync()
@@ -194,7 +227,7 @@ public partial class ServicesViewModel : ViewModelBase
 
                 for (int i = 1; i <= colCount; i++)
                 {
-                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToLowerInvariant();
+                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
                     if (header == "bakım tarihi" || header == "bakim tarihi" || header == "tarih" || header == "bakimtarihi")
                         colTarih = i;
                     else if (header == "cihaz adı" || header == "cihaz adi" || header == "cihaz" || header == "cihazadi")

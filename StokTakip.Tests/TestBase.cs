@@ -25,6 +25,7 @@ public abstract class TestBase : IDisposable
         Database = new Database(dbPath);
         Connection = new SqliteConnection($"Data Source={dbPath}");
         Connection.Open();
+        SqliteHelpers.RegisterCustomFunctions(Connection);
 
         // 2. Mocks
         MockDialog = new Mock<IDialogService>();

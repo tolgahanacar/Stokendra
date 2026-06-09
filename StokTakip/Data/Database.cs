@@ -86,6 +86,7 @@ public sealed partial class Database : IDisposable
     {
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
+        SqliteHelpers.RegisterCustomFunctions(connection);
         ApplyConnectionPragmas(connection);
         return connection;
     }

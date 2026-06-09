@@ -87,13 +87,13 @@ public partial class StocksViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        var term = SearchText.Trim().ToLowerInvariant();
+        var term = SearchText.Trim().ToTurkishLower();
         var data = string.IsNullOrEmpty(term)
             ? _allStocks
             : _allStocks.Where(k =>
-                k.Ad.ToLowerInvariant().Contains(term) ||
-                k.KodNo.ToLowerInvariant().Contains(term) ||
-                k.Kategori.ToLowerInvariant().Contains(term)).ToList();
+                k.Ad.ToTurkishLower().Contains(term) ||
+                k.KodNo.ToTurkishLower().Contains(term) ||
+                k.Kategori.ToTurkishLower().Contains(term)).ToList();
 
         Stocks.Clear();
         foreach (var k in data) Stocks.Add(k);

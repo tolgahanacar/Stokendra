@@ -14,6 +14,7 @@ public class TestDbFactory : IDbConnectionFactory
     {
         var conn = new SqliteConnection(ConnectionString);
         conn.Open();
+        StokTakip.Data.SqliteHelpers.RegisterCustomFunctions(conn);
         return conn;
     }
 }

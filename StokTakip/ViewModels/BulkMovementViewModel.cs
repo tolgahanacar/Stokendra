@@ -86,10 +86,10 @@ public partial class BulkMovementViewModel : ViewModelBase
     [RelayCommand]
     private void UpdateVisibleItems()
     {
-        var term = SearchText.Trim().ToLowerInvariant();
+        var term = SearchText.Trim().ToTurkishLower();
         var filtered = string.IsNullOrWhiteSpace(term) 
             ? _allItemViewModels 
-            : _allItemViewModels.Where(i => i.Card.Ad.ToLowerInvariant().Contains(term) || i.Card.KodNo.ToLowerInvariant().Contains(term)).ToList();
+            : _allItemViewModels.Where(i => i.Card.Ad.ToTurkishLower().Contains(term) || i.Card.KodNo.ToTurkishLower().Contains(term)).ToList();
 
         // Toplu güncelleme: önce temizle, sonra tek seferde ekle
         // Büyük listelerde her Add bir CollectionChanged tetikler.

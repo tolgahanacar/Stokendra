@@ -28,6 +28,8 @@ public sealed class SqliteConnectionFactory : IDbConnectionFactory
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
         
+        SqliteHelpers.RegisterCustomFunctions(connection);
+        
         // Optimize SQLite performance pragmas
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"

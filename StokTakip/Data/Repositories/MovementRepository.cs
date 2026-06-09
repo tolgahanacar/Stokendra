@@ -292,7 +292,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         if(!string.IsNullOrEmpty(dept)) sql += " AND h.Departman=$dp";
         if(!string.IsNullOrEmpty(type)) sql += " AND h.Tur=$tr";
         if(!string.IsNullOrEmpty(cat)) sql += " AND s.Kategori=$ct";
-        if(!string.IsNullOrEmpty(search)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
+        if(!string.IsNullOrEmpty(search)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.KimeVerildi LIKE $q OR h.Departman LIKE $q)";
         sql += " ORDER BY h.Tarih DESC, h.Id DESC";
         return sql;
     }
@@ -450,7 +450,7 @@ public sealed class MovementRepository : RepositoryBase, IMovementRepository
         if(!string.IsNullOrEmpty(department)) sql += " AND h.Departman=$dp";
         if(!string.IsNullOrEmpty(movementType)) sql += " AND h.Tur=$tr";
         if(!string.IsNullOrEmpty(category)) sql += " AND s.Kategori=$ct";
-        if(!string.IsNullOrEmpty(searchTerm)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.TeslimEdilen LIKE $q OR h.Departman LIKE $q)";
+        if(!string.IsNullOrEmpty(searchTerm)) sql += " AND (s.Ad LIKE $q OR s.KodNo LIKE $q OR h.KimeVerildi LIKE $q OR h.Departman LIKE $q)";
         
         cmd.CommandText = sql;
         BindQueryParams(cmd, stockCardId, startDate, endDate, department, movementType, category, searchTerm);
