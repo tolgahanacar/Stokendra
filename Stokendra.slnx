@@ -1,4 +1,3 @@
 <Solution>
   <Project Path="Stokendra/Stokendra.csproj" />
-  <Project Path="Stokendra.Tests/Stokendra.Tests.csproj" />
 </Solution>

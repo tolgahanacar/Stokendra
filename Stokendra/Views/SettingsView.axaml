@@ -1,129 +1,214 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.SettingsView"
-             Background="#0C0E14">
+             Background="#0C0E14"
+             x:DataType="vm:SettingsViewModel">
 
     <ScrollViewer>
         <StackPanel Margin="28,24,28,24" Spacing="24">
             
             <!-- Başlık -->
             <StackPanel Spacing="4">
-                <TextBlock Text="Ayarlar" FontSize="26" FontWeight="Bold" Foreground="#E8EEFF"/>
-                <TextBlock Text="Uygulama tercihlerini yönetin ve veri güvenliğini sağlayın" FontSize="13" Foreground="#5A6987"/>
+                <TextBlock Text="{infra:L settings_title}" FontSize="26" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="{infra:L settings_subtitle}" FontSize="13" Foreground="#5A6987"/>
             </StackPanel>
 
-            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Left">
+            <!-- Grid Layout to prevent shifting (kayma) and align columns perfectly -->
+            <Grid ColumnDefinitions="*,*" HorizontalAlignment="Stretch">
                 
-                <!-- Genel Ayarlar -->
-                <Border Classes="Card" Width="400" Margin="0,0,20,20">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="⚙ Genel Yapılandırma" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Firma / Kuruluş Adı" FontSize="12" Foreground="#8A9BBF"/>
-                            <TextBox Text="{Binding CompanyName}" Watermark="Firma adı (raporlarda görünür)"/>
-                        </StackPanel>
-                        
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Otomatik Yedekleme Klasörü" FontSize="12" Foreground="#8A9BBF"/>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Text="{Binding AutoBackupPath}" Watermark="Boş ise devre dışıdır" IsReadOnly="True" FontSize="11"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding SelectBackupFolderCommand}" Margin="4,0,0,0"/>
-                            </Grid>
-                        </StackPanel>
+                <!-- Left Column -->
+                <StackPanel Grid.Column="0" Spacing="20" Margin="0,0,10,0">
+                    
+                    <!-- Genel Ayarlar -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="{infra:L settings_general_header}" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
+                            
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L company_name_label}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding CompanyName}" Watermark="{infra:L company_name_hint}"/>
+                            </StackPanel>
 
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Veritabanı Yolu" FontSize="12" Foreground="#8A9BBF"/>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBox Text="{Binding DbPath}" IsReadOnly="True" Foreground="#5A6987" FontSize="11"/>
-                                <Button Grid.Column="1" Content="..." Command="{Binding SelectDbFileCommand}" Margin="4,0,0,0"/>
-                            </Grid>
-                        </StackPanel>
-                        <Button Content="✔ Ayarları Kaydet" Classes="Primary"
-                                Command="{Binding SaveSettingsCommand}"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L language_label}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+                            
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L auto_backup_folder}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding AutoBackupPath}" Watermark="Boş ise devre dışıdır" IsReadOnly="True" FontSize="11"/>
+                                    <Button Grid.Column="1" Content="..." Command="{Binding SelectBackupFolderCommand}" IsEnabled="{Binding CanEdit}" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
 
-                <!-- Şifre Değiştir -->
-                <Border Classes="Card" Width="400" Margin="0,0,20,20">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="🔐 Güvenlik ve Şifre" FontSize="15" FontWeight="Bold" Foreground="#E67E22"/>
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Mevcut Şifre" FontSize="12" Foreground="#8A9BBF"/>
-                            <TextBox Text="{Binding OldPassword}" PasswordChar="●" Watermark="Mevcut şifreniz"/>
-                        </StackPanel>
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Yeni Şifre" FontSize="12" Foreground="#8A9BBF"/>
-                            <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="En az 4 karakter"/>
-                        </StackPanel>
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="Yeni Şifre (Tekrar)" FontSize="12" Foreground="#8A9BBF"/>
-                            <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Şifreyi tekrar girin"/>
-                        </StackPanel>
-                        <Button Content="Şifreyi Güncelle" Classes="Success"
-                                Command="{Binding ChangePasswordAsyncCommand}"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-                    </StackPanel>
-                </Border>
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L db_path_label}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBox Text="{Binding DbPath}" IsReadOnly="True" Foreground="#5A6987" FontSize="11"/>
+                                    <Button Grid.Column="1" Content="..." Command="{Binding SelectDbFileCommand}" IsEnabled="{Binding CanEdit}" Margin="4,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
 
-                <!-- Yedekleme ve Bakım -->
-                <Border Classes="Card" Width="400" Margin="0,0,20,20">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="💾 Veri Yedekleme" FontSize="15" FontWeight="Bold" Foreground="#2ECC71"/>
-                        
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Veritabanı Yedeği (.db)" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
-                            <TextBlock Text="Veritabanı dosyasının birebir kopyasını alır. En güvenli yedekleme yöntemidir." 
-                                       FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
-                            <Button Content="📁 Veritabanı Yedeği Al" Classes="Primary"
-                                    Command="{Binding DatabaseBackupCommand}"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            <Button Content="{infra:L save_settings}" Classes="Primary"
+                                    Command="{Binding SaveSettingsCommand}"
+                                    IsEnabled="{Binding CanEdit}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Height="38" Margin="0,8,0,0"/>
                         </StackPanel>
+                    </Border>
 
-                        <Separator Height="1" Background="#1E2D45" Margin="0,10"/>
-
-                        <StackPanel Spacing="10">
-                            <TextBlock Text="Excel Rapor Yedeği (.xlsx)" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
-                            <TextBlock Text="Tüm verileri okunabilir Excel sayfalarına döker." 
-                                       FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
-                            <Button Content="📊 Excel Olarak Yedekle" Classes="Secondary"
-                                    Command="{Binding FullBackupCommand}"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                    <!-- Şifre Değiştir -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="{infra:L settings_security_header}" FontSize="15" FontWeight="Bold" Foreground="#E67E22"/>
+                            
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L old_password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding OldPassword}" PasswordChar="●" Watermark="{infra:L old_password}"/>
+                            </StackPanel>
+                            
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L new_password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="En az 4 karakter"/>
+                            </StackPanel>
+                            
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{infra:L confirm_password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Şifreyi tekrar girin"/>
+                            </StackPanel>
+                            
+                            <Button Content="{infra:L change_password_btn}" Classes="Success"
+                                    Command="{Binding ChangePasswordAsyncCommand}"
+                                    IsEnabled="{Binding CanEdit}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Height="38" Margin="0,8,0,0"/>
                         </StackPanel>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <!-- Hakkında ve Sistem -->
-                <Border Classes="Card" Width="400" Margin="0,0,20,20">
-                    <StackPanel Spacing="16">
-                        <TextBlock Text="ℹ Sistem Bilgisi" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
-                        
-                        <!-- Bakım Kısmı -->
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Bakım ve Temizlik" FontSize="13" FontWeight="SemiBold" Foreground="#FF5B5B"/>
-                            <TextBlock Text="İşlem geçmişini (Audit Log) temizlemek veritabanını küçültür." FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
-                            <Button Content="🗑 İşlem Geçmişini Temizle" 
-                                    Background="#2D1A1A" Foreground="#FF5B5B" BorderBrush="#4D2A2A" BorderThickness="1"
-                                    Cursor="Hand"
-                                    Command="{Binding TruncateAuditLogCommand}"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                    <!-- Aktivite Günlüğü -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <Grid RowDefinitions="Auto,*,Auto">
+                            <TextBlock Grid.Row="0" Text="{infra:L activity_log_header}" FontSize="15" FontWeight="Bold" Foreground="#38AEFF" Margin="0,0,0,12"/>
+                            
+                            <ListBox Grid.Row="1" ItemsSource="{Binding ActivityLogs}" Height="180" Background="#0C0E14" CornerRadius="6" Padding="6" FontSize="11" Foreground="#CBD5E1">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            
+                            <Button Grid.Row="2" Content="{infra:L clear_activity_log_btn}" Classes="Danger"
+                                    Command="{Binding ClearActivityLogsCommand}"
+                                    IsEnabled="{Binding CanEdit}"
+                                    Margin="0,12,0,0"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Height="36"/>
+                        </Grid>
+                    </Border>
+
+                </StackPanel>
+
+                <!-- Right Column -->
+                <StackPanel Grid.Column="1" Spacing="20" Margin="10,0,0,0">
+                    
+                    <!-- Veritabanı Sağlığı ve Bakım -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="{infra:L db_health_header}" FontSize="15" FontWeight="Bold" Foreground="#9B59B6"/>
+                            
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{infra:L db_size_label}" FontSize="11" Foreground="#8A9BBF" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DatabaseSize}" FontSize="18" Foreground="#E8EEFF" FontWeight="Bold"/>
+                            </StackPanel>
+
+                            <Separator Height="1" Background="#1E2D45" Margin="0,4"/>
+
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{infra:L db_integrity_title}" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
+                                <TextBlock Text="{infra:L db_integrity_desc}" FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                                <Button Content="{infra:L db_integrity_btn}" Classes="Secondary"
+                                        Command="{Binding CheckDatabaseIntegrityCommand}"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <Separator Height="1" Background="#1E2D45" Margin="0,4"/>
+
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{infra:L db_optimize_title}" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
+                                <TextBlock Text="{infra:L db_optimize_desc}" FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                                <Button Content="{infra:L db_optimize_btn}" Classes="Primary"
+                                        Command="{Binding OptimizeDatabaseCommand}"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
+                    </Border>
 
-                        <Separator Height="1" Background="#1E2D45" Margin="0,10"/>
+                    <!-- Yedekleme ve Bakım -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="{infra:L backup_section}" FontSize="15" FontWeight="Bold" Foreground="#2ECC71"/>
+                            
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{infra:L backup_db}" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
+                                <TextBlock Text="{infra:L backup_db_desc}" FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                                <Button Content="{infra:L backup_db_btn}" Classes="Primary"
+                                        Command="{Binding DatabaseBackupCommand}"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
 
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="Stokendra" FontSize="22" FontWeight="Bold" Foreground="#38AEFF"/>
-                            <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>
+                            <Separator Height="1" Background="#1E2D45" Margin="0,4"/>
+
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="{infra:L backup_excel}" FontSize="13" FontWeight="SemiBold" Foreground="#D0D8F0"/>
+                                <TextBlock Text="{infra:L backup_excel_desc}" FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                                <Button Content="{infra:L backup_excel_btn}" Classes="Secondary"
+                                        Command="{Binding FullBackupCommand}"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
-                        <TextBlock Text="Modern Stok ve Servis Takip Çözümü" FontSize="12" Foreground="#8A9BBF"/>
-                        <Separator Height="1" Background="#1E2D45"/>
-                        <TextBlock Text="© 2026 Tolgahan Acar. Tüm hakları saklıdır." FontSize="11" Foreground="#3A4560"/>
-                    </StackPanel>
-                </Border>
-            </WrapPanel>
+                    </Border>
 
-            <!-- Durum mesajı (Alt kısımda sabit) -->
+                    <!-- Hakkında ve Sistem Temizliği -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="{infra:L system_info_header}" FontSize="15" FontWeight="Bold" Foreground="#E67E22"/>
+                            
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="{infra:L audit_log_clean}" FontSize="13" FontWeight="SemiBold" Foreground="#FF5B5B"/>
+                                <TextBlock Text="{infra:L audit_log_clean_desc}" FontSize="11" Foreground="#8A9BBF" TextWrapping="Wrap"/>
+                                <Button Content="{infra:L audit_log_clean_btn}" 
+                                        Background="#2D1A1A" Foreground="#FF5B5B" BorderBrush="#4D2A2A" BorderThickness="1"
+                                        Cursor="Hand"
+                                        Command="{Binding TruncateAuditLogCommand}"
+                                        IsEnabled="{Binding CanEdit}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <Separator Height="1" Background="#1E2D45" Margin="0,4"/>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Stokendra" FontSize="22" FontWeight="Bold" Foreground="#38AEFF"/>
+                                <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>
+                            </StackPanel>
+                            <TextBlock Text="Modern Stok ve Servis Takip Çözümü" FontSize="12" Foreground="#8A9BBF"/>
+                            <Separator Height="1" Background="#1E2D45"/>
+                            <TextBlock Text="© 2026 Tolgahan Acar. Tüm hakları saklıdır." FontSize="11" Foreground="#3A4560"/>
+                        </StackPanel>
+                    </Border>
+
+                </StackPanel>
+
+            </Grid>
+
+            <!-- Durum mesajı -->
             <Border Background="#161B27" CornerRadius="8" Padding="16,12" BorderBrush="#1E2D45" BorderThickness="1"
                     IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                     HorizontalAlignment="Left" MinWidth="400">

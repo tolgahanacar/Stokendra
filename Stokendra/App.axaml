@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Stokendra"
+             xmlns:converters="using:Stokendra.Converters"
              x:Class="Stokendra.App"
              RequestedThemeVariant="Dark">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
@@ -8,6 +9,14 @@
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+
+    <Application.Resources>
+        <converters:StringEqualsConverter x:Key="StringEqualsConverter"/>
+        <converters:RoleColorConverter x:Key="RoleColorConverter"/>
+        <converters:RoleBackgroundConverter x:Key="RoleBackgroundConverter"/>
+        <converters:RoleTextConverter x:Key="RoleTextConverter"/>
+        <converters:FirstLetterConverter x:Key="FirstLetterConverter"/>
+    </Application.Resources>
 
     <Application.Styles>
         <FluentTheme />

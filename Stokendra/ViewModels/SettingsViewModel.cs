@@ -4,9 +4,10 @@ using Stokendra.Data.Interfaces;
 using Stokendra.Infrastructure;
 using Stokendra.Services;
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 
 namespace Stokendra.ViewModels;
@@ -18,6 +19,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly IBackupService _backupService;
     private readonly ILogger _logger;
+    private readonly IDbConnectionFactory _connectionFactory;
 
     [ObservableProperty] private string _companyName   = "";
     [ObservableProperty] private string _dbPath        = "";
@@ -28,29 +30,102 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool   _isSuccess;
     [ObservableProperty] private string _appVersion    = "";
     [ObservableProperty] private string _autoBackupPath = "";
+    
+    // New detailed & smart properties
+    [ObservableProperty] private string _selectedLanguage = "Türkçe";
+    [ObservableProperty] private int _lowStockThreshold = 3;
+    [ObservableProperty] private string _masterSecurityCode = "";
+    [ObservableProperty] private string _databaseSize = "Bilinmiyor";
+
+    public List<string> Languages { get; } = new() { "Türkçe", "English" };
+    public ObservableCollection<string> ActivityLogs { get; } = new();
 
     public SettingsViewModel(
         IUserRepository users,
         IConfigRepository config,
         IDialogService dialogService,
         IBackupService backupService,
-        ILogger logger)
+        ILogger logger,
+        IDbConnectionFactory connectionFactory)
     {
         _users = users;
         _config = config;
         _dialogService = dialogService;
         _backupService = backupService;
         _logger = logger;
+        _connectionFactory = connectionFactory;
         Load();
     }
 
     private void Load()
     {
         var settings = AppServices.Current.Settings;
-        CompanyName    = settings.CompanyName;
-        DbPath         = settings.DbPath;
-        AutoBackupPath = settings.AutoBackupPath;
-        AppVersion     = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "4.0.0"}";
+        CompanyName       = settings.CompanyName;
+        DbPath            = settings.DbPath;
+        AutoBackupPath    = settings.AutoBackupPath;
+        LowStockThreshold = settings.LowStockThreshold;
+        MasterSecurityCode = settings.MasterSecurityCode;
+        SelectedLanguage  = settings.Language == "en" ? "English" : "Türkçe";
+        
+        AppVersion = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0"}";
+        
+        UpdateDatabaseInfo();
+        LoadActivityLogs();
+    }
+
+    private void UpdateDatabaseInfo()
+    {
+        try
+        {
+            if (File.Exists(DbPath))
+            {
+                var fileInfo = new FileInfo(DbPath);
+                double sizeInKb = fileInfo.Length / 1024.0;
+                DatabaseSize = sizeInKb > 1024 
+                    ? $"{(sizeInKb / 1024.0):N2} MB" 
+                    : $"{sizeInKb:N0} KB";
+            }
+            else
+            {
+                DatabaseSize = "Bilinmiyor";
+            }
+        }
+        catch
+        {
+            DatabaseSize = "Bilinmiyor";
+        }
+    }
+
+    private void LoadActivityLogs()
+    {
+        ActivityLogs.Clear();
+        try
+        {
+            if (File.Exists(AppPaths.ActivityLogPath))
+            {
+                var lines = File.ReadLines(AppPaths.ActivityLogPath).Reverse().Take(12).ToList();
+                foreach (var line in lines)
+                {
+                    var parts = line.Split('\t');
+                    if (parts.Length >= 4)
+                    {
+                        ActivityLogs.Add($"{parts[0]} | {parts[1]} | {parts[2]} | {parts[3]}");
+                    }
+                    else
+                    {
+                        ActivityLogs.Add(line);
+                    }
+                }
+            }
+            if (ActivityLogs.Count == 0)
+            {
+                ActivityLogs.Add("Henüz aktivite kaydı bulunmuyor.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ActivityLogs.Add($"Loglar yüklenemedi: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -59,7 +134,13 @@ public partial class SettingsViewModel : ViewModelBase
         var settings = AppServices.Current.Settings;
         settings.CompanyName = CompanyName.Trim();
         settings.AutoBackupPath = AutoBackupPath.Trim();
+        settings.LowStockThreshold = LowStockThreshold;
+        settings.MasterSecurityCode = MasterSecurityCode.Trim();
         
+        string newLang = SelectedLanguage == "English" ? "en" : "tr";
+        bool langChanged = newLang != settings.Language;
+        settings.Language = newLang;
+
         bool dbPathChanged = false;
         if (!string.IsNullOrWhiteSpace(DbPath) && DbPath.Trim() != settings.DbPath)
         {
@@ -75,6 +156,8 @@ public partial class SettingsViewModel : ViewModelBase
                 _config.SetConfig("CompanyName", settings.CompanyName);
                 _config.SetConfig("AutoBackupPath", settings.AutoBackupPath);
                 _config.SetConfig("DbPath", settings.DbPath);
+                _config.SetConfig("LowStockThreshold", settings.LowStockThreshold.ToString());
+                _config.SetConfig("MasterSecurityCode", settings.MasterSecurityCode);
                 _config.SetConfig("LastSettingsUpdated", DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
                 _config.WriteAuditLog("Update", "AppConfig", 0, $"Settings updated. Company: {settings.CompanyName}, BackupPath: {settings.AutoBackupPath}");
             }
@@ -83,9 +166,11 @@ public partial class SettingsViewModel : ViewModelBase
                 _logger.LogError("Failed to update database AppConfig or AuditLog", ex);
             }
 
-            if (dbPathChanged)
+            LoadActivityLogs();
+
+            if (langChanged || dbPathChanged)
             {
-                StatusMessage = "Ayarlar kaydedildi. Veritabanı değişikliğinin geçerli olması için lütfen uygulamayı yeniden başlatın.";
+                StatusMessage = "Ayarlar kaydedildi. Dil veya veritabanı değişikliklerinin geçerli olması için lütfen uygulamayı yeniden başlatın.";
             }
             else
             {
@@ -150,7 +235,6 @@ public partial class SettingsViewModel : ViewModelBase
 
         var username = AppServices.Current.Session?.Username ?? "admin";
 
-        // PBKDF2 600k iterasyon — Task.Run ile UI thread'i bloklamadan çalıştır
         bool ok = await Task.Run(() => _users.ChangePassword(username, OldPassword, NewPassword));
         if (ok)
         {
@@ -159,6 +243,7 @@ public partial class SettingsViewModel : ViewModelBase
             OldPassword     = "";
             NewPassword     = "";
             ConfirmPassword = "";
+            LoadActivityLogs();
         }
         else
         {
@@ -178,12 +263,11 @@ public partial class SettingsViewModel : ViewModelBase
         {
             StatusMessage = "Veritabanı yedekleniyor...";
             await Task.Run(() => {
-                // SQLite backup API — WAL modunda güvenli kopya oluşturur.
-                // File.Copy WAL dosyasını dahil etmez ve bozuk yedek üretir.
                 _config.CreateBackup(destPath);
             });
             StatusMessage = "Veritabanı yedeği başarıyla oluşturuldu.";
             IsSuccess = true;
+            LoadActivityLogs();
             await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı güvenli şekilde yedeklendi.");
         }
         catch (Exception ex)
@@ -205,8 +289,6 @@ public partial class SettingsViewModel : ViewModelBase
         {
             StatusMessage = "Tam yedek hazırlanıyor...";
             
-            // Note: BackupService generates its own timestamped name, 
-            // but for user experience we move it to the requested location.
             string tempZip = await _backupService.ExportAllExcelAsync(Path.GetTempPath());
             
             if (File.Exists(zipPath)) File.Delete(zipPath);
@@ -214,6 +296,7 @@ public partial class SettingsViewModel : ViewModelBase
 
             StatusMessage = "Tam Excel yedeği (ZIP) başarıyla alındı.";
             IsSuccess = true;
+            LoadActivityLogs();
             await _dialogService.ShowMessageAsync("Başarılı", "Tüm veriler ayrı Excel dosyaları olarak ZIP içinde yedeklendi.");
         }
         catch (Exception ex)
@@ -235,11 +318,105 @@ public partial class SettingsViewModel : ViewModelBase
             await Task.Run(() => _config.TruncateAuditLog());
             StatusMessage = "İşlem geçmişi başarıyla temizlendi.";
             IsSuccess = true;
+            LoadActivityLogs();
             await _dialogService.ShowMessageAsync("Başarılı", "Audit log tablosu boşaltıldı.");
         }
         catch (Exception ex)
         {
             _logger.LogError("Audit log truncate error", ex);
+            StatusMessage = $"Hata: {ex.Message}";
+            IsSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task CheckDatabaseIntegrityAsync()
+    {
+        StatusMessage = "Veritabanı bütünlük kontrolü yapılıyor...";
+        IsSuccess = false;
+
+        try
+        {
+            string result = await Task.Run(() =>
+            {
+                using var conn = _connectionFactory.CreateConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "PRAGMA integrity_check;";
+                var val = cmd.ExecuteScalar()?.ToString();
+                return val ?? "Bilinmeyen hata";
+            });
+
+            if (result.Equals("ok", StringComparison.OrdinalIgnoreCase))
+            {
+                StatusMessage = "Bütünlük kontrolü: Başarılı (Herhangi bir bozulma yok).";
+                IsSuccess = true;
+                LoadActivityLogs();
+                await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı sağlık kontrolü başarılı. Herhangi bir bozulma veya indeks hatası bulunamadı.");
+            }
+            else
+            {
+                StatusMessage = $"Hata: Bütünlük kontrolü başarısız ({result}).";
+                IsSuccess = false;
+                await _dialogService.ShowMessageAsync("Hata", $"Bütünlük kontrolü başarısız:\n{result}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Database integrity check error", ex);
+            StatusMessage = $"Hata: {ex.Message}";
+            IsSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task OptimizeDatabaseAsync()
+    {
+        StatusMessage = "Veritabanı optimize ediliyor (VACUUM)...";
+        IsSuccess = false;
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var conn = _connectionFactory.CreateConnection();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "VACUUM;";
+                cmd.ExecuteNonQuery();
+            });
+
+            UpdateDatabaseInfo();
+            StatusMessage = "Veritabanı başarıyla optimize edildi (VACUUM yapıldı).";
+            IsSuccess = true;
+            LoadActivityLogs();
+            await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı optimizasyonu tamamlandı. SQLite dosya boyutu küçültüldü ve kullanılmayan alanlar serbest bırakıldı.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Database vacuum error", ex);
+            StatusMessage = $"Hata: {ex.Message}";
+            IsSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task ClearActivityLogsAsync()
+    {
+        bool confirm = await _dialogService.ShowConfirmAsync("Aktivite Günlüğü", "Tüm aktivite geçmişi silinecektir. Devam etmek istiyor musunuz?");
+        if (!confirm) return;
+
+        try
+        {
+            if (File.Exists(AppPaths.ActivityLogPath))
+            {
+                File.WriteAllText(AppPaths.ActivityLogPath, "");
+            }
+            LoadActivityLogs();
+            StatusMessage = "Aktivite geçmişi temizlendi.";
+            IsSuccess = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Clear activity logs error", ex);
             StatusMessage = $"Hata: {ex.Message}";
             IsSuccess = false;
         }

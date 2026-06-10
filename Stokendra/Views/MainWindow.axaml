@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.MainWindow"
         Title="Stokendra"
         Width="1280" Height="800"
@@ -19,110 +20,192 @@
             <Grid RowDefinitions="Auto,*,Auto">
 
                 <!-- Logo -->
-                <Border Grid.Row="0" Padding="24,32,24,24">
-                    <StackPanel Spacing="4">
+                <Border Grid.Row="0" Padding="20,20,20,12">
+                    <StackPanel Spacing="2">
                         <TextBlock Text="STOKENDRA"
-                                   FontSize="22" FontWeight="Black"
+                                   FontSize="20" FontWeight="Black"
                                    Foreground="#3B82F6"
                                    LetterSpacing="1"/>
                         <TextBlock Text="Yönetim Paneli"
-                                   FontSize="11"
+                                   FontSize="10"
                                    FontWeight="Medium"
                                    Foreground="#64748B"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Menü -->
-                <StackPanel Grid.Row="1" Margin="10,16,10,0" Spacing="2">
+                <!-- ═══ MENÜ (Kaydırılabilir) ═══ -->
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="10,4,10,10" Spacing="2">
 
-                    <TextBlock Text="MENÜ" FontSize="9" FontWeight="Bold"
-                               Foreground="#3A4560" LetterSpacing="2"
-                               Margin="16,0,0,8"/>
+                        <TextBlock Text="{infra:L menu}" FontSize="9" FontWeight="Bold"
+                                   Foreground="#3A4560" LetterSpacing="2"
+                                   Margin="16,0,0,6"/>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToDashboardCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="📊" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Dashboard" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=dashboard}"
+                                Command="{Binding NavigateToDashboardCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📊" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L dashboard}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToReportsCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="📈" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Raporlar" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=reports}"
+                                Command="{Binding NavigateToReportsCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📈" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L reports}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToStockCardsCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="📇" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Stok Kartları" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=stockcards}"
+                                Command="{Binding NavigateToStockCardsCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📇" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L stock_cards}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToMovementsCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="🔄" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Stok Hareketleri" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=movements}"
+                                Command="{Binding NavigateToMovementsCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="🔄" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L stock_movements}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToStocksCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="📦" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Stoklar" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=stocks}"
+                                Command="{Binding NavigateToStocksCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📦" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L stocks}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToServicesCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="🛠" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Servis Kayıtları" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=services}"
+                                Command="{Binding NavigateToServicesCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="🛠" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L services}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToDepartmentsCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="🏢" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Departmanlar" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=departments}"
+                                Command="{Binding NavigateToDepartmentsCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="🏢" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L departments}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToNotesCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="📝" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Notlar" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=notes}"
+                                Command="{Binding NavigateToNotesCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📝" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L notes}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                    <Border Height="1" Background="#1A2035" Margin="10,8"/>
+                        <!-- Ayırıcı -->
+                        <Border Height="1" Background="#1A2035" Margin="8,6"/>
 
-                    <Button Classes="MenuButton"
-                            Command="{Binding NavigateToSettingsCommand}">
-                        <Grid ColumnDefinitions="40,*">
-                            <TextBlock Grid.Column="0" Text="⚙" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Column="1" Text="Ayarlar" VerticalAlignment="Center" FontWeight="Medium"/>
-                        </Grid>
-                    </Button>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=guide}"
+                                Command="{Binding NavigateToGuideCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="📖" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L menu_guide}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                </StackPanel>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=users}"
+                                Command="{Binding NavigateToUsersCommand}"
+                                IsVisible="{Binding IsAdmin}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="👥" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L menu_users}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
 
-                <!-- Alt bilgi -->
-                <Border Grid.Row="2" Padding="16,12" BorderBrush="#1A2035" BorderThickness="0,1,0,0">
-                    <StackPanel Spacing="2">
-                        <TextBlock Text="{Binding CurrentUser, StringFormat='👤 {0}'}"
-                                   FontSize="12" Foreground="#5A6987"/>
-                        <TextBlock Text="© 2026 Tolgahan Acar"
-                                   FontSize="10" Foreground="#2A3550"/>
+                        <Button Classes="MenuButton"
+                                Classes.Active="{Binding ActiveMenu, Converter={StaticResource StringEqualsConverter}, ConverterParameter=settings}"
+                                Command="{Binding NavigateToSettingsCommand}">
+                            <Grid ColumnDefinitions="36,*">
+                                <TextBlock Grid.Column="0" Text="⚙" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{infra:L settings}" VerticalAlignment="Center" FontWeight="Medium" FontSize="13"/>
+                            </Grid>
+                        </Button>
+
                     </StackPanel>
+                </ScrollViewer>
+
+                <!-- ═══ KULLANICI PANELİ & ÇIKIŞ ═══ -->
+                <Border Grid.Row="2" Padding="10,8" BorderBrush="#1A2035" BorderThickness="0,1,0,0">
+                    <Grid RowDefinitions="Auto,Auto">
+
+                        <!-- Kullanıcı Bilgi + Çıkış Tek Satır -->
+                        <Border Grid.Row="0" Background="#141B2D" CornerRadius="8" Padding="10,8">
+                            <Grid ColumnDefinitions="32,*,Auto">
+                                <!-- Avatar -->
+                                <Border Grid.Column="0"
+                                        Width="30" Height="30"
+                                        CornerRadius="15"
+                                        Background="#1E3A5F">
+                                    <TextBlock Text="👤" FontSize="13"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <!-- Ad & Rol -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1" Margin="8,0,0,0">
+                                    <TextBlock Text="{Binding CurrentUser}"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Foreground="#CBD5E1"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <Border Background="{Binding CurrentRole, Converter={StaticResource RoleBackgroundConverter}}"
+                                            CornerRadius="3" Padding="5,1"
+                                            HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding CurrentRole}"
+                                                   FontSize="9" FontWeight="Bold"
+                                                   Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Çıkış Butonu (kompakt simge) -->
+                                <Button Grid.Column="2"
+                                        Command="{Binding LogoutCommand}"
+                                        ToolTip.Tip="Çıkış Yap"
+                                        Width="32" Height="32"
+                                        Padding="0"
+                                        CornerRadius="6"
+                                        Background="#1C1F2E"
+                                        Foreground="#EF4444"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Cursor="Hand">
+                                    <TextBlock Text="🚪" FontSize="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+
+                        <!-- Copyright -->
+                        <TextBlock Grid.Row="1"
+                                   Text="© 2026 Tolgahan Acar"
+                                   FontSize="8" Foreground="#2A3550"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,4,0,0"/>
+                    </Grid>
                 </Border>
 
             </Grid>

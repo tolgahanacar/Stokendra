@@ -29,39 +29,46 @@
         <!-- Toolbar -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="28,12,28,0">
             <Button Content="{infra:L new_card}" Classes="Primary"
-                    Command="{Binding AddCardCommand}"/>
+                    Command="{Binding AddCardCommand}"
+                    IsVisible="{Binding CanEdit}"/>
             
             <Button Content="{infra:L edit}" Classes="Secondary"
                     Command="{Binding EditCardCommand}"
-                    IsEnabled="{Binding IsCardSelected}"/>
+                    IsEnabled="{Binding IsCardSelected}"
+                    IsVisible="{Binding CanEdit}"/>
             
             <Button Content="{infra:L delete}" Classes="Danger"
                     Command="{Binding DeleteCardCommand}"
-                    IsEnabled="{Binding IsCardSelected}"/>
+                    IsEnabled="{Binding IsCardSelected}"
+                    IsVisible="{Binding CanEdit}"/>
 
             <Button Content="{infra:L bulk_delete}" Classes="Danger"
                     Command="{Binding BulkDeleteCommand}"
-                    IsEnabled="{Binding IsMultipleSelected}"/>
+                    IsEnabled="{Binding IsMultipleSelected}"
+                    IsVisible="{Binding CanEdit}"/>
 
-            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0" IsVisible="{Binding CanEdit}"/>
 
             <Button Content="{infra:L detail}" Classes="Success"
                     Command="{Binding ShowDetailCommand}"
                     IsEnabled="{Binding IsCardSelected}"/>
             
             <Button Content="{infra:L bulk_entry}" Classes="Secondary"
-                    Command="{Binding BulkEntryCommand}"/>
+                    Command="{Binding BulkEntryCommand}"
+                    IsVisible="{Binding CanEdit}"/>
 
-            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0" IsVisible="{Binding CanEdit}"/>
 
             <Button Content="{infra:L export_excel}" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
             
             <Button Content="{infra:L import_excel}" Classes="Secondary"
-                    Command="{Binding ImportExcelCommand}"/>
+                    Command="{Binding ImportExcelCommand}"
+                    IsVisible="{Binding CanEdit}"/>
             
             <Button Content="{infra:L sample_file}" Classes="Secondary"
-                    Command="{Binding DownloadSampleCommand}"/>
+                    Command="{Binding DownloadSampleCommand}"
+                    IsVisible="{Binding CanEdit}"/>
         </StackPanel>
 
         <!-- Grid -->

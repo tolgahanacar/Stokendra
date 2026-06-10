@@ -24,7 +24,7 @@
                 </StackPanel>
 
                 <!-- Action Buttons -->
-                <StackPanel Grid.Row="1" Margin="24,20,24,12" Spacing="8">
+                <StackPanel Grid.Row="1" Margin="24,20,24,12" Spacing="8" IsVisible="{Binding CanEdit}">
                     <Button Content="{infra:L new_note}" Classes="Primary"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                             Height="40"

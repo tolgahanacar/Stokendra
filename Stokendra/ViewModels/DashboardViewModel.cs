@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Stokendra.Data.Interfaces;
+using Stokendra.Infrastructure;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -39,7 +40,8 @@ public partial class DashboardViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var stats = await _reports.GetDashboardStatsAsync();
+            int lowStockThreshold = 0;
+            var stats = await _reports.GetDashboardStatsAsync(lowStockThreshold);
             TotalCards     = stats.TotalCards;
             TotalStock     = FormatNumber(stats.TotalStock);
             LowStock       = stats.LowStock;
@@ -48,7 +50,7 @@ public partial class DashboardViewModel : ViewModelBase
             TodayMovements = stats.TodayMovements;
 
             // Get top 20 low stock items directly from DB
-            var cards = await _stockCards.GetLowStockCardsAsync(20);
+            var cards = await _stockCards.GetLowStockCardsAsync(20, lowStockThreshold);
             LowStockItems.Clear();
             foreach (var k in cards)
             {
@@ -71,6 +73,12 @@ public partial class DashboardViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _ = LoadAsync();
     }
 
     private static string FormatNumber(double v)

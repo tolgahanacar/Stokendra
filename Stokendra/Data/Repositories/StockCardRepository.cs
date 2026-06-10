@@ -23,7 +23,7 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
     public List<StockCard> GetChildCards(int? parentId = null) => GetStockCards("Child", parentId, null);
     public async Task<List<StockCard>> GetChildCardsAsync(int? parentId = null, CancellationToken cancellationToken = default) => await GetStockCardsAsync("Child", parentId, null, cancellationToken);
 
-    public async Task<List<StockCard>> GetLowStockCardsAsync(int limit, CancellationToken cancellationToken = default)
+    public async Task<List<StockCard>> GetLowStockCardsAsync(int limit, int fallbackThreshold = 3, CancellationToken cancellationToken = default)
     {
         var list = new List<StockCard>();
         using var conn = ConnectionFactory.CreateConnection();
@@ -36,11 +36,12 @@ public sealed class StockCardRepository : RepositoryBase, IStockCardRepository
             LEFT JOIN StockCards u ON s.ParentId = u.Id
             WHERE s.CardType = 'Child'
               AND ((SELECT COALESCE(SUM(h.Quantity), 0) FROM StockMovements h WHERE h.StockCardId = s.Id AND h.Type = 'Entry') - 
-                   (SELECT COALESCE(SUM(h.Quantity), 0) FROM StockMovements h WHERE h.StockCardId = s.Id AND h.Type = 'Exit')) <= CASE WHEN s.MinStock > 0 THEN s.MinStock ELSE 3 END
+                   (SELECT COALESCE(SUM(h.Quantity), 0) FROM StockMovements h WHERE h.StockCardId = s.Id AND h.Type = 'Exit')) <= CASE WHEN s.MinStock > 0 THEN s.MinStock ELSE $fallback END
             ORDER BY ((SELECT COALESCE(SUM(h.Quantity), 0) FROM StockMovements h WHERE h.StockCardId = s.Id AND h.Type = 'Entry') - 
                       (SELECT COALESCE(SUM(h.Quantity), 0) FROM StockMovements h WHERE h.StockCardId = s.Id AND h.Type = 'Exit')) ASC, s.Code ASC
             LIMIT $limit";
         cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.Parameters.AddWithValue("$fallback", fallbackThreshold);
 
         using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken)) list.Add(Read(reader));

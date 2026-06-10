@@ -16,7 +16,7 @@ public interface IReportRepository
     /// Total card count, total stock quantity, low stock count,
     /// depleted stock count, total movement count, and today's movement count.
     /// </returns>
-    Task<DashboardStats> GetDashboardStatsAsync(CancellationToken cancellationToken = default);
+    Task<DashboardStats> GetDashboardStatsAsync(int fallbackThreshold = 3, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a summary report of all child stock cards asynchronously.

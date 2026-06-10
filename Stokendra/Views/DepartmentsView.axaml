@@ -1,8 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.DepartmentsView"
-             Background="#0C0E14">
+             Background="#0C0E14"
+             x:DataType="vm:DepartmentsViewModel">
 
     <Grid RowDefinitions="Auto,Auto,*" Margin="40,32,40,40">
         
@@ -14,7 +16,8 @@
 
         <!-- Ekleme Alanı -->
         <Border Grid.Row="1" Background="#161B27" CornerRadius="12" Padding="20,16" 
-                BorderBrush="#1E2D45" BorderThickness="1" Margin="0,0,0,24">
+                BorderBrush="#1E2D45" BorderThickness="1" Margin="0,0,0,24"
+                IsVisible="{Binding CanEdit}">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBox Text="{Binding NewDepartmentName}" 
                          Watermark="Yeni departman adı girin..." 
@@ -34,7 +37,7 @@
                 <Border Grid.Row="0" Background="#1E2D45" Padding="16,10" CornerRadius="10,10,0,0">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="Departman Adı" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                        <TextBlock Grid.Column="1" Text="İşlemler" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,20,0"/>
+                        <TextBlock Grid.Column="1" Text="İşlemler" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,20,0" IsVisible="{Binding CanEdit}"/>
                     </Grid>
                 </Border>
                 
@@ -47,7 +50,7 @@
                         <DataTemplate>
                             <Grid ColumnDefinitions="*,Auto" Margin="4">
                                 <TextBlock Text="{Binding}" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}">
                                     <Button Content="✎ Düzenle" 
                                             Classes="Secondary" 
                                             Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"

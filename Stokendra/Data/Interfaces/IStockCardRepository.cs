@@ -29,7 +29,7 @@ public interface IStockCardRepository
     Task<List<StockCard>> GetChildCardsAsync(int? parentId = null, CancellationToken cancellationToken = default);
 
     /// <summary>Gets low stock child cards directly from the database.</summary>
-    Task<List<StockCard>> GetLowStockCardsAsync(int limit, CancellationToken cancellationToken = default);
+    Task<List<StockCard>> GetLowStockCardsAsync(int limit, int fallbackThreshold = 3, CancellationToken cancellationToken = default);
 
     /// <summary>Gets the stock card with the specified ID. Returns null if not found.</summary>
     StockCard? GetById(int id);

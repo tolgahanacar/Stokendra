@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.ServicesView"
              Background="#0C0E14">
 
@@ -33,14 +34,17 @@
         <!-- Toolbar -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="40,14,40,0">
             <Button Content="＋ Ekle" Classes="Primary"
-                    Command="{Binding AddCommand}"/>
+                    Command="{Binding AddCommand}"
+                    IsVisible="{Binding CanEdit}"/>
             <Button Content="✎ Düzenle" Classes="Secondary"
                     Command="{Binding EditCommand}"
-                    IsEnabled="{Binding IsRecordSelected}"/>
+                    IsEnabled="{Binding IsRecordSelected}"
+                    IsVisible="{Binding CanEdit}"/>
             <Button Content="🗑 Sil" Classes="Danger"
                     Command="{Binding DeleteCommand}"
-                    IsEnabled="{Binding IsRecordSelected}"/>
-            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0"/>
+                    IsEnabled="{Binding IsRecordSelected}"
+                    IsVisible="{Binding CanEdit}"/>
+            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
             <Button Content="📊 Excel" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
             <Button Content="🖨 Yazdır" Classes="Secondary"

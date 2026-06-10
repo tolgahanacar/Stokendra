@@ -17,7 +17,7 @@ public sealed class ReportRepository : IReportRepository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<DashboardStats> GetDashboardStatsAsync(CancellationToken cancellationToken = default)
+    public async Task<DashboardStats> GetDashboardStatsAsync(int fallbackThreshold = 3, CancellationToken cancellationToken = default)
     {
         using var conn = _connectionFactory.CreateConnection();
         using var cmd = conn.CreateCommand();
@@ -25,10 +25,12 @@ public sealed class ReportRepository : IReportRepository
             SELECT 
                 (SELECT COUNT(*) FROM StockCards WHERE CardType = 'Child'),
                 (SELECT COALESCE(SUM(CASE WHEN Type = 'Entry' THEN Quantity ELSE -Quantity END), 0) FROM StockMovements),
-                (SELECT COUNT(*) FROM StockCards s WHERE s.CardType = 'Child' AND (SELECT COALESCE(SUM(CASE WHEN Type = 'Entry' THEN Quantity ELSE -Quantity END), 0) FROM StockMovements WHERE StockCardId = s.Id) <= s.MinStock),
+                (SELECT COUNT(*) FROM StockCards s WHERE s.CardType = 'Child' AND (SELECT COALESCE(SUM(CASE WHEN Type = 'Entry' THEN Quantity ELSE -Quantity END), 0) FROM StockMovements WHERE StockCardId = s.Id) <= CASE WHEN s.MinStock > 0 THEN s.MinStock ELSE $fallback END),
                 (SELECT COUNT(*) FROM StockCards s WHERE s.CardType = 'Child' AND (SELECT COALESCE(SUM(CASE WHEN Type = 'Entry' THEN Quantity ELSE -Quantity END), 0) FROM StockMovements WHERE StockCardId = s.Id) <= 0),
                 (SELECT COUNT(*) FROM StockMovements),
                 (SELECT COUNT(*) FROM StockMovements WHERE DATE(Date) = DATE('now'))";
+        
+        cmd.Parameters.AddWithValue("$fallback", fallbackThreshold);
         
         using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         if (await reader.ReadAsync(cancellationToken))

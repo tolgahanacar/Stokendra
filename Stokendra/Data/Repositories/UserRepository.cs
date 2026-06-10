@@ -151,6 +151,79 @@ public sealed class UserRepository : IUserRepository
         catch { return false; }
     }
 
+    public async Task<System.Collections.Generic.List<Models.User>> GetUsersAsync(CancellationToken cancellationToken = default)
+    {
+        var list = new System.Collections.Generic.List<Models.User>();
+        using var conn = _connectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT Id, Username, Role FROM Users ORDER BY Username ASC";
+        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            list.Add(new Models.User
+            {
+                Id = reader.GetInt32(0),
+                Username = reader.GetString(1),
+                Role = reader.IsDBNull(2) ? "admin" : reader.GetString(2)
+            });
+        }
+        return list;
+    }
+
+    public async Task<bool> AddUserAsync(string username, string password, string role, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            using var checkCmd = conn.CreateCommand();
+            checkCmd.CommandText = "SELECT COUNT(*) FROM Users WHERE Username = $u COLLATE NOCASE";
+            checkCmd.Parameters.AddWithValue("$u", username.Trim());
+            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(cancellationToken));
+            if (count > 0) return false;
+
+            string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+            string hash = HashV4(password, salt);
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES ($u, $h, $s, $r)";
+            cmd.Parameters.AddWithValue("$u", username.Trim());
+            cmd.Parameters.AddWithValue("$h", hash);
+            cmd.Parameters.AddWithValue("$s", salt);
+            cmd.Parameters.AddWithValue("$r", role.Trim());
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public async Task<bool> DeleteUserAsync(int id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM Users WHERE Id = $id";
+            cmd.Parameters.AddWithValue("$id", id);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    public async Task<bool> UpdateUserRoleAsync(int id, string role, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var conn = _connectionFactory.CreateConnection();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "UPDATE Users SET Role = $r WHERE Id = $id";
+            cmd.Parameters.AddWithValue("$r", role.Trim());
+            cmd.Parameters.AddWithValue("$id", id);
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            return true;
+        }
+        catch { return false; }
+    }
+
     private static bool FixedTimeEquals(string a, string b)
     {
         if (a == null || b == null) return false;

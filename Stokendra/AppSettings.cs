@@ -21,6 +21,9 @@ public class AppSettings
 
     /// <summary>Otomatik yedekleme hedef klasörü. Boşsa otomatik yedekleme devre dışıdır.</summary>
     public string AutoBackupPath { get; set; } = "";
+
+    /// <summary>Düşük stok uyarı eşiği.</summary>
+    public int LowStockThreshold { get; set; } = 3;
     
     /// <summary>Yönetici güvenlik kodu.</summary>
     public string MasterSecurityCode { get; set; } = "1951"; // Varsayılan kod

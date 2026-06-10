@@ -108,6 +108,8 @@ class Program
         services.AddSingleton<StocksViewModel>();
         services.AddSingleton<DepartmentsViewModel>();
         services.AddSingleton<ReportsViewModel>();
+        services.AddSingleton<GuideViewModel>();
+        services.AddSingleton<UsersViewModel>();
 
         // Geçici Pencereler ve Formlar (Transient)
         services.AddTransient<LoginViewModel>();
