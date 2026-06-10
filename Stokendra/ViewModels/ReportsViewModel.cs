@@ -97,7 +97,7 @@ public partial class ReportsViewModel : ViewModelBase
                     startDate: StartDate,
                     endDate: EndDate.AddDays(1),
                     department: dept,
-                    movementType: "Cikis",
+                    movementType: "Exit",
                     category: cat,
                     searchTerm: null);
 

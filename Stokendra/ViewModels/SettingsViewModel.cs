@@ -59,10 +59,38 @@ public partial class SettingsViewModel : ViewModelBase
         var settings = AppServices.Current.Settings;
         settings.CompanyName = CompanyName.Trim();
         settings.AutoBackupPath = AutoBackupPath.Trim();
+        
+        bool dbPathChanged = false;
+        if (!string.IsNullOrWhiteSpace(DbPath) && DbPath.Trim() != settings.DbPath)
+        {
+            settings.DbPath = DbPath.Trim();
+            dbPathChanged = true;
+        }
+
         bool saved = settings.Kaydet();
         if (saved)
         {
-            StatusMessage = "Ayarlar kaydedildi.";
+            try
+            {
+                _config.SetConfig("CompanyName", settings.CompanyName);
+                _config.SetConfig("AutoBackupPath", settings.AutoBackupPath);
+                _config.SetConfig("DbPath", settings.DbPath);
+                _config.SetConfig("LastSettingsUpdated", DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
+                _config.WriteAuditLog("Update", "AppConfig", 0, $"Settings updated. Company: {settings.CompanyName}, BackupPath: {settings.AutoBackupPath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Failed to update database AppConfig or AuditLog", ex);
+            }
+
+            if (dbPathChanged)
+            {
+                StatusMessage = "Ayarlar kaydedildi. Veritabanı değişikliğinin geçerli olması için lütfen uygulamayı yeniden başlatın.";
+            }
+            else
+            {
+                StatusMessage = "Ayarlar kaydedildi.";
+            }
             IsSuccess     = true;
         }
         else
@@ -79,6 +107,16 @@ public partial class SettingsViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(path))
         {
             AutoBackupPath = path;
+        }
+    }
+
+    [RelayCommand]
+    public async Task SelectDbFile()
+    {
+        var path = await _dialogService.OpenFileAsync("Veritabanı Dosyası Seç", "SQLite Veritabanı (*.db)|*.db");
+        if (!string.IsNullOrEmpty(path))
+        {
+            DbPath = path;
         }
     }
 

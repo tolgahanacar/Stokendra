@@ -79,11 +79,11 @@
                 CornerRadius="12" BorderBrush="#1E2D45" BorderThickness="1">
             <DataGrid ItemsSource="{Binding ReportRows}" IsReadOnly="True" Background="Transparent">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding StokKartAd}" Width="250"/>
-                    <DataGridTextColumn Header="Miktar" Binding="{Binding Miktar}" Width="100"/>
-                    <DataGridTextColumn Header="Teslim Edilen" Binding="{Binding TeslimEdilen}" Width="200"/>
-                    <DataGridTextColumn Header="Departman" Binding="{Binding Departman}" Width="300"/>
-                    <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy HH:mm}" Width="250"/>
+                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding StockCardName}" Width="250"/>
+                    <DataGridTextColumn Header="Miktar" Binding="{Binding Quantity}" Width="100"/>
+                    <DataGridTextColumn Header="Teslim Edilen" Binding="{Binding Recipient}" Width="200"/>
+                    <DataGridTextColumn Header="Departman" Binding="{Binding Department}" Width="300"/>
+                    <DataGridTextColumn Header="Tarih" Binding="{Binding Date, StringFormat=dd.MM.yyyy HH:mm}" Width="250"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>

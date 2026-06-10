@@ -126,236 +126,287 @@ public sealed partial class Database
 
     private static void MigrateToV12(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        // 1. Rename tables if they exist under Turkish names
-        if (TableExists(connection, transaction, "StokKartlari"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE StokKartlari RENAME TO StockCards;");
-        }
-        if (TableExists(connection, transaction, "StokHareketleri"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE StokHareketleri RENAME TO StockMovements;");
-        }
-        if (TableExists(connection, transaction, "Notlar"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE Notlar RENAME TO Notes;");
-        }
-        if (TableExists(connection, transaction, "Birimler"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE Birimler RENAME TO Units;");
-        }
-        if (TableExists(connection, transaction, "Departmanlar"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE Departmanlar RENAME TO Departments;");
-        }
-        if (TableExists(connection, transaction, "Kullanicilar"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE Kullanicilar RENAME TO Users;");
-        }
-        if (TableExists(connection, transaction, "ServisKayitlari"))
-        {
-            TryAlter(connection, transaction, "ALTER TABLE ServisKayitlari RENAME TO ServiceRecords;");
-        }
-
-        // 2. Rename columns to English in the renamed tables
-        TryRenameColumn(connection, transaction, "StockCards", "Ad", "Name");
-        TryRenameColumn(connection, transaction, "StockCards", "KodNo", "Code");
-        TryRenameColumn(connection, transaction, "StockCards", "Aciklama", "Description");
-        TryRenameColumn(connection, transaction, "StockCards", "MinStok", "MinStock");
-        TryRenameColumn(connection, transaction, "StockCards", "Kategori", "Category");
-        TryRenameColumn(connection, transaction, "StockCards", "KartTipi", "CardType");
-        TryRenameColumn(connection, transaction, "StockCards", "UstKartId", "ParentId");
-        TryRenameColumn(connection, transaction, "StockCards", "OlusturmaTarihi", "CreatedAt");
-        TryRenameColumn(connection, transaction, "StockCards", "GuncellenmeTarihi", "UpdatedAt");
-        TryRenameColumn(connection, transaction, "StockCards", "Birim", "Unit");
-        TryRenameColumn(connection, transaction, "StockCards", "Konum", "Location");
-        TryRenameColumn(connection, transaction, "StockCards", "Tedarikci", "Supplier");
-        TryRenameColumn(connection, transaction, "StockCards", "Barkod", "Barcode");
-        TryRenameColumn(connection, transaction, "StockCards", "BirimFiyat", "UnitPrice");
-
-        // Rename StockMovements columns:
-        TryRenameColumn(connection, transaction, "StockMovements", "StokKartId", "StockCardId");
-        TryRenameColumn(connection, transaction, "StockMovements", "Tur", "Type");
-        TryRenameColumn(connection, transaction, "StockMovements", "Miktar", "Quantity");
-        TryRenameColumn(connection, transaction, "StockMovements", "KimeVerildi", "Recipient");
-        TryRenameColumn(connection, transaction, "StockMovements", "Departman", "Department");
-        TryRenameColumn(connection, transaction, "StockMovements", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "StockMovements", "Aciklama", "Description");
-
-        // Rename Notes columns:
-        TryRenameColumn(connection, transaction, "Notes", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "Notes", "Baslik", "Title");
-        TryRenameColumn(connection, transaction, "Notes", "Icerik", "Content");
-        TryRenameColumn(connection, transaction, "Notes", "OlusturmaTarihi", "CreatedAt");
-        TryRenameColumn(connection, transaction, "Notes", "GuncellenmeTarihi", "UpdatedAt");
-
-        // Rename Units / Departments columns:
-        TryRenameColumn(connection, transaction, "Units", "Ad", "Name");
-        TryRenameColumn(connection, transaction, "Departments", "Ad", "Name");
-
-        // Rename Users columns:
-        TryRenameColumn(connection, transaction, "Users", "KullaniciAdi", "Username");
-        TryRenameColumn(connection, transaction, "Users", "SifreHash", "PasswordHash");
-        TryRenameColumn(connection, transaction, "Users", "Tuz", "Salt");
-        TryRenameColumn(connection, transaction, "Users", "Rol", "Role");
-
-        // Rename ServiceRecords columns:
-        TryRenameColumn(connection, transaction, "ServiceRecords", "CihazAdi", "DeviceName");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "SeriNumarasi", "SerialNumber");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Firma", "Company");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "BakimTarihi", "ServiceDate");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Aciklama", "Description");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Sorun", "Issue");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Sonuc", "Result");
-
-        // Rename AuditLog columns:
-        TryRenameColumn(connection, transaction, "AuditLog", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "AuditLog", "IslemTipi", "Action");
-        TryRenameColumn(connection, transaction, "AuditLog", "TabloAdi", "TableName");
-        TryRenameColumn(connection, transaction, "AuditLog", "KayitId", "RecordId");
-        TryRenameColumn(connection, transaction, "AuditLog", "Detay", "Details");
-
-        // Normalize legacy value strings to English
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Entry' WHERE Type IN ('Giris', 'Giriş')");
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Exit' WHERE Type IN ('Cikis', 'Çıkış')");
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Blank' WHERE Type='Bos'");
-        
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Child' WHERE CardType='Alt'");
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Parent' WHERE CardType IN ('Ust', 'Üst')");
-        
-        // Clean up legacy indexes to prevent duplicate index names on different columns
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_Hareket_StokKartId");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_Hareket_Tarih");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StokKart_KodNo");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StokKart_KartTipi");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS UX_StokKartlari_KodNo");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_ServisKayit_Tarih");
+        // No-op: V12 migration logic is now folded into the much more robust V13 migration
+        // to prevent partial migration errors and foreign key constraint failures.
     }
 
     private static void MigrateToV13(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        // Recovery mechanism for failed V12 migration where empty English tables were created before rename could happen.
-        // If a Turkish table exists, we check if the corresponding English table has 0 rows.
-        // If it has 0 rows, we drop it so the Turkish table can be renamed to it.
-        string[,] tableMapping = {
-            { "StokKartlari", "StockCards" },
-            { "StokHareketleri", "StockMovements" },
-            { "Notlar", "Notes" },
-            { "Birimler", "Units" },
-            { "Departmanlar", "Departments" },
-            { "Kullanicilar", "Users" },
-            { "ServisKayitlari", "ServiceRecords" }
+        string? GetSourceTable(string trName, string enName)
+        {
+            if (TableExists(connection, transaction, trName))
+            {
+                if (TableExists(connection, transaction, enName))
+                {
+                    using var cmdOld = CreateCommand(connection, transaction, $"SELECT COUNT(*) FROM [{trName}]");
+                    using var cmdNew = CreateCommand(connection, transaction, $"SELECT COUNT(*) FROM [{enName}]");
+                    long oldCnt = Convert.ToInt64(cmdOld.ExecuteScalar() ?? 0);
+                    long newCnt = Convert.ToInt64(cmdNew.ExecuteScalar() ?? 0);
+                    return (oldCnt >= newCnt) ? trName : enName;
+                }
+                return trName;
+            }
+            return TableExists(connection, transaction, enName) ? enName : null;
+        }
+
+        // 1. StockCards
+        var srcCards = GetSourceTable("StokKartlari", "StockCards");
+        if (srcCards != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS StockCards_temp;");
+            TryAlter(connection, transaction, @"
+                CREATE TABLE StockCards_temp (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT NOT NULL,
+                    Code TEXT NOT NULL COLLATE NOCASE,
+                    Description TEXT DEFAULT '',
+                    MinStock INTEGER DEFAULT 0,
+                    Category TEXT DEFAULT '',
+                    CardType TEXT NOT NULL DEFAULT 'Child',
+                    ParentId INTEGER DEFAULT NULL,
+                    CreatedAt TEXT DEFAULT '',
+                    UpdatedAt TEXT DEFAULT '',
+                    Unit TEXT DEFAULT 'Adet',
+                    Location TEXT DEFAULT '',
+                    Supplier TEXT DEFAULT '',
+                    Barcode TEXT DEFAULT '',
+                    UnitPrice REAL DEFAULT 0
+                )
+            ");
+
+            string colId = GetSelectColumn(connection, transaction, srcCards, "Id", "Id");
+            string colName = GetSelectColumn(connection, transaction, srcCards, "Name", "Ad", "Name");
+            string colCode = GetSelectColumn(connection, transaction, srcCards, "Code", "KodNo", "Code");
+            string colDesc = GetSelectColumn(connection, transaction, srcCards, "Description", "Aciklama", "Description");
+            string colMinStock = GetSelectColumn(connection, transaction, srcCards, "MinStock", "MinStok", "MinStock");
+            string colCategory = GetSelectColumn(connection, transaction, srcCards, "Category", "Kategori", "Category");
+            string colCardType = GetSelectColumn(connection, transaction, srcCards, "CardType", "KartTipi", "CardType");
+            string colParentId = GetSelectColumn(connection, transaction, srcCards, "ParentId", "UstKartId", "ParentId");
+            string colCreatedAt = GetSelectColumn(connection, transaction, srcCards, "CreatedAt", "OlusturmaTarihi", "CreatedAt");
+            string colUpdatedAt = GetSelectColumn(connection, transaction, srcCards, "UpdatedAt", "GuncellenmeTarihi", "UpdatedAt");
+            string colUnit = GetSelectColumn(connection, transaction, srcCards, "Unit", "Birim", "Unit");
+            string colLocation = GetSelectColumn(connection, transaction, srcCards, "Location", "Konum", "Location");
+            string colSupplier = GetSelectColumn(connection, transaction, srcCards, "Supplier", "Tedarikci", "Supplier");
+            string colBarcode = GetSelectColumn(connection, transaction, srcCards, "Barcode", "Barkod", "Barcode");
+            string colUnitPrice = GetSelectColumn(connection, transaction, srcCards, "UnitPrice", "BirimFiyat", "UnitPrice");
+
+            string exprCardType = $"CASE WHEN {colCardType} IN ('Alt', 'child', 'Child') THEN 'Child' WHEN {colCardType} IN ('Ust', 'Üst', 'parent', 'Parent') THEN 'Parent' ELSE 'Child' END";
+
+            string insertSql = $@"
+                INSERT INTO StockCards_temp (Id, Name, Code, Description, MinStock, Category, CardType, ParentId, CreatedAt, UpdatedAt, Unit, Location, Supplier, Barcode, UnitPrice)
+                SELECT {colId}, COALESCE({colName}, ''), COALESCE({colCode}, ''), COALESCE({colDesc}, ''), COALESCE({colMinStock}, 0), COALESCE({colCategory}, ''), {exprCardType}, {colParentId}, COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, ''), COALESCE({colUnit}, 'Adet'), COALESCE({colLocation}, ''), COALESCE({colSupplier}, ''), COALESCE({colBarcode}, ''), COALESCE({colUnitPrice}, 0.0)
+                FROM [{srcCards}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 2. StockMovements
+        var srcMovements = GetSourceTable("StokHareketleri", "StockMovements");
+        if (srcMovements != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS StockMovements_temp;");
+            TryAlter(connection, transaction, @"
+                CREATE TABLE StockMovements_temp (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    StockCardId INTEGER NOT NULL,
+                    Type TEXT NOT NULL,
+                    Quantity REAL NOT NULL,
+                    Recipient TEXT DEFAULT '',
+                    Department TEXT DEFAULT '',
+                    Date TEXT NOT NULL,
+                    Description TEXT DEFAULT ''
+                )
+            ");
+
+            string colId = GetSelectColumn(connection, transaction, srcMovements, "Id", "Id");
+            string colCardId = GetSelectColumn(connection, transaction, srcMovements, "StockCardId", "StokKartId", "StockCardId");
+            string colType = GetSelectColumn(connection, transaction, srcMovements, "Type", "Tur", "Type");
+            string colQty = GetSelectColumn(connection, transaction, srcMovements, "Quantity", "Miktar", "Quantity");
+            string colRecipient = GetSelectColumn(connection, transaction, srcMovements, "Recipient", "KimeVerildi", "Recipient");
+            string colDept = GetSelectColumn(connection, transaction, srcMovements, "Department", "Departman", "Department");
+            string colDate = GetSelectColumn(connection, transaction, srcMovements, "Date", "Tarih", "Date");
+            string colDesc = GetSelectColumn(connection, transaction, srcMovements, "Description", "Aciklama", "Description");
+
+            string exprType = $"CASE WHEN {colType} IN ('Giris', 'Giriş', 'entry', 'Entry') THEN 'Entry' WHEN {colType} IN ('Cikis', 'Çıkış', 'exit', 'Exit') THEN 'Exit' ELSE 'Blank' END";
+
+            string insertSql = $@"
+                INSERT INTO StockMovements_temp (Id, StockCardId, Type, Quantity, Recipient, Department, Date, Description)
+                SELECT {colId}, {colCardId}, {exprType}, COALESCE({colQty}, 0.0), COALESCE({colRecipient}, ''), COALESCE({colDept}, ''), COALESCE({colDate}, datetime('now')), COALESCE({colDesc}, '')
+                FROM [{srcMovements}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 3. Notes
+        var srcNotes = GetSourceTable("Notlar", "Notes");
+        if (srcNotes != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS Notes_temp;");
+            TryAlter(connection, transaction, "CREATE TABLE Notes_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT NOT NULL, Title TEXT NOT NULL, Content TEXT DEFAULT '', CreatedAt TEXT DEFAULT '', UpdatedAt TEXT DEFAULT '')");
+
+            string colId = GetSelectColumn(connection, transaction, srcNotes, "Id", "Id");
+            string colDate = GetSelectColumn(connection, transaction, srcNotes, "Date", "Tarih", "Date");
+            string colTitle = GetSelectColumn(connection, transaction, srcNotes, "Title", "Baslik", "Title");
+            string colContent = GetSelectColumn(connection, transaction, srcNotes, "Content", "Icerik", "Content");
+            string colCreatedAt = GetSelectColumn(connection, transaction, srcNotes, "CreatedAt", "OlusturmaTarihi", "CreatedAt");
+            string colUpdatedAt = GetSelectColumn(connection, transaction, srcNotes, "UpdatedAt", "GuncellenmeTarihi", "UpdatedAt");
+
+            string insertSql = $@"
+                INSERT INTO Notes_temp (Id, Date, Title, Content, CreatedAt, UpdatedAt)
+                SELECT {colId}, COALESCE({colDate}, datetime('now')), COALESCE({colTitle}, ''), COALESCE({colContent}, ''), COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, '')
+                FROM [{srcNotes}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 4. Units
+        var srcUnits = GetSourceTable("Birimler", "Units");
+        if (srcUnits != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS Units_temp;");
+            TryAlter(connection, transaction, "CREATE TABLE Units_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE)");
+
+            string colId = GetSelectColumn(connection, transaction, srcUnits, "Id", "Id");
+            string colName = GetSelectColumn(connection, transaction, srcUnits, "Name", "Ad", "Name");
+
+            string insertSql = $@"
+                INSERT OR IGNORE INTO Units_temp (Id, Name)
+                SELECT {colId}, COALESCE({colName}, '') FROM [{srcUnits}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 5. Departments
+        var srcDepts = GetSourceTable("Departmanlar", "Departments");
+        if (srcDepts != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS Departments_temp;");
+            TryAlter(connection, transaction, "CREATE TABLE Departments_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE)");
+
+            string colId = GetSelectColumn(connection, transaction, srcDepts, "Id", "Id");
+            string colName = GetSelectColumn(connection, transaction, srcDepts, "Name", "Ad", "Name");
+
+            string insertSql = $@"
+                INSERT OR IGNORE INTO Departments_temp (Id, Name)
+                SELECT {colId}, COALESCE({colName}, '') FROM [{srcDepts}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 6. Users
+        var srcUsers = GetSourceTable("Kullanicilar", "Users");
+        if (srcUsers != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS Users_temp;");
+            TryAlter(connection, transaction, "CREATE TABLE Users_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Username TEXT NOT NULL UNIQUE, PasswordHash TEXT NOT NULL, Salt TEXT NOT NULL, Role TEXT DEFAULT 'admin')");
+
+            string colId = GetSelectColumn(connection, transaction, srcUsers, "Id", "Id");
+            string colUser = GetSelectColumn(connection, transaction, srcUsers, "Username", "KullaniciAdi", "Username");
+            string colHash = GetSelectColumn(connection, transaction, srcUsers, "PasswordHash", "SifreHash", "PasswordHash");
+            string colSalt = GetSelectColumn(connection, transaction, srcUsers, "Salt", "Tuz", "Salt");
+            string colRole = GetSelectColumn(connection, transaction, srcUsers, "Role", "Rol", "Role");
+
+            string insertSql = $@"
+                INSERT OR IGNORE INTO Users_temp (Id, Username, PasswordHash, Salt, Role)
+                SELECT {colId}, COALESCE({colUser}, ''), COALESCE({colHash}, ''), COALESCE({colSalt}, ''), COALESCE({colRole}, 'admin') FROM [{srcUsers}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 7. ServiceRecords
+        var srcService = GetSourceTable("ServisKayitlari", "ServiceRecords");
+        if (srcService != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS ServiceRecords_temp;");
+            TryAlter(connection, transaction, @"
+                CREATE TABLE ServiceRecords_temp (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    DeviceName TEXT NOT NULL,
+                    SerialNumber TEXT DEFAULT '',
+                    Company TEXT DEFAULT '',
+                    ServiceDate TEXT NOT NULL,
+                    Description TEXT DEFAULT '',
+                    Issue TEXT DEFAULT '',
+                    Result TEXT DEFAULT ''
+                )
+            ");
+
+            string colId = GetSelectColumn(connection, transaction, srcService, "Id", "Id");
+            string colDev = GetSelectColumn(connection, transaction, srcService, "DeviceName", "CihazAdi", "DeviceName");
+            string colSer = GetSelectColumn(connection, transaction, srcService, "SerialNumber", "SeriNumarasi", "SerialNumber");
+            string colComp = GetSelectColumn(connection, transaction, srcService, "Company", "Firma", "Company");
+            string colDate = GetSelectColumn(connection, transaction, srcService, "ServiceDate", "BakimTarihi", "ServiceDate");
+            string colDesc = GetSelectColumn(connection, transaction, srcService, "Description", "Aciklama", "Description");
+            string colIssue = GetSelectColumn(connection, transaction, srcService, "Issue", "Sorun", "Issue");
+            string colResult = GetSelectColumn(connection, transaction, srcService, "Result", "Sonuc", "Result");
+
+            string insertSql = $@"
+                INSERT INTO ServiceRecords_temp (Id, DeviceName, SerialNumber, Company, ServiceDate, Description, Issue, Result)
+                SELECT {colId}, COALESCE({colDev}, ''), COALESCE({colSer}, ''), COALESCE({colComp}, ''), COALESCE({colDate}, datetime('now')), COALESCE({colDesc}, ''), COALESCE({colIssue}, ''), COALESCE({colResult}, '')
+                FROM [{srcService}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // 8. AuditLog
+        var srcAudit = GetSourceTable("AuditLog", "AuditLog");
+        if (srcAudit != null)
+        {
+            TryAlter(connection, transaction, "DROP TABLE IF EXISTS AuditLog_temp;");
+            TryAlter(connection, transaction, "CREATE TABLE AuditLog_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT NOT NULL, Action TEXT NOT NULL, TableName TEXT NOT NULL, RecordId INTEGER DEFAULT 0, Details TEXT DEFAULT '')");
+
+            string colId = GetSelectColumn(connection, transaction, srcAudit, "Id", "Id");
+            string colDate = GetSelectColumn(connection, transaction, srcAudit, "Date", "Tarih", "Date");
+            string colAction = GetSelectColumn(connection, transaction, srcAudit, "Action", "IslemTipi", "Action");
+            string colTab = GetSelectColumn(connection, transaction, srcAudit, "TableName", "TabloAdi", "TableName");
+            string colRec = GetSelectColumn(connection, transaction, srcAudit, "RecordId", "KayitId", "RecordId");
+            string colDetails = GetSelectColumn(connection, transaction, srcAudit, "Details", "Detay", "Details");
+
+            string exprAction = $"CASE WHEN {colAction}='Ekle' THEN 'Insert' WHEN {colAction}='Guncelle' THEN 'Update' WHEN {colAction}='Sil' THEN 'Delete' ELSE {colAction} END";
+            string exprTable = $"CASE WHEN {colTab}='StokKartlari' THEN 'StockCards' WHEN {colTab}='StokHareketleri' THEN 'StockMovements' WHEN {colTab}='Notlar' THEN 'Notes' WHEN {colTab}='Birimler' THEN 'Units' WHEN {colTab}='Departmanlar' THEN 'Departments' WHEN {colTab}='Kullanicilar' THEN 'Users' WHEN {colTab}='ServisKayitlari' THEN 'ServiceRecords' ELSE {colTab} END";
+
+            string insertSql = $@"
+                INSERT INTO AuditLog_temp (Id, Date, Action, TableName, RecordId, Details)
+                SELECT {colId}, COALESCE({colDate}, datetime('now')), COALESCE({exprAction}, ''), COALESCE({exprTable}, ''), COALESCE({colRec}, 0), COALESCE({colDetails}, '')
+                FROM [{srcAudit}]
+            ";
+            TryAlter(connection, transaction, insertSql);
+        }
+
+        // Drop both old Turkish tables and potential half-migrated English tables
+        string[] tablesToDrop = {
+            "StokKartlari", "StockCards",
+            "StokHareketleri", "StockMovements",
+            "Notlar", "Notes",
+            "Birimler", "Units",
+            "Departmanlar", "Departments",
+            "Kullanicilar", "Users",
+            "ServisKayitlari", "ServiceRecords",
+            "AuditLog"
         };
 
-        for (int i = 0; i < tableMapping.GetLength(0); i++)
+        foreach (var t in tablesToDrop)
         {
-            string oldTable = tableMapping[i, 0];
-            string newTable = tableMapping[i, 1];
+            TryAlter(connection, transaction, $"DROP TABLE IF EXISTS [{t}];");
+        }
 
-            if (TableExists(connection, transaction, oldTable))
+        // Rename temp tables to final names
+        void TryRenameTable(string tempName, string finalName)
+        {
+            if (TableExists(connection, transaction, tempName))
             {
-                bool dropEmptyNewTable = false;
-                if (TableExists(connection, transaction, newTable))
-                {
-                    using var cmdCount = CreateCommand(connection, transaction, $"SELECT COUNT(*) FROM [{newTable}]");
-                    try
-                    {
-                        long count = Convert.ToInt64(cmdCount.ExecuteScalar() ?? 0);
-                        if (count == 0)
-                        {
-                            dropEmptyNewTable = true;
-                        }
-                    }
-                    catch
-                    {
-                        dropEmptyNewTable = true;
-                    }
-                }
-
-                if (dropEmptyNewTable)
-                {
-                    TryAlter(connection, transaction, $"DROP TABLE IF EXISTS [{newTable}];");
-                }
-
-                if (!TableExists(connection, transaction, newTable))
-                {
-                    TryAlter(connection, transaction, $"ALTER TABLE [{oldTable}] RENAME TO [{newTable}];");
-                }
+                TryAlter(connection, transaction, $"ALTER TABLE [{tempName}] RENAME TO [{finalName}];");
             }
         }
 
-        // Rename columns for StockCards
-        TryRenameColumn(connection, transaction, "StockCards", "Ad", "Name");
-        TryRenameColumn(connection, transaction, "StockCards", "KodNo", "Code");
-        TryRenameColumn(connection, transaction, "StockCards", "Aciklama", "Description");
-        TryRenameColumn(connection, transaction, "StockCards", "MinStok", "MinStock");
-        TryRenameColumn(connection, transaction, "StockCards", "Kategori", "Category");
-        TryRenameColumn(connection, transaction, "StockCards", "KartTipi", "CardType");
-        TryRenameColumn(connection, transaction, "StockCards", "UstKartId", "ParentId");
-        TryRenameColumn(connection, transaction, "StockCards", "OlusturmaTarihi", "CreatedAt");
-        TryRenameColumn(connection, transaction, "StockCards", "GuncellenmeTarihi", "UpdatedAt");
-        TryRenameColumn(connection, transaction, "StockCards", "Birim", "Unit");
-        TryRenameColumn(connection, transaction, "StockCards", "Konum", "Location");
-        TryRenameColumn(connection, transaction, "StockCards", "Tedarikci", "Supplier");
-        TryRenameColumn(connection, transaction, "StockCards", "Barkod", "Barcode");
-        TryRenameColumn(connection, transaction, "StockCards", "BirimFiyat", "UnitPrice");
-
-        // Rename columns for StockMovements
-        TryRenameColumn(connection, transaction, "StockMovements", "StokKartId", "StockCardId");
-        TryRenameColumn(connection, transaction, "StockMovements", "Tur", "Type");
-        TryRenameColumn(connection, transaction, "StockMovements", "Miktar", "Quantity");
-        TryRenameColumn(connection, transaction, "StockMovements", "KimeVerildi", "Recipient");
-        TryRenameColumn(connection, transaction, "StockMovements", "Departman", "Department");
-        TryRenameColumn(connection, transaction, "StockMovements", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "StockMovements", "Aciklama", "Description");
-
-        // Rename columns for Notes
-        TryRenameColumn(connection, transaction, "Notes", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "Notes", "Baslik", "Title");
-        TryRenameColumn(connection, transaction, "Notes", "Icerik", "Content");
-        TryRenameColumn(connection, transaction, "Notes", "OlusturmaTarihi", "CreatedAt");
-        TryRenameColumn(connection, transaction, "Notes", "GuncellenmeTarihi", "UpdatedAt");
-
-        // Rename columns for Units / Departments
-        TryRenameColumn(connection, transaction, "Units", "Ad", "Name");
-        TryRenameColumn(connection, transaction, "Departments", "Ad", "Name");
-
-        // Rename columns for Users
-        TryRenameColumn(connection, transaction, "Users", "KullaniciAdi", "Username");
-        TryRenameColumn(connection, transaction, "Users", "SifreHash", "PasswordHash");
-        TryRenameColumn(connection, transaction, "Users", "Tuz", "Salt");
-        TryRenameColumn(connection, transaction, "Users", "Rol", "Role");
-
-        // Rename columns for ServiceRecords
-        TryRenameColumn(connection, transaction, "ServiceRecords", "CihazAdi", "DeviceName");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "SeriNumarasi", "SerialNumber");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Firma", "Company");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "BakimTarihi", "ServiceDate");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Aciklama", "Description");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Sorun", "Issue");
-        TryRenameColumn(connection, transaction, "ServiceRecords", "Sonuc", "Result");
-
-        // Rename columns for AuditLog
-        TryRenameColumn(connection, transaction, "AuditLog", "Tarih", "Date");
-        TryRenameColumn(connection, transaction, "AuditLog", "IslemTipi", "Action");
-        TryRenameColumn(connection, transaction, "AuditLog", "TabloAdi", "TableName");
-        TryRenameColumn(connection, transaction, "AuditLog", "KayitId", "RecordId");
-        TryRenameColumn(connection, transaction, "AuditLog", "Detay", "Details");
-
-        // Normalize legacy value strings to English
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Entry' WHERE Type IN ('Giris', 'Giriş')");
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Exit' WHERE Type IN ('Cikis', 'Çıkış')");
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Blank' WHERE Type='Bos'");
-        
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Child' WHERE CardType='Alt'");
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Parent' WHERE CardType IN ('Ust', 'Üst')");
-
-        // Clean up legacy indexes to prevent duplicate index names on different columns
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_Hareket_StokKartId");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_Hareket_Tarih");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StokKart_KodNo");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StokKart_KartTipi");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS UX_StokKartlari_KodNo");
-        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_ServisKayit_Tarih");
+        TryRenameTable("StockCards_temp", "StockCards");
+        TryRenameTable("StockMovements_temp", "StockMovements");
+        TryRenameTable("Notes_temp", "Notes");
+        TryRenameTable("Units_temp", "Units");
+        TryRenameTable("Departments_temp", "Departments");
+        TryRenameTable("Users_temp", "Users");
+        TryRenameTable("ServiceRecords_temp", "ServiceRecords");
+        TryRenameTable("AuditLog_temp", "AuditLog");
     }
 
     private static bool TableExists(SqliteConnection connection, SqliteTransaction? transaction, string tableName)
@@ -371,6 +422,17 @@ public sealed partial class Database
         {
             TryAlter(connection, transaction, $"ALTER TABLE {tableName} RENAME COLUMN {oldCol} TO {newCol};");
         }
+    }
+
+    private static string GetSelectColumn(SqliteConnection connection, SqliteTransaction? transaction, string tableName, string targetCol, string sourceCol1, string? sourceCol2 = null)
+    {
+        if (ColumnExists(connection, transaction, tableName, sourceCol1))
+            return $"[{sourceCol1}]";
+        if (sourceCol2 != null && ColumnExists(connection, transaction, tableName, sourceCol2))
+            return $"[{sourceCol2}]";
+        if (ColumnExists(connection, transaction, tableName, targetCol))
+            return $"[{targetCol}]";
+        return "NULL";
     }
 
     private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction? transaction)
@@ -400,6 +462,17 @@ public sealed partial class Database
         string result = command.ExecuteScalar()?.ToString() ?? "ok";
         if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(L("db_integrity_failed", result));
+
+        // Validate foreign key constraint integrity
+        using var commandFk = CreateCommand(connection, transaction, "PRAGMA foreign_key_check;");
+        using var reader = commandFk.ExecuteReader();
+        if (reader.Read())
+        {
+            var table = reader.GetString(0);
+            var rowid = reader.GetInt64(1);
+            var targetTable = reader.GetString(2);
+            throw new InvalidOperationException($"Foreign key constraint violation in table '{table}' at row {rowid} referencing '{targetTable}'");
+        }
     }
 
     private static void SeedDefaults(SqliteConnection connection, SqliteTransaction? transaction)
@@ -435,6 +508,40 @@ public sealed partial class Database
         catch (Exception ex)
         {
             AppLogger.LogError("Seed Users error: " + ex);
+        }
+
+        try
+        {
+            var settings = AppSettings.Yukle();
+            string[] keys = { "CompanyName", "AutoBackupPath", "DbPath", "LastSettingsUpdated" };
+            
+            foreach (var key in keys)
+            {
+                using var checkCmd = CreateCommand(connection, transaction, "SELECT COUNT(*) FROM AppConfig WHERE Key=$k");
+                checkCmd.Parameters.AddWithValue("$k", key);
+                long count = Convert.ToInt64(checkCmd.ExecuteScalar() ?? 0);
+                
+                if (count == 0)
+                {
+                    string value = key switch
+                    {
+                        "CompanyName" => settings.CompanyName ?? "",
+                        "AutoBackupPath" => settings.AutoBackupPath ?? "",
+                        "DbPath" => settings.DbPath ?? "",
+                        "LastSettingsUpdated" => DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", CultureInfo.InvariantCulture),
+                        _ => ""
+                    };
+                    
+                    using var insertCmd = CreateCommand(connection, transaction, "INSERT INTO AppConfig (Key, Value) VALUES ($k, $v)");
+                    insertCmd.Parameters.AddWithValue("$k", key);
+                    insertCmd.Parameters.AddWithValue("$v", value);
+                    insertCmd.ExecuteNonQuery();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Seed AppConfig error: " + ex);
         }
     }
 

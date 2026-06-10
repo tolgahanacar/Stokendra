@@ -34,7 +34,10 @@
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="Veritabanı Yolu" FontSize="12" Foreground="#8A9BBF"/>
-                            <TextBox Text="{Binding DbPath}" IsReadOnly="True" Foreground="#5A6987" FontSize="11"/>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBox Text="{Binding DbPath}" IsReadOnly="True" Foreground="#5A6987" FontSize="11"/>
+                                <Button Grid.Column="1" Content="..." Command="{Binding SelectDbFileCommand}" Margin="4,0,0,0"/>
+                            </Grid>
                         </StackPanel>
                         <Button Content="✔ Ayarları Kaydet" Classes="Primary"
                                 Command="{Binding SaveSettingsCommand}"

@@ -59,12 +59,12 @@
                   Background="#0C0E14"
                   BorderThickness="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Cihaz Adı"  Binding="{Binding CihazAdi}"     Width="250"/>
-                <DataGridTextColumn Header="Seri No"    Binding="{Binding SeriNumarasi}"  Width="200"/>
-                <DataGridTextColumn Header="Firma"      Binding="{Binding Firma}"         Width="180"/>
-                <DataGridTextColumn Header="Sorun"      Binding="{Binding Sorun}"         Width="250"/>
-                <DataGridTextColumn Header="Sonuç"      Binding="{Binding Sonuc}"         Width="250"/>
-                <DataGridTextColumn Header="Tarih"      Binding="{Binding BakimTarihi, StringFormat=dd.MM.yyyy}" Width="*"/>
+                <DataGridTextColumn Header="Cihaz Adı"  Binding="{Binding DeviceName}"     Width="250"/>
+                <DataGridTextColumn Header="Seri No"    Binding="{Binding SerialNumber}"  Width="200"/>
+                <DataGridTextColumn Header="Firma"      Binding="{Binding Company}"         Width="180"/>
+                <DataGridTextColumn Header="Sorun"      Binding="{Binding Issue}"         Width="250"/>
+                <DataGridTextColumn Header="Sonuç"      Binding="{Binding Result}"         Width="250"/>
+                <DataGridTextColumn Header="Tarih"      Binding="{Binding ServiceDate, StringFormat=dd.MM.yyyy}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

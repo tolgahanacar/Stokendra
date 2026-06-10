@@ -112,6 +112,9 @@ public sealed partial class Database : IDisposable
     {
         using var connection = CreateConnection();
         
+        // Turn foreign keys OFF during schema changes so we can rename/drop tables without constraints triggering
+        ExecutePragma(connection, "foreign_keys", "OFF");
+
         using var cmdBegin = connection.CreateCommand();
         cmdBegin.CommandText = "BEGIN IMMEDIATE";
         cmdBegin.ExecuteNonQuery();
@@ -138,7 +141,6 @@ public sealed partial class Database : IDisposable
             SetSchemaVersion(connection, null, CurrentSchemaVersion);
             NormalizeLegacyData(connection, null);
             SeedDefaults(connection, null);
-            ValidateDatabase(connection, null);
 
             using var cmdCommit = connection.CreateCommand();
             cmdCommit.CommandText = "COMMIT";
@@ -151,6 +153,14 @@ public sealed partial class Database : IDisposable
             cmdRollback.ExecuteNonQuery();
             throw;
         }
+        finally
+        {
+            // Restore foreign keys enforcement
+            ExecutePragma(connection, "foreign_keys", "ON");
+        }
+
+        // Validate database integrity and foreign key constraints
+        ValidateDatabase(connection, null);
 
         using var optimize = connection.CreateCommand();
         optimize.CommandText = "PRAGMA optimize;";

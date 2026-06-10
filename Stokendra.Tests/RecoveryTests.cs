@@ -208,36 +208,13 @@ public class RecoveryTests : TestBase
         using (var connection = new SqliteConnection($"Data Source={userDbPath}"))
         {
             connection.Open();
-            
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "PRAGMA user_version;";
-            int version = Convert.ToInt32(cmd.ExecuteScalar());
             
-            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table';";
-            var tables = new System.Collections.Generic.List<string>();
-            using (var reader = cmd.ExecuteReader())
+            cmd.CommandText = "SELECT ServiceDate, DeviceName FROM ServiceRecords LIMIT 5;";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
             {
-                while (reader.Read())
-                {
-                    tables.Add(reader.GetString(0));
-                }
-            }
-            
-            System.Console.WriteLine($"DIAGNOSTIC - DB VERSION: {version}");
-            System.Console.WriteLine($"DIAGNOSTIC - TABLES: {string.Join(", ", tables)}");
-            
-            foreach (var table in tables)
-            {
-                cmd.CommandText = $"PRAGMA table_info({table});";
-                var columns = new System.Collections.Generic.List<string>();
-                using (var reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        columns.Add(reader.GetString(1));
-                    }
-                }
-                System.Console.WriteLine($"DIAGNOSTIC - TABLE {table} COLUMNS: {string.Join(", ", columns)}");
+                System.Console.WriteLine($"DIAGNOSTIC - ServiceDate: '{reader.GetValue(0)}' for Device: '{reader.GetValue(1)}'");
             }
         }
         
