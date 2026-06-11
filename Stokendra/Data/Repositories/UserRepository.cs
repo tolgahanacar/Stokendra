@@ -1,37 +1,41 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Dapper;
 using Microsoft.Data.Sqlite;
 using Stokendra.Data.Interfaces;
 
 namespace Stokendra.Data.Repositories;
 
-public sealed class UserRepository : IUserRepository
+public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
 {
-    private readonly IDbConnectionFactory _connectionFactory;
     private const int HashSize = 32;
 
-    public UserRepository(IDbConnectionFactory connectionFactory)
+    private class UserDb
     {
-        _connectionFactory = connectionFactory;
+        public string PasswordHash { get; set; } = "";
+        public string Salt { get; set; } = "";
+        public string Role { get; set; } = "admin";
     }
 
     public async Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        using var conn = _connectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT PasswordHash, Salt, Role FROM Users WHERE Username = $u COLLATE NOCASE";
-        cmd.Parameters.AddWithValue("$u", username);
-        
-        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        if (!await reader.ReadAsync(cancellationToken))
+        using var conn = connectionFactory.CreateConnection();
+        var user = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
+            "SELECT PasswordHash, Salt, Role FROM Users WHERE Username = @Username COLLATE NOCASE",
+            new { Username = username },
+            cancellationToken: cancellationToken));
+
+        if (user == null)
             return (false, "");
-        
-        string storedHash = reader.GetString(0).Trim();
-        string salt = reader.GetString(1).Trim();
-        string role = reader.IsDBNull(2) ? "admin" : reader.GetString(2);
+
+        string storedHash = user.PasswordHash.Trim();
+        string salt = user.Salt.Trim();
+        string role = user.Role;
 
         bool match = Verify(password, salt, storedHash, out bool upgrade);
         
@@ -52,7 +56,7 @@ public sealed class UserRepository : IUserRepository
         if (!Authenticate(username, oldPassword)) return false;
         if (ValidatePasswordPolicy(newPassword, username) != null) return false;
         
-        using var conn = _connectionFactory.CreateConnection();
+        using var conn = connectionFactory.CreateConnection();
         Upgrade(username, newPassword, conn);
         return true;
     }
@@ -124,24 +128,20 @@ public sealed class UserRepository : IUserRepository
     {
         string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
         string hash = HashV4(pass, salt);
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "UPDATE Users SET PasswordHash=$h, Salt=$s WHERE Username=$u";
-        cmd.Parameters.AddWithValue("$h", hash);
-        cmd.Parameters.AddWithValue("$s", salt);
-        cmd.Parameters.AddWithValue("$u", user);
-        cmd.ExecuteNonQuery();
+        conn.Execute(
+            "UPDATE Users SET PasswordHash=@Hash, Salt=@Salt WHERE Username=@Username",
+            new { Hash = hash, Salt = salt, Username = user });
     }
 
     public async Task<bool> ResetPasswordAsync(string username, string newPassword, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var conn = _connectionFactory.CreateConnection();
-            // Check if user exists
-            using var checkCmd = conn.CreateCommand();
-            checkCmd.CommandText = "SELECT COUNT(*) FROM Users WHERE Username = $u COLLATE NOCASE";
-            checkCmd.Parameters.AddWithValue("$u", username);
-            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(cancellationToken));
+            using var conn = connectionFactory.CreateConnection();
+            var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
+                new { Username = username },
+                cancellationToken: cancellationToken));
             
             if (count == 0) return false;
 
@@ -151,45 +151,33 @@ public sealed class UserRepository : IUserRepository
         catch { return false; }
     }
 
-    public async Task<System.Collections.Generic.List<Models.User>> GetUsersAsync(CancellationToken cancellationToken = default)
+    public async Task<List<Models.User>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        var list = new System.Collections.Generic.List<Models.User>();
-        using var conn = _connectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Id, Username, Role FROM Users ORDER BY Username ASC";
-        using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
-        {
-            list.Add(new Models.User
-            {
-                Id = reader.GetInt32(0),
-                Username = reader.GetString(1),
-                Role = reader.IsDBNull(2) ? "admin" : reader.GetString(2)
-            });
-        }
-        return list;
+        using var conn = connectionFactory.CreateConnection();
+        var result = await conn.QueryAsync<Models.User>(new CommandDefinition(
+            "SELECT Id, Username, Role FROM Users ORDER BY Username ASC",
+            cancellationToken: cancellationToken));
+        return result.ToList();
     }
 
     public async Task<bool> AddUserAsync(string username, string password, string role, CancellationToken cancellationToken = default)
     {
         try
         {
-            using var conn = _connectionFactory.CreateConnection();
-            using var checkCmd = conn.CreateCommand();
-            checkCmd.CommandText = "SELECT COUNT(*) FROM Users WHERE Username = $u COLLATE NOCASE";
-            checkCmd.Parameters.AddWithValue("$u", username.Trim());
-            var count = Convert.ToInt32(await checkCmd.ExecuteScalarAsync(cancellationToken));
+            using var conn = connectionFactory.CreateConnection();
+            var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
+                new { Username = username.Trim() },
+                cancellationToken: cancellationToken));
             if (count > 0) return false;
 
             string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
             string hash = HashV4(password, salt);
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES ($u, $h, $s, $r)";
-            cmd.Parameters.AddWithValue("$u", username.Trim());
-            cmd.Parameters.AddWithValue("$h", hash);
-            cmd.Parameters.AddWithValue("$s", salt);
-            cmd.Parameters.AddWithValue("$r", role.Trim());
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            
+            await conn.ExecuteAsync(new CommandDefinition(
+                "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES (@Username, @PasswordHash, @Salt, @Role)",
+                new { Username = username.Trim(), PasswordHash = hash, Salt = salt, Role = role.Trim() },
+                cancellationToken: cancellationToken));
             return true;
         }
         catch { return false; }
@@ -199,11 +187,11 @@ public sealed class UserRepository : IUserRepository
     {
         try
         {
-            using var conn = _connectionFactory.CreateConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "DELETE FROM Users WHERE Id = $id";
-            cmd.Parameters.AddWithValue("$id", id);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            using var conn = connectionFactory.CreateConnection();
+            await conn.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM Users WHERE Id = @Id",
+                new { Id = id },
+                cancellationToken: cancellationToken));
             return true;
         }
         catch { return false; }
@@ -213,12 +201,11 @@ public sealed class UserRepository : IUserRepository
     {
         try
         {
-            using var conn = _connectionFactory.CreateConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "UPDATE Users SET Role = $r WHERE Id = $id";
-            cmd.Parameters.AddWithValue("$r", role.Trim());
-            cmd.Parameters.AddWithValue("$id", id);
-            await cmd.ExecuteNonQueryAsync(cancellationToken);
+            using var conn = connectionFactory.CreateConnection();
+            await conn.ExecuteAsync(new CommandDefinition(
+                "UPDATE Users SET Role = @Role WHERE Id = @Id",
+                new { Role = role.Trim(), Id = id },
+                cancellationToken: cancellationToken));
             return true;
         }
         catch { return false; }

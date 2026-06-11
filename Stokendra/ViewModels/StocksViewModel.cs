@@ -59,9 +59,7 @@ public partial class StocksViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var all = await _stockCards.GetAllAsync();
-            // Show only Child cards (eligible for movements)
-            _allStocks = all.Where(k => k.CardType == "Child").ToList();
+            _allStocks = await _stockCards.GetChildCardsAsync();
             ApplyFilter();
         }
         catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }

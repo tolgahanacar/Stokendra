@@ -18,7 +18,8 @@ public interface IMovementRepository
         DateTime? endDate = null,
         string? department = null,
         string? movementType = null,
-        string? category = null);
+        string? category = null,
+        string? recipient = null);
 
     /// <summary>Gets stock movements asynchronously matching the specified filters.</summary>
     Task<List<StockMovement>> GetAllAsync(
@@ -28,6 +29,7 @@ public interface IMovementRepository
         string? department = null,
         string? movementType = null,
         string? category = null,
+        string? recipient = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Adds a single stock movement.</summary>
@@ -70,6 +72,7 @@ public interface IMovementRepository
         string? movementType = null,
         string? category = null,
         string? searchTerm = null,
+        string? recipient = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Gets total count of stock movements matching the specified filters.</summary>
@@ -81,5 +84,6 @@ public interface IMovementRepository
         string? movementType = null,
         string? category = null,
         string? searchTerm = null,
+        string? recipient = null,
         CancellationToken cancellationToken = default);
 }

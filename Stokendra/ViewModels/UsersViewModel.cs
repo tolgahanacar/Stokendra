@@ -188,6 +188,60 @@ public partial class UsersViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    public async Task ResetPasswordAsync(User user)
+    {
+        if (user == null) return;
+
+        var vm = new PromptViewModel(LocalizationManager.L("change_password"), $"{user.Username} {LocalizationManager.L("new_password").ToTurkishLower()}:")
+        {
+            PasswordChar = '●',
+            Watermark = LocalizationManager.L("new_password")
+        };
+
+        if (await _dialogService.ShowDialogAsync(vm))
+        {
+            var newPassword = vm.InputText?.Trim();
+            if (string.IsNullOrWhiteSpace(newPassword))
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("password_empty"));
+                return;
+            }
+
+            var policyError = _userRepository.ValidatePasswordPolicy(newPassword, user.Username);
+            if (policyError != null)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), policyError);
+                return;
+            }
+
+            IsLoading = true;
+            try
+            {
+                bool ok = await _userRepository.ResetPasswordAsync(user.Username, newPassword);
+                if (ok)
+                {
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("password_changed"));
+                    StatusMessage = $"{user.Username} - {LocalizationManager.L("password_changed")}";
+                    IsSuccess = true;
+                }
+                else
+                {
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), "Şifre değiştirilemedi.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Reset password error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"Şifre değiştirme hatası: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+    }
+
     public override void RefreshSession()
     {
         base.RefreshSession();

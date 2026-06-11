@@ -1,5 +1,6 @@
 using Stokendra.Data.Interfaces;
 using Stokendra.Models;
+using Stokendra.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,27 +17,17 @@ public class StockCardService : IStockCardService
         _stockCardRepository = stockCardRepository;
     }
 
-    public PagedResult<StockCard> GetPagedStocks(string? searchTerm, int page, int pageSize)
+    public async Task<PagedResult<StockCard>> GetPagedStocksAsync(string? searchTerm, int page, int pageSize)
     {
-        var allStocks = _stockCardRepository.GetChildCards();
-        var filtered = allStocks.AsEnumerable();
+        var search = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim().ToTurkishLower();
 
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var s = searchTerm.Trim().ToLowerInvariant();
-            filtered = filtered.Where(k => 
-                k.Name.ToLowerInvariant().Contains(s) || 
-                k.Code.ToLowerInvariant().Contains(s) || 
-                (!string.IsNullOrEmpty(k.ParentName) && k.ParentName.ToLowerInvariant().Contains(s)));
-        }
-
-        var totalCount = filtered.Count();
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        int totalCount = await _stockCardRepository.GetCountAsync(search, "Child");
+        int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
         if (totalPages == 0) totalPages = 1;
         if (page > totalPages) page = totalPages;
         if (page < 1) page = 1;
 
-        var items = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+        var items = await _stockCardRepository.GetPagedAsync(page, pageSize, search, "Child");
 
         return new PagedResult<StockCard>(items, totalCount, totalPages, page);
     }
@@ -48,6 +39,7 @@ public class StockCardService : IStockCardService
 
     public int GetLowStockCount()
     {
+        // Keep this sync or use GetChildCards (which is now optimized)
         return _stockCardRepository.GetChildCards().Count(k => k.CurrentStock <= (k.MinStock > 0 ? k.MinStock : 3));
     }
 }

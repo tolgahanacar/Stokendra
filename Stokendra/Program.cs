@@ -18,6 +18,9 @@ class Program
     [STAThread]
     public static void Main(string[] args) 
     {
+        // Register custom type mapping for SQLite compatibility
+        DapperConfig.Initialize();
+
         // Global Exception Handling
         AppDomain.CurrentDomain.UnhandledException += (s, e) => 
         {

@@ -48,4 +48,10 @@ public interface IStockCardRepository
 
     /// <summary>Generates the next sequential stock code (e.g. "042").</summary>
     string GetNextCode();
+
+    /// <summary>Gets a paged list of stock cards with search and type filters directly from the database.</summary>
+    Task<List<StockCard>> GetPagedAsync(int page, int pageSize, string? searchTerm, string? cardType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the total count of stock cards matching search and type filters.</summary>
+    Task<int> GetCountAsync(string? searchTerm, string? cardType = null, CancellationToken cancellationToken = default);
 }

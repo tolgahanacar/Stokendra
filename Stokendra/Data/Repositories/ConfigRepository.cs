@@ -1,50 +1,36 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
 using Stokendra.Data.Interfaces;
 using Stokendra.Models;
-using System.Globalization;
 using System.Collections.Generic;
-using System;
+using System.Linq;
 
 namespace Stokendra.Data.Repositories;
 
-public sealed class ConfigRepository : RepositoryBase, IConfigRepository
+public sealed class ConfigRepository(IDbConnectionFactory connectionFactory) 
+    : RepositoryBase(connectionFactory), IConfigRepository
 {
-    public ConfigRepository(IDbConnectionFactory connectionFactory) : base(connectionFactory)
-    {
-    }
-
     public string GetConfig(string key, string defaultValue = "")
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Value FROM AppConfig WHERE Key = $k";
-        cmd.Parameters.AddWithValue("$k", key);
-        var res = cmd.ExecuteScalar();
-        return res != null && res != DBNull.Value ? res.ToString()! : defaultValue;
+        var res = conn.ExecuteScalar<string>(
+            "SELECT Value FROM AppConfig WHERE Key = @Key", 
+            new { Key = key });
+        return res ?? defaultValue;
     }
 
     public void SetConfig(string key, string value)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "INSERT INTO AppConfig (Key, Value) VALUES ($k, $v) ON CONFLICT(Key) DO UPDATE SET Value=$v";
-        cmd.Parameters.AddWithValue("$k", key);
-        cmd.Parameters.AddWithValue("$v", value ?? "");
-        cmd.ExecuteNonQuery();
+        conn.Execute(
+            "INSERT INTO AppConfig (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value=@Value",
+            new { Key = key, Value = value ?? "" });
     }
 
     public List<Unit> GetUnits()
     {
-        var list = new List<Unit>();
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Id, Name FROM Units ORDER BY Name";
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            list.Add(new Unit { Id = reader.GetInt32(0), Name = reader.GetString(1) });
-        }
-        return list;
+        return conn.Query<Unit>("SELECT Id, Name FROM Units ORDER BY Name").ToList();
     }
 
     public void CreateBackup(string destinationPath)
@@ -63,12 +49,7 @@ public sealed class ConfigRepository : RepositoryBase, IConfigRepository
     public void TruncateAuditLog()
     {
         using var conn = ConnectionFactory.CreateConnection();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM AuditLog";
-        cmd.ExecuteNonQuery();
-        
-        using var cmdReset = conn.CreateCommand();
-        cmdReset.CommandText = "DELETE FROM sqlite_sequence WHERE name='AuditLog'";
-        cmdReset.ExecuteNonQuery();
+        conn.Execute("DELETE FROM AuditLog");
+        conn.Execute("DELETE FROM sqlite_sequence WHERE name='AuditLog'");
     }
 }

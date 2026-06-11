@@ -99,16 +99,14 @@ public partial class ReportsViewModel : ViewModelBase
                     department: dept,
                     movementType: "Exit",
                     category: cat,
-                    searchTerm: null);
+                    searchTerm: null,
+                    recipient: user);
 
                 if (batch.Count == 0) break;
                 allMovements.AddRange(batch);
                 if (batch.Count < batchSize) break;
                 page++;
             }
-
-            if (user != null)
-                allMovements = allMovements.Where(m => m.Recipient == user).ToList();
 
             ReportRows.Clear();
             double total = 0;

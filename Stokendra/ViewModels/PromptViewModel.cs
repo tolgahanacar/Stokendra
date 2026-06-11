@@ -9,6 +9,8 @@ public partial class PromptViewModel : ViewModelBase
     [ObservableProperty] private string _title;
     [ObservableProperty] private string _message;
     [ObservableProperty] private string _inputText;
+    [ObservableProperty] private char _passwordChar = '\0';
+    [ObservableProperty] private string _watermark = "Değer giriniz...";
 
     public PromptViewModel(string title, string message, string initialValue = "")
     {

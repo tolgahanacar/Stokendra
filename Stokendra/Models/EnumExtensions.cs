@@ -49,19 +49,4 @@ public static class EnumExtensions
         _ => CardType.Child
     };
 
-    /// <summary>
-    /// Converts string to upper case using Turkish culture rules.
-    /// </summary>
-    public static string ToUpperTr(this string text)
-    {
-        return text.ToUpper(new CultureInfo("tr-TR"));
-    }
-
-    /// <summary>
-    /// Converts string to lower case using Turkish culture rules.
-    /// </summary>
-    public static string ToLowerTr(this string text)
-    {
-        return text.ToLower(new CultureInfo("tr-TR"));
-    }
 }

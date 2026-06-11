@@ -11,4 +11,10 @@ public static class StringExtensions
         if (text == null) return string.Empty;
         return text.ToLower(TurkishCulture);
     }
+
+    public static string ToTurkishUpper(this string? text)
+    {
+        if (text == null) return string.Empty;
+        return text.ToUpper(TurkishCulture);
+    }
 }

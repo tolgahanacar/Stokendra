@@ -4,14 +4,9 @@ using System.Globalization;
 
 namespace Stokendra.Data.Repositories;
 
-public abstract class RepositoryBase
+public abstract class RepositoryBase(IDbConnectionFactory connectionFactory)
 {
-    protected readonly IDbConnectionFactory ConnectionFactory;
-
-    protected RepositoryBase(IDbConnectionFactory connectionFactory)
-    {
-        ConnectionFactory = connectionFactory;
-    }
+    protected readonly IDbConnectionFactory ConnectionFactory = connectionFactory;
 
     protected void LogAudit(string type, string table, int recordId, string detail)
     {

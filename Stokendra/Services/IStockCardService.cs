@@ -10,9 +10,9 @@ namespace Stokendra.Services;
 public interface IStockCardService
 {
     /// <summary>
-    /// Returns a filtered and paged list of stock cards.
+    /// Returns a filtered and paged list of stock cards asynchronously.
     /// </summary>
-    PagedResult<StockCard> GetPagedStocks(string? searchTerm, int page, int pageSize);
+    Task<PagedResult<StockCard>> GetPagedStocksAsync(string? searchTerm, int page, int pageSize);
 
     /// <summary>
     /// Gets all stock cards asynchronously.
