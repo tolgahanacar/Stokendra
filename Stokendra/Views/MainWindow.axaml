@@ -8,7 +8,8 @@
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="#0C0E14"
-        Icon="/Stokendra.ico">
+        Icon="/Stokendra.ico"
+        x:CompileBindings="False">
 
     <Grid ColumnDefinitions="250,*">
 

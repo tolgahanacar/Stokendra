@@ -106,6 +106,10 @@ public partial class StockCardsViewModel : ViewModelBase
             ApplySearch();
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError("Search filter error", ex);
+        }
     }
 
     private void ApplySearch()
@@ -120,7 +124,7 @@ public partial class StockCardsViewModel : ViewModelBase
 
         Cards.Clear();
         foreach (var k in data) Cards.Add(k);
-        StatusText = $"{data.Count} {LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim()}";
+        StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
     }
 
     [RelayCommand]
@@ -143,7 +147,7 @@ public partial class StockCardsViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() => _stockCards.Delete(SelectedCard.Id));
+            await _stockCards.DeleteAsync(SelectedCard.Id);
             await LoadAsync();
             StatusText = LocalizationManager.L("bulk_delete_success", 1);
         }
@@ -160,7 +164,7 @@ public partial class StockCardsViewModel : ViewModelBase
         var vm = new AddStockCardViewModel(_stockCards);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await Task.Run(() => _stockCards.Add(vm.Result));
+            await _stockCards.AddAsync(vm.Result);
             await LoadAsync();
             StatusText = LocalizationManager.L("save_settings"); // saved
         }
@@ -173,7 +177,7 @@ public partial class StockCardsViewModel : ViewModelBase
         var vm = new AddStockCardViewModel(_stockCards, SelectedCard);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await Task.Run(() => _stockCards.Update(vm.Result));
+            await _stockCards.UpdateAsync(vm.Result);
             await LoadAsync();
             StatusText = LocalizationManager.L("save_settings");
         }
@@ -193,10 +197,8 @@ public partial class StockCardsViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() => {
-                foreach (var k in SelectedCards.ToList())
-                    _stockCards.Delete(k.Id);
-            });
+            foreach (var k in SelectedCards.ToList())
+                await _stockCards.DeleteAsync(k.Id);
             await LoadAsync();
             StatusText = LocalizationManager.L("bulk_delete_success", SelectedCards.Count);
         }

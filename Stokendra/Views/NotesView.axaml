@@ -3,7 +3,8 @@
              xmlns:vm="using:Stokendra.ViewModels"
              xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.NotesView"
-             Background="#0C0E14">
+             Background="#0C0E14"
+             x:CompileBindings="False">
 
     <UserControl.KeyBindings>
         <KeyBinding Gesture="Delete" 
@@ -153,6 +154,11 @@
                         <TextBox Text="{Binding EditTitle}" 
                                  Watermark="{infra:L note_title_placeholder}"
                                  FontSize="15" Padding="12"/>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{infra:L date_label}" FontSize="13" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                        <DatePicker SelectedDate="{Binding EditCreatedAt}" HorizontalAlignment="Stretch"/>
                     </StackPanel>
 
                     <StackPanel Spacing="8">

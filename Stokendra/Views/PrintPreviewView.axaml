@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterOwner"
         Background="#0C0E14"
         TransparencyLevelHint="AcrylicBlur"
-        ExtendClientAreaToDecorationsHint="True">
+        ExtendClientAreaToDecorationsHint="True" x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20">
         <!-- Header -->

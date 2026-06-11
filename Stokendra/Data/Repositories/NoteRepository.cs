@@ -35,7 +35,7 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
     public void Add(Note note)
     {
         if (string.IsNullOrWhiteSpace(note.Title)) throw new InvalidOperationException("Title cannot be empty.");
-        note.CreatedAt = DateTime.Now;
+        // note.CreatedAt is preserved from note if set, otherwise uses its default initialized value.
         note.UpdatedAt = DateTime.Now;
 
         using var conn = ConnectionFactory.CreateConnection();
@@ -58,11 +58,12 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
     {
         note.UpdatedAt = DateTime.Now;
         using var conn = ConnectionFactory.CreateConnection();
-        var sql = "UPDATE Notes SET Title=@Title, Content=@Content, UpdatedAt=@UpdatedAt WHERE Id=@Id";
+        var sql = "UPDATE Notes SET Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
         
         conn.Execute(sql, new {
             note.Title,
             Content = note.Content ?? "",
+            CreatedAt = note.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             UpdatedAt = note.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             note.Id
         });

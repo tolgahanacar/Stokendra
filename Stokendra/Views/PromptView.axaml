@@ -7,7 +7,7 @@
         MinHeight="160"
         WindowStartupLocation="CenterOwner"
         CanResize="False"
-        Background="#161B27">
+        Background="#161B27" x:CompileBindings="False">
 
     <!--
         PromptView: küçük input dialog.

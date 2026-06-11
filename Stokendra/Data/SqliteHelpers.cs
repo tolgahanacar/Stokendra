@@ -1,11 +1,15 @@
 using Microsoft.Data.Sqlite;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
 
 namespace Stokendra.Data;
 
 public static class SqliteHelpers
 {
+    private static readonly CultureInfo TurkishCulture = new("tr-TR");
+    private static readonly ConcurrentDictionary<string, Regex> RegexCache = new(StringComparer.Ordinal);
+
     public static void RegisterCustomFunctions(SqliteConnection connection)
     {
         connection.CreateFunction("like", (string pattern, string input) => SqlLike(pattern, input));
@@ -15,9 +19,8 @@ public static class SqliteHelpers
     {
         if (input == null || pattern == null) return false;
 
-        var culture = new CultureInfo("tr-TR");
-        string inputLower = input.ToLower(culture);
-        string patternLower = pattern.ToLower(culture);
+        string inputLower = input.ToLower(TurkishCulture);
+        string patternLower = pattern.ToLower(TurkishCulture);
 
         // Optimize standard %term% matches
         if (patternLower.StartsWith("%") && patternLower.EndsWith("%") && patternLower.Length >= 2)
@@ -36,7 +39,8 @@ public static class SqliteHelpers
 
         try
         {
-            return Regex.IsMatch(inputLower, regexPattern);
+            var regex = RegexCache.GetOrAdd(regexPattern, pat => new Regex(pat, RegexOptions.Singleline));
+            return regex.IsMatch(inputLower);
         }
         catch
         {

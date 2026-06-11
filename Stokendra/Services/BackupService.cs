@@ -204,7 +204,7 @@ public class BackupService : IBackupService
 
         ws.Columns().AdjustToContents();
         ApplyTableStyle(ws, tumKartlar.Count, headers.Length);
-        wb.SaveAs(Path.Combine(tempDir, "StokKartlari.xlsx"));
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "StokKartlari.xlsx")));
     }
 
     private async Task ExportStokHareketleriAsync(string tempDir)
@@ -234,7 +234,7 @@ public class BackupService : IBackupService
 
         ws.Columns().AdjustToContents();
         ApplyTableStyle(ws, hareketler.Count, headers.Length);
-        wb.SaveAs(Path.Combine(tempDir, "StokHareketleri.xlsx"));
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "StokHareketleri.xlsx")));
     }
 
     private async Task ExportServisKayitlariAsync(string tempDir)
@@ -262,7 +262,7 @@ public class BackupService : IBackupService
 
         ws.Columns().AdjustToContents();
         ApplyTableStyle(ws, servisler.Count, headers.Length);
-        wb.SaveAs(Path.Combine(tempDir, "ServisKayitlari.xlsx"));
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "ServisKayitlari.xlsx")));
     }
 
     private async Task ExportNotlarAsync(string tempDir)
@@ -288,7 +288,7 @@ public class BackupService : IBackupService
 
         ws.Columns().AdjustToContents();
         ApplyTableStyle(ws, notlar.Count, headers.Length);
-        wb.SaveAs(Path.Combine(tempDir, "Notlar.xlsx"));
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Notlar.xlsx")));
     }
 
     private async Task ExportDepartmanlarAsync(string tempDir)
@@ -309,7 +309,7 @@ public class BackupService : IBackupService
 
         ws.Columns().AdjustToContents();
         ApplyTableStyle(ws, deptlar.Count, headers.Length);
-        wb.SaveAs(Path.Combine(tempDir, "Departmanlar.xlsx"));
+        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Departmanlar.xlsx")));
     }
 
     private void SetHeaders(IXLWorksheet ws, string[] headers)

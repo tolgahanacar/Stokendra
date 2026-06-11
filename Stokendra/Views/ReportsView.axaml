@@ -3,7 +3,7 @@
              xmlns:vm="using:Stokendra.ViewModels"
              xmlns:sp="clr-namespace:ScottPlot.Avalonia;assembly=ScottPlot.Avalonia"
              x:Class="Stokendra.Views.ReportsView"
-             Background="#0C0E14">
+             Background="#0C0E14" x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
         

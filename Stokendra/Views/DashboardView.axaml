@@ -3,7 +3,7 @@
              xmlns:vm="using:Stokendra.ViewModels"
              xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.DashboardView"
-             Background="#0C0E14">
+             Background="#0C0E14" x:CompileBindings="False">
 
     <ScrollViewer>
         <StackPanel Margin="28,24,28,24" Spacing="24">

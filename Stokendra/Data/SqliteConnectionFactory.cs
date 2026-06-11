@@ -35,9 +35,10 @@ public sealed class SqliteConnectionFactory : IDbConnectionFactory
         cmd.CommandText = @"
             PRAGMA journal_mode = WAL;
             PRAGMA synchronous = NORMAL;
-            PRAGMA busy_timeout = 5000;
+            PRAGMA busy_timeout = 30000;
             PRAGMA foreign_keys = ON;
-            PRAGMA cache_size = -2000; -- ~2MB
+            PRAGMA cache_size = -32000; -- ~32MB
+            PRAGMA temp_store = MEMORY;
         ";
         cmd.ExecuteNonQuery();
         

@@ -8,7 +8,8 @@
         MinWidth="900" MinHeight="500"
         MaxHeight="960"
         WindowStartupLocation="CenterOwner"
-        Background="#0C0E14">
+        Background="#0C0E14"
+        x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 

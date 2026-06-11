@@ -81,6 +81,10 @@ public partial class StocksViewModel : ViewModelBase
             ApplyFilter();
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            _logger.LogError("Filter schedule error", ex);
+        }
     }
 
     private void ApplyFilter()
@@ -100,7 +104,7 @@ public partial class StocksViewModel : ViewModelBase
         int depletedCount = data.Count(k => k.CurrentStock <= 0);
         
         // Localized status text
-        StatusText = $"{data.Count} {LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim()} | ⚠ {lowStockCount} {LocalizationManager.L("low_stock")} | ❌ {depletedCount} {LocalizationManager.L("depleted")}";
+        StatusText = $"{LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim()} | ⚠ {lowStockCount} {LocalizationManager.L("low_stock")} | ❌ {depletedCount} {LocalizationManager.L("depleted")}";
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]

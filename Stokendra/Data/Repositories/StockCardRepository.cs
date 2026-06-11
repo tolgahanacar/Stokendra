@@ -14,6 +14,19 @@ namespace Stokendra.Data.Repositories;
 public sealed class StockCardRepository(IDbConnectionFactory connectionFactory) 
     : RepositoryBase(connectionFactory), IStockCardRepository
 {
+    private const string StockBalancesCte = """
+        WITH StockBalances AS (
+            SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
+                   u.Name as ParentName,
+                   CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
+                   CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
+            FROM StockCards s
+            LEFT JOIN StockCards u ON s.ParentId = u.Id
+            LEFT JOIN StockMovements h ON h.StockCardId = s.Id
+            GROUP BY s.Id
+        )
+        """;
+
     public List<StockCard> GetAll() => GetStockCards(null, null, null);
     public async Task<List<StockCard>> GetAllAsync(CancellationToken cancellationToken = default) => await GetStockCardsAsync(null, null, null, cancellationToken);
     public List<StockCard> GetParentCards() => GetStockCards("Parent", null, null);
@@ -24,18 +37,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
     public async Task<List<StockCard>> GetLowStockCardsAsync(int limit, int fallbackThreshold = 3, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        var sql = """
-            WITH StockBalances AS (
-                SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
-                       u.Name as ParentName,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
-                FROM StockCards s
-                LEFT JOIN StockCards u ON s.ParentId = u.Id
-                LEFT JOIN StockMovements h ON h.StockCardId = s.Id
-                WHERE s.CardType = 'Child'
-                GROUP BY s.Id
-            )
+        var sql = StockBalancesCte + """
+
             SELECT *, (TotalEntry - TotalExit) as CurrentStock
             FROM StockBalances
             WHERE CurrentStock <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END
@@ -128,6 +131,31 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         }
     }
 
+    public async Task UpdateAsync(StockCard stockCard, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            ValidateCard(stockCard, conn, (SqliteTransaction)trans);
+            var sql = """
+                UPDATE StockCards SET 
+                    Code=@Code, Name=@Name, CardType=@CardType, ParentId=@ParentId, Category=@Category, 
+                    Unit=@Unit, MinStock=@MinStock, Location=@Location, Supplier=@Supplier, Barcode=@Barcode, 
+                    UnitPrice=@UnitPrice, Description=@Description 
+                WHERE Id=@Id
+                """;
+            await conn.ExecuteAsync(new CommandDefinition(sql, stockCard, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Update", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
+            throw; 
+        }
+    }
+
     public void Delete(int id)
     {
         using var conn = ConnectionFactory.CreateConnection();
@@ -141,6 +169,23 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         catch 
         { 
             trans.Rollback(); 
+            throw; 
+        }
+    }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockCards WHERE Id=@Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Delete", "StockCards", id, "");
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
             throw; 
         }
     }
@@ -174,23 +219,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             @params.Add("Id", id.Value);
         }
 
-        var sql = $"""
-            WITH StockBalances AS (
-                SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
-                       u.Name as ParentName,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
-                FROM StockCards s
-                LEFT JOIN StockCards u ON s.ParentId = u.Id
-                LEFT JOIN StockMovements h ON h.StockCardId = s.Id
-                GROUP BY s.Id
-            )
-            SELECT *, (TotalEntry - TotalExit) as CurrentStock
-            FROM StockBalances s
-            WHERE {where}
-            ORDER BY s.Code
-            """;
-
+        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances s WHERE {where} ORDER BY s.Code";
         return conn.Query<StockCard>(sql, @params).ToList();
     }
 
@@ -215,22 +244,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             @params.Add("Id", id.Value);
         }
 
-        var sql = $"""
-            WITH StockBalances AS (
-                SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
-                       u.Name as ParentName,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
-                FROM StockCards s
-                LEFT JOIN StockCards u ON s.ParentId = u.Id
-                LEFT JOIN StockMovements h ON h.StockCardId = s.Id
-                GROUP BY s.Id
-            )
-            SELECT *, (TotalEntry - TotalExit) as CurrentStock
-            FROM StockBalances s
-            WHERE {where}
-            ORDER BY s.Code
-            """;
+        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances s WHERE {where} ORDER BY s.Code";
 
         var result = await conn.QueryAsync<StockCard>(new CommandDefinition(
             sql, @params, cancellationToken: cancellationToken));
@@ -254,23 +268,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             @params.Add("Search", $"%{searchTerm}%");
         }
         
-        var sql = $"""
-            WITH StockBalances AS (
-                SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
-                       u.Name as ParentName,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                       CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
-                FROM StockCards s
-                LEFT JOIN StockCards u ON s.ParentId = u.Id
-                LEFT JOIN StockMovements h ON h.StockCardId = s.Id
-                GROUP BY s.Id
-            )
-            SELECT *, (TotalEntry - TotalExit) as CurrentStock
-            FROM StockBalances
-            WHERE {where}
-            ORDER BY Code ASC
-            LIMIT @Limit OFFSET @Offset
-            """;
+        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances WHERE {where} ORDER BY Code ASC LIMIT @Limit OFFSET @Offset";
             
         @params.Add("Limit", pageSize);
         @params.Add("Offset", (page - 1) * pageSize);
@@ -285,7 +283,9 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         using var conn = ConnectionFactory.CreateConnection();
         var @params = new DynamicParameters();
         
+        string sql = "SELECT COUNT(*) FROM StockCards s";
         string where = "1=1";
+        
         if (!string.IsNullOrEmpty(cardType))
         {
             where += " AND s.CardType = @CardType";
@@ -294,26 +294,13 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            var sql = """
-                SELECT COUNT(*) FROM StockCards s
-                LEFT JOIN StockCards u ON s.ParentId = u.Id
-                WHERE 1=1
-                """;
-            if (!string.IsNullOrEmpty(cardType))
-                sql += " AND s.CardType = @CardType";
-            sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR s.Category LIKE @Search OR u.Name LIKE @Search)";
+            sql += " LEFT JOIN StockCards u ON s.ParentId = u.Id";
+            where += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR s.Category LIKE @Search OR u.Name LIKE @Search)";
             @params.Add("Search", $"%{searchTerm}%");
-            @params.Add("CardType", cardType);
-            return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
         }
-        else
-        {
-            var sql = "SELECT COUNT(*) FROM StockCards s WHERE 1=1";
-            if (!string.IsNullOrEmpty(cardType))
-                sql += " AND s.CardType = @CardType";
-            @params.Add("CardType", cardType);
-            return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
-        }
+        
+        sql = $"{sql} WHERE {where}";
+        return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
     }
 
     private void ValidateCard(StockCard s, SqliteConnection conn, SqliteTransaction? trans = null)

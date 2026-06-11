@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.ServicesView"
-             Background="#0C0E14">
+             Background="#0C0E14" x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
 

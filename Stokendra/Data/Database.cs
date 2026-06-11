@@ -95,7 +95,7 @@ public sealed partial class Database : IDisposable
     {
         ExecutePragma(connection, "foreign_keys", "ON");
         ExecutePragma(connection, "busy_timeout", "30000"); // 30 sn
-        ExecutePragma(connection, "synchronous", "FULL");  // Maksimum güvenlik
+        ExecutePragma(connection, "synchronous", "NORMAL"); // Uyumlu ve yüksek performans
         ExecutePragma(connection, "journal_mode", "WAL");
         ExecutePragma(connection, "temp_store", "MEMORY");
         ExecutePragma(connection, "cache_size", "-32000"); // 32MB cache

@@ -8,29 +8,19 @@ namespace Stokendra.Data.Interfaces;
 /// </summary>
 public interface IUserRepository
 {
-    /// <summary>
-    /// Verifies the username and password.
-    /// If the password is in a legacy hash format, automatically upgrades it to the current format.
-    /// </summary>
-    /// <returns>True and the user role if the credentials are valid.</returns>
     Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Verifies the username and password synchronously.
+    /// Verifies the username and password asynchronously.
     /// </summary>
-    bool Authenticate(string username, string password);
+    Task<bool> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Changes the user's password.
+    /// Changes the user's password asynchronously.
     /// Verifies the old password and checks if the new password meets the security policy.
     /// </summary>
     /// <returns>True if the password was successfully changed.</returns>
-    bool ChangePassword(string username, string oldPassword, string newPassword);
-
-    /// <summary>
-    /// Checks if the default "admin" password is still in use.
-    /// </summary>
-    bool IsDefaultAdminPasswordInUse();
+    Task<bool> ChangePasswordAsync(string username, string oldPassword, string newPassword, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates the password against the password policy.

@@ -23,6 +23,7 @@ public partial class NotesViewModel : ViewModelBase
     // Edit properties
     [ObservableProperty] private string _editTitle   = "";
     [ObservableProperty] private string _editContent = "";
+    [ObservableProperty] private DateTimeOffset _editCreatedAt = DateTimeOffset.Now;
     [ObservableProperty] private bool   _isEditing;
     private int _editingId = 0;
 
@@ -50,7 +51,7 @@ public partial class NotesViewModel : ViewModelBase
             var data = await Task.Run(() => _notes.GetAll());
             Notes.Clear();
             foreach (var n in data) Notes.Add(n);
-            StatusText = $"{data.Count} {LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim()}";
+            StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
         }
         catch (Exception ex) 
         { 
@@ -66,6 +67,7 @@ public partial class NotesViewModel : ViewModelBase
         _editingId   = 0;
         EditTitle    = "";
         EditContent  = "";
+        EditCreatedAt = DateTimeOffset.Now;
         IsEditing    = true;
     }
 
@@ -76,6 +78,7 @@ public partial class NotesViewModel : ViewModelBase
         _editingId   = SelectedNote.Id;
         EditTitle    = SelectedNote.Title;
         EditContent  = SelectedNote.Content;
+        EditCreatedAt = new DateTimeOffset(SelectedNote.CreatedAt);
         IsEditing    = true;
     }
 
@@ -92,13 +95,13 @@ public partial class NotesViewModel : ViewModelBase
         {
             if (_editingId == 0)
             {
-                var n = new Note { Title = EditTitle.Trim(), Content = EditContent.Trim() };
+                var n = new Note { Title = EditTitle.Trim(), Content = EditContent.Trim(), CreatedAt = EditCreatedAt.DateTime };
                 await Task.Run(() => _notes.Add(n));
                 StatusText = LocalizationManager.L("save_settings");
             }
             else
             {
-                var n = new Note { Id = _editingId, Title = EditTitle.Trim(), Content = EditContent.Trim() };
+                var n = new Note { Id = _editingId, Title = EditTitle.Trim(), Content = EditContent.Trim(), CreatedAt = EditCreatedAt.DateTime };
                 await Task.Run(() => _notes.Update(n));
                 StatusText = LocalizationManager.L("save_settings");
             }

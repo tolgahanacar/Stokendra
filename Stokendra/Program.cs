@@ -1,5 +1,4 @@
 using Avalonia;
-using Avalonia.ReactiveUI;
 using Microsoft.Extensions.DependencyInjection;
 using Stokendra.Data;
 using Stokendra.Data.Interfaces;
@@ -7,8 +6,6 @@ using Stokendra.Data.Repositories;
 using Stokendra.Infrastructure;
 using Stokendra.Services;
 using Stokendra.ViewModels;
-using ReactiveUI;
-using System.Reactive;
 using System;
 
 namespace Stokendra;
@@ -32,11 +29,6 @@ class Program
             AppLogger.LogError("FATAL: TaskScheduler Unobserved Exception", e.Exception);
             e.SetObserved();
         };
-
-        RxApp.DefaultExceptionHandler = Observer.Create<Exception>(ex => 
-        {
-            AppLogger.LogError("FATAL: ReactiveUI Exception", ex);
-        });
 
         // Migrate legacy settings and database if needed
         AppPaths.MigrateLegacyData();
@@ -64,8 +56,7 @@ class Program
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace()
-            .UseReactiveUI();
+            .LogToTrace();
     }
 
     private static ServiceProvider SetupDI()

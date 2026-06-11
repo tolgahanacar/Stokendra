@@ -3,7 +3,7 @@ namespace Stokendra;
 /// <summary>
 /// Uygulama genelinde hata ve bilgi günlüğü yönetimi.
 /// Günlük dosyası: <c>AppData/Local/Stokendra/logs/error.log</c>
-/// Buffered StreamWriter kullanarak her log için dosya açma/kapama overhead'ini önler.
+/// Aç-yaz-kapat yöntemi kullanarak çökme durumlarında logların anında diskte kaydedilmesini garanti eder.
 /// Log rotation: 5MB üzerinde eski log arşivlenir.
 /// </summary>
 public static class AppLogger

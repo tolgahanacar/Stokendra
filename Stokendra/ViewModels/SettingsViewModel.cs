@@ -235,7 +235,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         var username = AppServices.Current.Session?.Username ?? "admin";
 
-        bool ok = await Task.Run(() => _users.ChangePassword(username, OldPassword, NewPassword));
+        bool ok = await _users.ChangePasswordAsync(username, OldPassword, NewPassword);
         if (ok)
         {
             StatusMessage   = "Şifre başarıyla değiştirildi.";

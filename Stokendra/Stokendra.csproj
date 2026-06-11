@@ -10,7 +10,7 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Stokendra.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
-    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +29,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.4" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.4" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.4" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.4" />
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.4" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.4" />
 

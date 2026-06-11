@@ -47,14 +47,26 @@ public interface IMovementRepository
     /// <summary>Updates an existing stock movement.</summary>
     void Update(StockMovement movement);
 
+    /// <summary>Updates an existing stock movement asynchronously.</summary>
+    Task UpdateAsync(StockMovement movement, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes the stock movement with the specified ID.</summary>
     void Delete(int id);
+
+    /// <summary>Deletes the stock movement with the specified ID asynchronously.</summary>
+    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes multiple stock movements in bulk.</summary>
     void DeleteBulk(IEnumerable<int> ids);
 
+    /// <summary>Deletes multiple stock movements in bulk asynchronously.</summary>
+    Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
     /// <summary>Updates multiple stock movements in bulk under a single transaction.</summary>
     void UpdateBulk(IEnumerable<StockMovement> movements);
+
+    /// <summary>Updates multiple stock movements in bulk asynchronously.</summary>
+    Task UpdateBulkAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken = default);
 
     /// <summary>Gets entry/exit summary data for the last 7 days.</summary>
     Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync(CancellationToken cancellationToken = default);

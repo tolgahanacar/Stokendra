@@ -43,8 +43,14 @@ public interface IStockCardRepository
     /// <summary>Updates an existing stock card.</summary>
     void Update(StockCard stockCard);
 
+    /// <summary>Updates an existing stock card asynchronously.</summary>
+    Task UpdateAsync(StockCard stockCard, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes the stock card with the specified ID. Cascade deletes linked movements.</summary>
     void Delete(int id);
+
+    /// <summary>Deletes the stock card with the specified ID asynchronously. Cascade deletes linked movements.</summary>
+    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>Generates the next sequential stock code (e.g. "042").</summary>
     string GetNextCode();

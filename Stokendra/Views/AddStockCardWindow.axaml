@@ -9,7 +9,8 @@
         MaxHeight="900"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
-        Background="#161B27">
+        Background="#161B27"
+        x:CompileBindings="False">
 
     <Design.DataContext>
         <vm:AddStockCardViewModel/>

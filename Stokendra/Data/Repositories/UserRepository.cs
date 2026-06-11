@@ -40,30 +40,25 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
         bool match = Verify(password, salt, storedHash, out bool upgrade);
         
         if (match && upgrade)
-            Upgrade(username, password, conn);
+            await UpgradeAsync(username, password, conn, cancellationToken);
 
         return (match, role);
     }
 
-    public bool Authenticate(string username, string password)
+    public async Task<bool> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        var task = VerifyPasswordAsync(username, password);
-        return task.GetAwaiter().GetResult().success;
+        var res = await VerifyPasswordAsync(username, password, cancellationToken);
+        return res.success;
     }
 
-    public bool ChangePassword(string username, string oldPassword, string newPassword)
+    public async Task<bool> ChangePasswordAsync(string username, string oldPassword, string newPassword, CancellationToken cancellationToken = default)
     {
-        if (!Authenticate(username, oldPassword)) return false;
+        if (!await AuthenticateAsync(username, oldPassword, cancellationToken)) return false;
         if (ValidatePasswordPolicy(newPassword, username) != null) return false;
         
         using var conn = connectionFactory.CreateConnection();
-        Upgrade(username, newPassword, conn);
+        await UpgradeAsync(username, newPassword, conn, cancellationToken);
         return true;
-    }
-
-    public bool IsDefaultAdminPasswordInUse()
-    {
-        return Authenticate("admin", "admin");
     }
 
     public string? ValidatePasswordPolicy(string password, string? username = null)
@@ -124,13 +119,14 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
         return "v2:" + Convert.ToBase64String(pbkdf2.GetBytes(HashSize));
     }
 
-    private void Upgrade(string user, string pass, SqliteConnection conn)
+    private async Task UpgradeAsync(string user, string pass, SqliteConnection conn, CancellationToken cancellationToken = default)
     {
         string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
         string hash = HashV4(pass, salt);
-        conn.Execute(
+        await conn.ExecuteAsync(new CommandDefinition(
             "UPDATE Users SET PasswordHash=@Hash, Salt=@Salt WHERE Username=@Username",
-            new { Hash = hash, Salt = salt, Username = user });
+            new { Hash = hash, Salt = salt, Username = user },
+            cancellationToken: cancellationToken));
     }
 
     public async Task<bool> ResetPasswordAsync(string username, string newPassword, CancellationToken cancellationToken = default)
@@ -145,7 +141,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
             
             if (count == 0) return false;
 
-            Upgrade(username, newPassword, conn);
+            await UpgradeAsync(username, newPassword, conn, cancellationToken);
             return true;
         }
         catch { return false; }

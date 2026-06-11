@@ -81,7 +81,7 @@
                             </StackPanel>
                             
                             <Button Content="{infra:L change_password_btn}" Classes="Success"
-                                    Command="{Binding ChangePasswordAsyncCommand}"
+                                    Command="{Binding ChangePasswordCommand}"
                                     IsEnabled="{Binding CanEdit}"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Height="38" Margin="0,8,0,0"/>

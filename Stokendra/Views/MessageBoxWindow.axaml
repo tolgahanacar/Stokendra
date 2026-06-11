@@ -8,7 +8,7 @@
         MaxWidth="600"
         WindowStartupLocation="CenterOwner"
         Background="#161B27"
-        CanResize="False">
+        CanResize="False" x:CompileBindings="False">
 
     <!--
         MessageBoxWindow: SizeToContent="Height" ile yükseklik içeriğe göre ayarlanır.

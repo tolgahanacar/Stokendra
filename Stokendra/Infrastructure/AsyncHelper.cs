@@ -3,7 +3,7 @@ using static Stokendra.LocalizationManager;
 namespace Stokendra.Infrastructure;
 
 /// <summary>
-/// WinForms async void event handler'larında güvenli exception yönetimi sağlar.
+/// Avalonia ve UI async void event handler'larında güvenli exception yönetimi sağlar.
 /// async void metodlarda fırlatılan exception'lar sessizce yutulur;
 /// bu helper merkezi hata yakalama ve loglama sağlar.
 /// </summary>

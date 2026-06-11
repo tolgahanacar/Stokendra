@@ -18,7 +18,8 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     {
         using var conn = ConnectionFactory.CreateConnection();
         var @params = new DynamicParameters();
-        string sql = BuildQuery(stockCardId, startDate, endDate, department, movementType, category, null, recipient, @params);
+        string sql = BuildQuery("SELECT h.*, s.Name as StockCardName, s.Code as StockCardCode FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, null, recipient, @params);
+        sql += " ORDER BY h.Date DESC, h.Id DESC";
         return conn.Query<StockMovement>(sql, @params).ToList();
     }
 
@@ -26,7 +27,8 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     {
         using var conn = ConnectionFactory.CreateConnection();
         var @params = new DynamicParameters();
-        string sql = BuildQuery(stockCardId, startDate, endDate, department, movementType, category, null, recipient, @params);
+        string sql = BuildQuery("SELECT h.*, s.Name as StockCardName, s.Code as StockCardCode FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, null, recipient, @params);
+        sql += " ORDER BY h.Date DESC, h.Id DESC";
         var result = await conn.QueryAsync<StockMovement>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
         return result.ToList();
     }
@@ -213,11 +215,42 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
     }
 
+    public async Task UpdateAsync(StockMovement movement, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        ValidateUpdate(movement, conn);
+        var sql = """
+            UPDATE StockMovements SET 
+                StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
+                Department=@Department, Date=@DateString, Description=@Description 
+            WHERE Id=@Id
+            """;
+        await conn.ExecuteAsync(new CommandDefinition(sql, new {
+            movement.StockCardId,
+            movement.Type,
+            movement.Quantity,
+            Recipient = movement.Recipient ?? "",
+            Department = movement.Department ?? "",
+            DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+            Description = movement.Description ?? "",
+            movement.Id
+        }, cancellationToken: cancellationToken));
+        LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+    }
+
     public void Delete(int id)
     {
         using var conn = ConnectionFactory.CreateConnection();
         ValidateDeletion([id], conn);
         conn.Execute("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id });
+        LogAudit("Delete", "StockMovements", id, "");
+    }
+
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        ValidateDeletion([id], conn);
+        await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id }, cancellationToken: cancellationToken));
         LogAudit("Delete", "StockMovements", id, "");
     }
 
@@ -244,6 +277,34 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         catch 
         { 
             trans.Rollback(); 
+            throw; 
+        }
+    }
+
+    public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var list = ids.ToList();
+        if (list.Count == 0) throw new InvalidOperationException("List cannot be empty.");
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids", 
+                new { Ids = list }, 
+                transaction: trans,
+                cancellationToken: cancellationToken));
+            if (count != list.Count) throw new InvalidOperationException("Some movements were not found.");
+
+            ValidateDeletion(list, conn, (SqliteTransaction)trans);
+
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockMovements WHERE Id IN @Ids", new { Ids = list }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
             throw; 
         }
     }
@@ -276,6 +337,38 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         catch 
         { 
             trans.Rollback(); 
+            throw; 
+        }
+    }
+
+    public async Task UpdateBulkAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            var sql = """
+                UPDATE StockMovements SET 
+                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
+                    Department=@Department, Date=@DateString, Description=@Description 
+                WHERE Id=@Id
+                """;
+            var data = movements.Select(m => new {
+                m.StockCardId,
+                m.Type,
+                m.Quantity,
+                Recipient = m.Recipient ?? "",
+                Department = m.Department ?? "",
+                DateString = m.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Description = m.Description ?? "",
+                m.Id
+            });
+            await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
             throw; 
         }
     }
@@ -313,9 +406,9 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         return conn.Query<string>("SELECT DISTINCT Recipient FROM StockMovements WHERE Recipient IS NOT NULL AND Recipient <> '' ORDER BY Recipient").ToList();
     }
 
-    private string BuildQuery(int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, string? recipient, DynamicParameters @params)
+    private string BuildQuery(string baseSelect, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, string? recipient, DynamicParameters @params)
     {
-        var sql = "SELECT h.*, s.Name as StockCardName, s.Code as StockCardCode FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id WHERE 1=1";
+        var sql = baseSelect + " WHERE 1=1";
         if(cardId.HasValue) 
         {
             sql += " AND h.StockCardId=@CardId";
@@ -356,7 +449,6 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR h.Recipient LIKE @Search OR h.Department LIKE @Search)";
             @params.Add("Search", $"%{search}%");
         }
-        sql += " ORDER BY h.Date DESC, h.Id DESC";
         return sql;
     }
 
@@ -416,8 +508,8 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     {
         using var conn = ConnectionFactory.CreateConnection();
         var @params = new DynamicParameters();
-        string baseQuery = BuildQuery(stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
-        string sql = $"{baseQuery} LIMIT @Limit OFFSET @Offset";
+        string baseQuery = BuildQuery("SELECT h.*, s.Name as StockCardName, s.Code as StockCardCode FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
+        string sql = $"{baseQuery} ORDER BY h.Date DESC, h.Id DESC LIMIT @Limit OFFSET @Offset";
         @params.Add("Limit", pageSize);
         @params.Add("Offset", (page - 1) * pageSize);
 
@@ -429,48 +521,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     {
         using var conn = ConnectionFactory.CreateConnection();
         var @params = new DynamicParameters();
-        string sql = "SELECT COUNT(*) FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id WHERE 1=1";
-        if(stockCardId.HasValue) 
-        {
-            sql += " AND h.StockCardId=@CardId";
-            @params.Add("CardId", stockCardId.Value);
-        }
-        if(startDate.HasValue) 
-        {
-            sql += " AND h.Date >= @Start";
-            @params.Add("Start", startDate.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        }
-        if(endDate.HasValue) 
-        {
-            sql += " AND h.Date < @End";
-            @params.Add("End", endDate.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        }
-        if(!string.IsNullOrEmpty(department)) 
-        {
-            sql += " AND h.Department=@Dept";
-            @params.Add("Dept", department);
-        }
-        if(!string.IsNullOrEmpty(movementType)) 
-        {
-            sql += " AND h.Type=@Type";
-            @params.Add("Type", movementType);
-        }
-        if(!string.IsNullOrEmpty(category)) 
-        {
-            sql += " AND s.Category=@Cat";
-            @params.Add("Cat", category);
-        }
-        if(!string.IsNullOrEmpty(recipient)) 
-        {
-            sql += " AND h.Recipient=@Recipient";
-            @params.Add("Recipient", recipient);
-        }
-        if(!string.IsNullOrEmpty(searchTerm)) 
-        {
-            sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR h.Recipient LIKE @Search OR h.Department LIKE @Search)";
-            @params.Add("Search", $"%{searchTerm}%");
-        }
-        
+        string sql = BuildQuery("SELECT COUNT(*) FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
         return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
     }
 

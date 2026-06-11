@@ -6,7 +6,7 @@
         Width="420" Height="520"
         WindowStartupLocation="CenterScreen"
         CanResize="False"
-        Background="#0C0E14">
+        Background="#0C0E14" x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,*,Auto">
 
