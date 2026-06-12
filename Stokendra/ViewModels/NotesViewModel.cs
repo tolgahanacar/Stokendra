@@ -134,4 +134,61 @@ public partial class NotesViewModel : ViewModelBase
             StatusText = LocalizationManager.L("bulk_delete_success", list.Count);
         } catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message); }
     }
+
+    [RelayCommand]
+    public async Task ExportExcelAsync()
+    {
+        string fileName = $"Notlar_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        string? path = await _dialogService.SaveFileAsync(
+            LocalizationManager.L("export_excel"), 
+            fileName, 
+            "Excel File (*.xlsx)|*.xlsx");
+            
+        if (string.IsNullOrEmpty(path)) return;
+
+        IsLoading = true;
+        try
+        {
+            StatusText = LocalizationManager.L("loading");
+            await Task.Run(() => {
+                var headers = new[] { "ID", "Başlık", "Açıklama", "Oluşturma Tarihi" };
+                ExcelService.ExportToExcel(
+                    path, 
+                    "Notlar", 
+                    headers, 
+                    Notes, 
+                    n => new object?[] { 
+                        n.Id, 
+                        n.Title, 
+                        n.Content, 
+                        n.CreatedAt.ToString("dd.MM.yyyy HH:mm") 
+                    },
+                    sheet => {
+                        var colTitle = sheet.Column(2);
+                        colTitle.Width = 40;
+                        colTitle.Style.Alignment.WrapText = true;
+
+                        var colContent = sheet.Column(3);
+                        colContent.Width = 90;
+                        colContent.Style.Alignment.WrapText = true;
+                    });
+            });
+            StatusText = LocalizationManager.L("export_success", path);
+            await _dialogService.ShowMessageAsync(
+                LocalizationManager.L("info"), 
+                LocalizationManager.L("export_success", path));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Notes Excel export error", ex);
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
+            await _dialogService.ShowMessageAsync(
+                LocalizationManager.L("error"), 
+                $"{LocalizationManager.L("export_error")}: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 }

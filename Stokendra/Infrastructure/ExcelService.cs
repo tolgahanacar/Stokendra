@@ -24,7 +24,8 @@ public static class ExcelService
         string sheetName,
         string[] headers,
         IEnumerable<T> items,
-        Func<T, object?[]> rowMapper)
+        Func<T, object?[]> rowMapper,
+        Action<IXLWorksheet>? customizeSheet = null)
     {
         using var workbook = new XLWorkbook();
         var worksheet = workbook.Worksheets.Add(sheetName);
@@ -71,6 +72,7 @@ public static class ExcelService
         }
 
         worksheet.Columns().AdjustToContents();
+        customizeSheet?.Invoke(worksheet);
         workbook.SaveAs(filePath);
     }
 }

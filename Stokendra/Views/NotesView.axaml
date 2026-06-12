@@ -25,23 +25,32 @@
                 </StackPanel>
 
                 <!-- Action Buttons -->
-                <StackPanel Grid.Row="1" Margin="24,20,24,12" Spacing="8" IsVisible="{Binding CanEdit}">
-                    <Button Content="{infra:L new_note}" Classes="Primary"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                            Height="40"
-                            Command="{Binding NewNoteCommand}"/>
+                <StackPanel Grid.Row="1" Margin="24,20,24,12" Spacing="8">
+                    <!-- Editor Actions -->
+                    <StackPanel Spacing="8" IsVisible="{Binding CanEdit}">
+                        <Button Content="{infra:L new_note}" Classes="Primary"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Height="40"
+                                Command="{Binding NewNoteCommand}"/>
+                        
+                        <UniformGrid Columns="2" Margin="0,0,0,4">
+                            <Button Content="{infra:L edit}" Classes="Secondary" Margin="0,0,4,0"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Command="{Binding EditNoteCommand}"
+                                    IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                            <Button Content="{infra:L delete}" Classes="Danger" Margin="4,0,0,0"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Command="{Binding DeleteSelectedCommand}"
+                                    CommandParameter="{Binding #NotesGrid.SelectedItems}"
+                                    IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        </UniformGrid>
+                    </StackPanel>
                     
-                    <UniformGrid Columns="2">
-                        <Button Content="{infra:L edit}" Classes="Secondary" Margin="0,0,4,0"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                Command="{Binding EditNoteCommand}"
-                                IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                        <Button Content="{infra:L delete}" Classes="Danger" Margin="4,0,0,0"
-                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                Command="{Binding DeleteSelectedCommand}"
-                                CommandParameter="{Binding #NotesGrid.SelectedItems}"
-                                IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-                    </UniformGrid>
+                    <!-- Export Action -->
+                    <Button Content="{infra:L export_excel}" Classes="Secondary"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            Height="36"
+                            Command="{Binding ExportExcelCommand}"/>
                 </StackPanel>
 
                 <!-- List -->
