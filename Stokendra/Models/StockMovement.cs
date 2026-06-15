@@ -79,4 +79,19 @@ public class StockMovement
         MovementType.Exit => "#EF4444",  // Red
         _ => "#94A3B8"                   // Gray
     };
+
+    /// <summary>Creates a shallow copy of the stock movement.</summary>
+    public StockMovement Clone() => new StockMovement
+    {
+        Id = Id,
+        StockCardId = StockCardId,
+        StockCardName = StockCardName,
+        StockCardCode = StockCardCode,
+        Type = Type,
+        Quantity = Quantity,
+        Recipient = Recipient,
+        Department = Department,
+        Date = Date,
+        Description = Description
+    };
 }

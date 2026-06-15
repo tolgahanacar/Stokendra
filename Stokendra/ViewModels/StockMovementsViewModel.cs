@@ -237,14 +237,27 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditMovementAsync()
     {
-        if (SelectedMovement == null) return;
+        if (SelectedMovements.Count == 0) return;
         
-        var vm = new AddMovementViewModel(_stockCards, _departments, SelectedMovement);
-        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
+        if (SelectedMovements.Count == 1)
         {
-            await Task.Run(() => _movements.Update(vm.Result));
-            await LoadMovementsAsync();
-            StatusText = LocalizationManager.L("save_settings");
+            var target = SelectedMovements[0];
+            var vm = new AddMovementViewModel(_stockCards, _departments, target);
+            if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
+            {
+                await Task.Run(() => _movements.Update(vm.Result));
+                await LoadMovementsAsync();
+                StatusText = LocalizationManager.L("save_settings");
+            }
+        }
+        else
+        {
+            var vm = new BulkEditMovementsViewModel(SelectedMovements.ToList(), _movements, _departments, _dialogService, _logger);
+            if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
+            {
+                await LoadMovementsAsync();
+                StatusText = LocalizationManager.L("save_settings");
+            }
         }
     }
 

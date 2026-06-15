@@ -80,8 +80,8 @@
                   Background="#0C0E14"
                   BorderThickness="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding StockCardCode}" Width="75"  MinWidth="60"/>
-                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding StockCardName}" Width="2*"  MinWidth="120"/>
+                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding StockCardCode}" Width="110" MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding StockCardName}" Width="1.6*" MinWidth="120"/>
 
                 <DataGridTemplateColumn Header="{infra:L type}" Width="100" MinWidth="80">
                     <DataGridTemplateColumn.CellTemplate>

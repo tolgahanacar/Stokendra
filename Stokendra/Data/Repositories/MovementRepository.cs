@@ -311,17 +311,20 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
     public void UpdateBulk(IEnumerable<StockMovement> movements)
     {
+        var list = movements.ToList();
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try 
         {
+            ValidateBulkUpdate(list, conn, trans);
+
             var sql = """
                 UPDATE StockMovements SET 
                     StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
                     Department=@Department, Date=@DateString, Description=@Description 
                 WHERE Id=@Id
                 """;
-            var data = movements.Select(m => new {
+            var data = list.Select(m => new {
                 m.StockCardId,
                 m.Type,
                 m.Quantity,
@@ -333,6 +336,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             });
             conn.Execute(sql, data, transaction: trans);
             trans.Commit();
+            LogAudit("Update", "StockMovements", 0, "Bulk Update");
         } 
         catch 
         { 
@@ -343,17 +347,20 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
     public async Task UpdateBulkAsync(IEnumerable<StockMovement> movements, CancellationToken cancellationToken = default)
     {
+        var list = movements.ToList();
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try 
         {
+            ValidateBulkUpdate(list, conn, (SqliteTransaction)trans);
+
             var sql = """
                 UPDATE StockMovements SET 
                     StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
                     Department=@Department, Date=@DateString, Description=@Description 
                 WHERE Id=@Id
                 """;
-            var data = movements.Select(m => new {
+            var data = list.Select(m => new {
                 m.StockCardId,
                 m.Type,
                 m.Quantity,
@@ -365,11 +372,65 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             });
             await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
             await trans.CommitAsync(cancellationToken);
+            LogAudit("Update", "StockMovements", 0, "Bulk Update (Async)");
         } 
         catch 
         { 
             await trans.RollbackAsync(cancellationToken); 
             throw; 
+        }
+    }
+
+    private void ValidateBulkUpdate(IEnumerable<StockMovement> movements, SqliteConnection conn, SqliteTransaction? trans = null)
+    {
+        var list = movements.ToList();
+        if (list.Count == 0) return;
+
+        foreach (var m in list)
+        {
+            if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000) 
+                throw new InvalidOperationException("Invalid quantity value.");
+            
+            if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos") 
+                throw new InvalidOperationException("Invalid movement type.");
+            
+            if (m.Quantity < 0) throw new InvalidOperationException("Quantity cannot be negative.");
+            if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException("Quantity cannot be zero.");
+            
+            if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException("Type field cannot be empty.");
+            if (m.StockCardId <= 0) throw new InvalidOperationException("Invalid stock card ID.");
+
+            var cardType = conn.ExecuteScalar<string>(
+                "SELECT CardType FROM StockCards WHERE Id=@Id", 
+                new { Id = m.StockCardId }, 
+                transaction: trans);
+            if (cardType == "Parent")
+                throw new InvalidOperationException("Cannot associate movements with parent cards.");
+        }
+
+        var movementIds = list.Select(m => m.Id).ToList();
+        var cards = list.GroupBy(m => m.StockCardId);
+
+        foreach (var cardGroup in cards)
+        {
+            int cardId = cardGroup.Key;
+            
+            var baseResult = conn.ExecuteScalar<double?>(
+                "SELECT SUM(CASE WHEN Id IN @Ids THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
+                new { Ids = movementIds, StockCardId = cardId },
+                transaction: trans);
+
+            double baseBalance = baseResult ?? 0;
+            double newImpact = cardGroup.Sum(m => (m.TypeEnum == MovementType.Entry) ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0));
+            
+            if (baseBalance + newImpact < 0)
+            {
+                var cardName = conn.ExecuteScalar<string>(
+                    "SELECT Name FROM StockCards WHERE Id=@Id", 
+                    new { Id = cardId }, 
+                    transaction: trans) ?? $"ID {cardId}";
+                throw new InvalidOperationException($"Update invalid: would result in negative stock for '{cardName}'.");
+            }
         }
     }
 
@@ -446,7 +507,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         }
         if(!string.IsNullOrEmpty(search)) 
         {
-            sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR h.Recipient LIKE @Search OR h.Department LIKE @Search)";
+            sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR h.Recipient LIKE @Search OR h.Department LIKE @Search OR h.Description LIKE @Search)";
             @params.Add("Search", $"%{search}%");
         }
         return sql;

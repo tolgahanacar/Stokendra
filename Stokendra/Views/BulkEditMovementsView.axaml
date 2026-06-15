@@ -1,0 +1,192 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
+        xmlns:models="using:Stokendra.Models"
+        xmlns:views="using:Stokendra.Views"
+        x:Class="Stokendra.Views.BulkEditMovementsView"
+        Title="{Binding Title}"
+        Width="1000" Height="650"
+        MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#111522"
+        x:CompileBindings="False">
+
+    <Design.DataContext>
+        <vm:BulkEditMovementsViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#181D2A" Padding="24,16,24,14" BorderBrush="#1F2636" BorderThickness="0,0,0,1">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Seçilen stok hareketlerini toplu veya tekil olarak düzenleyin"
+                           FontSize="12" Foreground="#64748B"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Bulk Apply Panel -->
+        <Border Grid.Row="1" Background="#161B27" Margin="20,16,20,0"
+                CornerRadius="10" Padding="16,14"
+                BorderBrush="#1F2B3E" BorderThickness="1">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Toplu Değer Atama (Tüm Seçililere Uygula)" 
+                           FontSize="12" FontWeight="Bold" Foreground="#38AEFF"/>
+                
+                <Grid ColumnDefinitions="*,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="16">
+                    <!-- Date (Row 0, Col 0) -->
+                    <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDate}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="Tarih:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <views:SafeCalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date}" IsEnabled="{Binding IsApplyDate}" HorizontalAlignment="Stretch" Height="28"/>
+                    </Grid>
+
+                    <!-- Department (Row 0, Col 1) -->
+                    <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDepartment}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="Departman:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <ComboBox Grid.Column="2" ItemsSource="{Binding AllDepartments}"
+                                  SelectedItem="{Binding SelectedDepartment}"
+                                  IsEnabled="{Binding IsApplyDepartment}"
+                                  HorizontalAlignment="Stretch" Height="28"/>
+                    </Grid>
+
+                    <!-- Recipient (Row 1, Col 0) -->
+                    <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyRecipient}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="Teslim Edilen:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding Recipient}" 
+                                 IsEnabled="{Binding IsApplyRecipient}"
+                                 Watermark="Kişi veya Birim"
+                                 Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Description (Row 1, Col 1) -->
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDescription}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="Açıklama:" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding Description}" 
+                                 IsEnabled="{Binding IsApplyDescription}"
+                                 Watermark="Açıklama notu"
+                                 Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Apply Button (Row 0-1, Col 2) -->
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" 
+                            Content="Uygula" 
+                            Classes="Primary"
+                            Command="{Binding ApplyBulkCommand}"
+                            Width="90" Height="68"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Grid Container -->
+        <Border Grid.Row="2" Background="#161B27" Margin="20,12,20,16"
+                CornerRadius="10" BorderBrush="#1F2B3E" BorderThickness="1">
+            <DataGrid ItemsSource="{Binding EditingMovements}"
+                      SelectionMode="Single"
+                      IsReadOnly="False"
+                      CanUserResizeColumns="True"
+                      Background="Transparent"
+                      RowBackground="#161B27"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Kod" Binding="{Binding StockCardCode}" IsReadOnly="True" Width="80"/>
+                    <DataGridTextColumn Header="Malzeme Adı" Binding="{Binding StockCardName}" IsReadOnly="True" Width="1.5*"/>
+                    
+                    <DataGridTemplateColumn Header="Tür" IsReadOnly="True" Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockMovement">
+                                <TextBlock Text="{Binding DisplayType}" 
+                                           Foreground="{Binding DisplayColor}"
+                                           FontWeight="Bold" 
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Miktar" Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockMovement">
+                                <TextBox Text="{Binding Quantity}" 
+                                         Height="28" 
+                                         Padding="6,4"
+                                         VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Departman" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockMovement">
+                                <ComboBox ItemsSource="{Binding DataContext.AllDepartments, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          SelectedItem="{Binding Department}"
+                                          HorizontalAlignment="Stretch"
+                                          Height="28"
+                                          VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Teslim Edilen" Width="150">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockMovement">
+                                <TextBox Text="{Binding Recipient}" 
+                                         Height="28" 
+                                         Padding="6,4"
+                                         VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Tarih" Binding="{Binding Date, StringFormat=dd.MM.yyyy HH:mm}" IsReadOnly="True" Width="150"/>
+
+                    <DataGridTemplateColumn Header="Açıklama" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockMovement">
+                                <TextBox Text="{Binding Description}" 
+                                         Height="28" 
+                                         Padding="6,4"
+                                         VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Footer -->
+        <Border Grid.Row="3" Background="#181D2A" Padding="24,14,24,14" BorderBrush="#1F2636" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="#FF453A"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,0,16,0"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <Button Content="İptal"
+                            Classes="Secondary"
+                            Command="{Binding CancelCommand}"
+                            Width="100" MinHeight="36"/>
+                    <Button Content="Kaydet"
+                            Classes="Primary"
+                            Command="{Binding SaveCommand}"
+                            Width="100" MinHeight="36"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>
