@@ -76,8 +76,16 @@ public partial class StockCardDetailViewModel : ViewModelBase
         
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _movements.AddAsync(vm.Result);
-            await LoadDataAsync();
+            try
+            {
+                await _movements.AddAsync(vm.Result);
+                await LoadDataAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Add movement from detail error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 

@@ -90,16 +90,35 @@ public partial class AddMovementViewModel : ViewModelBase
         double stockWithoutOld = SelectedCard.CurrentStock;
         if (_editingMovement != null)
         {
-            if (_editingMovement.TypeEnum == MovementType.Exit)
-                stockWithoutOld += _editingMovement.Quantity;
-            else if (_editingMovement.TypeEnum == MovementType.Entry)
-                stockWithoutOld -= _editingMovement.Quantity;
+            if (SelectedCard.Id == _editingMovement.StockCardId)
+            {
+                if (_editingMovement.TypeEnum == MovementType.Exit)
+                    stockWithoutOld += _editingMovement.Quantity;
+                else if (_editingMovement.TypeEnum == MovementType.Entry)
+                    stockWithoutOld -= _editingMovement.Quantity;
+            }
+            else
+            {
+                var originalCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StockCardId);
+                if (originalCard != null)
+                {
+                    double originalCardStockWithoutOld = originalCard.CurrentStock;
+                    if (_editingMovement.TypeEnum == MovementType.Entry)
+                    {
+                        originalCardStockWithoutOld -= _editingMovement.Quantity;
+                        if (originalCardStockWithoutOld < 0)
+                        {
+                            ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({originalCard.Name}: {originalCard.CurrentStock})";
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         double newImpact = tur switch { "Entry" => Quantity, "Exit" => -Quantity, _ => 0 };
         if (stockWithoutOld + newImpact < 0)
         {
-            double maxAllowedExit = stockWithoutOld;
             ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({LocalizationManager.L("current_stock")}: {SelectedCard.CurrentStock})";
             return;
         }
@@ -112,7 +131,7 @@ public partial class AddMovementViewModel : ViewModelBase
             Quantity = Quantity,
             Recipient = DeliveredTo,
             Department = Department,
-            Date = Date.Date.Add(DateTime.Now.TimeOfDay),
+            Date = Date.Date.Add(_editingMovement != null ? _editingMovement.Date.TimeOfDay : DateTime.Now.TimeOfDay),
             Description = Description,
             StockCardName = SelectedCard.Name,
             StockCardCode = SelectedCard.Code

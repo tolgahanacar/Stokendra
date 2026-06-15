@@ -35,7 +35,7 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _selectedLanguage = "Türkçe";
     [ObservableProperty] private int _lowStockThreshold = 3;
     [ObservableProperty] private string _masterSecurityCode = "";
-    [ObservableProperty] private string _databaseSize = "Bilinmiyor";
+    [ObservableProperty] private string _databaseSize = "";
 
     public List<string> Languages { get; } = new() { "Türkçe", "English" };
     public ObservableCollection<string> ActivityLogs { get; } = new();
@@ -87,12 +87,12 @@ public partial class SettingsViewModel : ViewModelBase
             }
             else
             {
-                DatabaseSize = "Bilinmiyor";
+                DatabaseSize = LocalizationManager.L("db_size_unknown");
             }
         }
         catch
         {
-            DatabaseSize = "Bilinmiyor";
+            DatabaseSize = LocalizationManager.L("db_size_unknown");
         }
     }
 
@@ -119,17 +119,17 @@ public partial class SettingsViewModel : ViewModelBase
             }
             if (ActivityLogs.Count == 0)
             {
-                ActivityLogs.Add("Henüz aktivite kaydı bulunmuyor.");
+                ActivityLogs.Add(LocalizationManager.L("no_activity_log"));
             }
         }
         catch (Exception ex)
         {
-            ActivityLogs.Add($"Loglar yüklenemedi: {ex.Message}");
+            ActivityLogs.Add(string.Format(LocalizationManager.L("activity_log_load_failed"), ex.Message));
         }
     }
 
     [RelayCommand]
-    public void SaveSettings()
+    public async Task SaveSettingsAsync()
     {
         var settings = AppServices.Current.Settings;
         settings.CompanyName = CompanyName.Trim();
@@ -170,17 +170,39 @@ public partial class SettingsViewModel : ViewModelBase
 
             if (langChanged || dbPathChanged)
             {
-                StatusMessage = "Ayarlar kaydedildi. Dil veya veritabanı değişikliklerinin geçerli olması için lütfen uygulamayı yeniden başlatın.";
+                StatusMessage = LocalizationManager.L("saved_restart");
+                IsSuccess     = true;
+
+                string infoTitle = LocalizationManager.L("info");
+                string infoMsg = langChanged 
+                    ? LocalizationManager.L("restart_required") 
+                    : LocalizationManager.L("db_path_changed_restart");
+
+                await _dialogService.ShowMessageAsync(infoTitle, infoMsg);
+
+                try
+                {
+                    string? processPath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(processPath))
+                    {
+                        System.Diagnostics.Process.Start(processPath);
+                    }
+                    Environment.Exit(0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to restart application automatically", ex);
+                }
             }
             else
             {
-                StatusMessage = "Ayarlar kaydedildi.";
+                StatusMessage = LocalizationManager.L("settings_saved");
+                IsSuccess     = true;
             }
-            IsSuccess     = true;
         }
         else
         {
-            StatusMessage = "Ayarlar kaydedilemedi. Disk alanını kontrol edin.";
+            StatusMessage = LocalizationManager.L("save_settings_failed");
             IsSuccess     = false;
         }
     }
@@ -188,7 +210,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task SelectBackupFolder()
     {
-        var path = await _dialogService.OpenFolderAsync("Yedekleme Klasörü Seç");
+        var path = await _dialogService.OpenFolderAsync(LocalizationManager.L("select_backup_folder_title"));
         if (!string.IsNullOrEmpty(path))
         {
             AutoBackupPath = path;
@@ -198,7 +220,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task SelectDbFile()
     {
-        var path = await _dialogService.OpenFileAsync("Veritabanı Dosyası Seç", "SQLite Veritabanı (*.db)|*.db");
+        var path = await _dialogService.OpenFileAsync(LocalizationManager.L("select_db_file_title"), "SQLite Veritabanı (*.db)|*.db");
         if (!string.IsNullOrEmpty(path))
         {
             DbPath = path;
@@ -215,13 +237,13 @@ public partial class SettingsViewModel : ViewModelBase
             string.IsNullOrWhiteSpace(NewPassword) ||
             string.IsNullOrWhiteSpace(ConfirmPassword))
         {
-            StatusMessage = "Tüm şifre alanlarını doldurun.";
+            StatusMessage = LocalizationManager.L("fill_all_password_fields");
             return;
         }
 
         if (NewPassword != ConfirmPassword)
         {
-            StatusMessage = "Yeni şifreler eşleşmiyor.";
+            StatusMessage = LocalizationManager.L("passwords_dont_match");
             return;
         }
 
@@ -238,7 +260,7 @@ public partial class SettingsViewModel : ViewModelBase
         bool ok = await _users.ChangePasswordAsync(username, OldPassword, NewPassword);
         if (ok)
         {
-            StatusMessage   = "Şifre başarıyla değiştirildi.";
+            StatusMessage   = LocalizationManager.L("password_changed_success");
             IsSuccess       = true;
             OldPassword     = "";
             NewPassword     = "";
@@ -247,7 +269,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         else
         {
-            StatusMessage = "Mevcut şifre hatalı.";
+            StatusMessage = LocalizationManager.L("current_password_incorrect");
         }
     }
 
@@ -255,25 +277,25 @@ public partial class SettingsViewModel : ViewModelBase
     public async Task DatabaseBackupAsync()
     {
         string fileName = $"Stokendra_DB_{DateTime.Now:yyyyMMdd_HHmm}.db";
-        string? destPath = await _dialogService.SaveFileAsync("Veritabanı Yedeği Kaydet", fileName, "SQLite Veritabanı (*.db)|*.db");
+        string? destPath = await _dialogService.SaveFileAsync(LocalizationManager.L("save_db_backup_title"), fileName, "SQLite Veritabanı (*.db)|*.db");
         
         if (string.IsNullOrEmpty(destPath)) return;
 
         try
         {
-            StatusMessage = "Veritabanı yedekleniyor...";
+            StatusMessage = LocalizationManager.L("db_backing_up");
             await Task.Run(() => {
                 _config.CreateBackup(destPath);
             });
-            StatusMessage = "Veritabanı yedeği başarıyla oluşturuldu.";
+            StatusMessage = LocalizationManager.L("db_backup_success");
             IsSuccess = true;
             LoadActivityLogs();
-            await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı güvenli şekilde yedeklendi.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_backup_dialog_msg"));
         }
         catch (Exception ex)
         {
             _logger.LogError("Database backup error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }
@@ -281,28 +303,28 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task FullBackupAsync()
     {
-        string? zipPath = await _dialogService.SaveFileAsync("Tam Excel Yedeği Kaydet", 
+        string? zipPath = await _dialogService.SaveFileAsync(LocalizationManager.L("save_full_excel_backup_title"), 
             $"Stokendra_FullExcel_Backup_{DateTime.Now:ddMMyyyy}.zip", "Zip Arşivi (*.zip)|*.zip");
         if (string.IsNullOrEmpty(zipPath)) return;
 
         try
         {
-            StatusMessage = "Tam yedek hazırlanıyor...";
+            StatusMessage = LocalizationManager.L("full_backup_preparing");
             
             string tempZip = await _backupService.ExportAllExcelAsync(Path.GetTempPath());
             
             if (File.Exists(zipPath)) File.Delete(zipPath);
             File.Move(tempZip, zipPath);
 
-            StatusMessage = "Tam Excel yedeği (ZIP) başarıyla alındı.";
+            StatusMessage = LocalizationManager.L("full_backup_success");
             IsSuccess = true;
             LoadActivityLogs();
-            await _dialogService.ShowMessageAsync("Başarılı", "Tüm veriler ayrı Excel dosyaları olarak ZIP içinde yedeklendi.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("full_backup_dialog_msg"));
         }
         catch (Exception ex)
         {
             _logger.LogError("Full zip backup error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }
@@ -310,21 +332,21 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task TruncateAuditLog()
     {
-        bool confirm = await _dialogService.ShowConfirmAsync("Audit Log Temizleme", "Tüm işlem geçmişi silinecektir. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?");
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("audit_log_clear_confirm_title"), LocalizationManager.L("audit_log_clear_confirm_msg"));
         if (!confirm) return;
 
         try
         {
             await Task.Run(() => _config.TruncateAuditLog());
-            StatusMessage = "İşlem geçmişi başarıyla temizlendi.";
+            StatusMessage = LocalizationManager.L("audit_log_cleared_success");
             IsSuccess = true;
             LoadActivityLogs();
-            await _dialogService.ShowMessageAsync("Başarılı", "Audit log tablosu boşaltıldı.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("audit_log_cleared_dialog_msg"));
         }
         catch (Exception ex)
         {
             _logger.LogError("Audit log truncate error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }
@@ -332,7 +354,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task CheckDatabaseIntegrityAsync()
     {
-        StatusMessage = "Veritabanı bütünlük kontrolü yapılıyor...";
+        StatusMessage = LocalizationManager.L("db_integrity_checking");
         IsSuccess = false;
 
         try
@@ -348,22 +370,22 @@ public partial class SettingsViewModel : ViewModelBase
 
             if (result.Equals("ok", StringComparison.OrdinalIgnoreCase))
             {
-                StatusMessage = "Bütünlük kontrolü: Başarılı (Herhangi bir bozulma yok).";
+                StatusMessage = LocalizationManager.L("db_integrity_success_status");
                 IsSuccess = true;
                 LoadActivityLogs();
-                await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı sağlık kontrolü başarılı. Herhangi bir bozulma veya indeks hatası bulunamadı.");
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_integrity_success_dialog_msg"));
             }
             else
             {
-                StatusMessage = $"Hata: Bütünlük kontrolü başarısız ({result}).";
+                StatusMessage = string.Format(LocalizationManager.L("db_integrity_failed_status"), result);
                 IsSuccess = false;
-                await _dialogService.ShowMessageAsync("Hata", $"Bütünlük kontrolü başarısız:\n{result}");
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("db_integrity_failed_dialog_msg"), result));
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Database integrity check error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }
@@ -371,7 +393,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task OptimizeDatabaseAsync()
     {
-        StatusMessage = "Veritabanı optimize ediliyor (VACUUM)...";
+        StatusMessage = LocalizationManager.L("db_optimizing");
         IsSuccess = false;
 
         try
@@ -385,15 +407,15 @@ public partial class SettingsViewModel : ViewModelBase
             });
 
             UpdateDatabaseInfo();
-            StatusMessage = "Veritabanı başarıyla optimize edildi (VACUUM yapıldı).";
+            StatusMessage = LocalizationManager.L("db_optimize_success_status");
             IsSuccess = true;
             LoadActivityLogs();
-            await _dialogService.ShowMessageAsync("Başarılı", "Veritabanı optimizasyonu tamamlandı. SQLite dosya boyutu küçültüldü ve kullanılmayan alanlar serbest bırakıldı.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_optimize_success_dialog_msg"));
         }
         catch (Exception ex)
         {
             _logger.LogError("Database vacuum error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }
@@ -401,7 +423,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task ClearActivityLogsAsync()
     {
-        bool confirm = await _dialogService.ShowConfirmAsync("Aktivite Günlüğü", "Tüm aktivite geçmişi silinecektir. Devam etmek istiyor musunuz?");
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("activity_log_clear_confirm_title"), LocalizationManager.L("activity_log_clear_confirm_msg"));
         if (!confirm) return;
 
         try
@@ -411,13 +433,13 @@ public partial class SettingsViewModel : ViewModelBase
                 File.WriteAllText(AppPaths.ActivityLogPath, "");
             }
             LoadActivityLogs();
-            StatusMessage = "Aktivite geçmişi temizlendi.";
+            StatusMessage = LocalizationManager.L("activity_log_cleared_success");
             IsSuccess = true;
         }
         catch (Exception ex)
         {
             _logger.LogError("Clear activity logs error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
     }

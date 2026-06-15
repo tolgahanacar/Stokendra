@@ -13,6 +13,7 @@ public partial class MessageBoxWindow : Window
     public static async Task Show(Window parent, string title, string message)
     {
         var msg = new MessageBoxWindow();
+        msg.Title = title;
         msg.FindControl<TextBlock>("TitleText")!.Text = title;
         msg.FindControl<TextBlock>("MessageText")!.Text = message;
         msg.FindControl<Button>("OkBtn")!.Click += (_, _) => msg.Close();
@@ -22,6 +23,7 @@ public partial class MessageBoxWindow : Window
     public static async Task<bool> ShowConfirm(Window parent, string title, string message)
     {
         var msg = new MessageBoxWindow();
+        msg.Title = title;
         msg.FindControl<TextBlock>("TitleText")!.Text = title;
         msg.FindControl<TextBlock>("MessageText")!.Text = message;
         

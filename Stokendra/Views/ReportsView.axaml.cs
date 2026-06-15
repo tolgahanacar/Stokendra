@@ -1,7 +1,10 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Stokendra.ViewModels;
 using ScottPlot;
+using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -19,21 +22,41 @@ public partial class ReportsView : UserControl
         AvaloniaXamlLoader.Load(this);
     }
 
+    private ReportsViewModel? _viewModel;
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        if (DataContext is ReportsViewModel vm)
+        _viewModel = DataContext as ReportsViewModel;
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (_viewModel != null)
         {
-            vm.PropertyChanged += (s, args) =>
+            _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+            if (_viewModel.ChartData != null && _viewModel.ChartData.Count > 0)
             {
-                if (args.PropertyName == nameof(ReportsViewModel.ChartData))
-                {
-                    Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateChart(vm.ChartData));
-                }
-            };
-            
-            if (vm.ChartData != null && vm.ChartData.Count > 0)
-                Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateChart(vm.ChartData));
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateChart(_viewModel.ChartData));
+            }
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (_viewModel != null)
+        {
+            _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        }
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ReportsViewModel.ChartData) && _viewModel != null)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => UpdateChart(_viewModel.ChartData));
         }
     }
 

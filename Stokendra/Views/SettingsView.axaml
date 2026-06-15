@@ -39,7 +39,7 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{infra:L auto_backup_folder}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
                                 <Grid ColumnDefinitions="*,Auto">
-                                    <TextBox Text="{Binding AutoBackupPath}" Watermark="Boş ise devre dışıdır" IsReadOnly="True" FontSize="11"/>
+                                    <TextBox Text="{Binding AutoBackupPath}" Watermark="{infra:L auto_backup_folder_watermark}" IsReadOnly="True" FontSize="11"/>
                                     <Button Grid.Column="1" Content="..." Command="{Binding SelectBackupFolderCommand}" IsEnabled="{Binding CanEdit}" Margin="4,0,0,0"/>
                                 </Grid>
                             </StackPanel>
@@ -72,12 +72,12 @@
                             
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{infra:L new_password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="En az 4 karakter"/>
+                                <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="{infra:L new_password_hint_min4}"/>
                             </StackPanel>
                             
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{infra:L confirm_password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="Şifreyi tekrar girin"/>
+                                <TextBox Text="{Binding ConfirmPassword}" PasswordChar="●" Watermark="{infra:L confirm_password_watermark}"/>
                             </StackPanel>
                             
                             <Button Content="{infra:L change_password_btn}" Classes="Success"
@@ -198,9 +198,9 @@
                                 <TextBlock Text="Stokendra" FontSize="22" FontWeight="Bold" Foreground="#38AEFF"/>
                                 <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>
                             </StackPanel>
-                            <TextBlock Text="Modern Stok ve Servis Takip Çözümü" FontSize="12" Foreground="#8A9BBF"/>
+                            <TextBlock Text="{infra:L app_subtitle}" FontSize="12" Foreground="#8A9BBF"/>
                             <Separator Height="1" Background="#1E2D45"/>
-                            <TextBlock Text="© 2026 Tolgahan Acar. Tüm hakları saklıdır." FontSize="11" Foreground="#3A4560"/>
+                            <TextBlock Text="{infra:L app_copyright}" FontSize="11" Foreground="#3A4560"/>
                         </StackPanel>
                     </Border>
 

@@ -34,6 +34,15 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
         if (string.IsNullOrWhiteSpace(name)) return;
 
         using var conn = connectionFactory.CreateConnection();
+        var inUse = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+            "SELECT EXISTS(SELECT 1 FROM StockMovements WHERE Department = @Name)",
+            new { Name = name.Trim() },
+            cancellationToken: cancellationToken));
+        if (inUse)
+        {
+            throw new InvalidOperationException(Stokendra.LocalizationManager.L("dept_in_use"));
+        }
+
         await conn.ExecuteAsync(new CommandDefinition(
             "DELETE FROM Departments WHERE Name = @Name", 
             new { Name = name.Trim() }, 

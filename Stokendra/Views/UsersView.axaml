@@ -30,7 +30,7 @@
 
                     <StackPanel Spacing="6">
                         <TextBlock Text="{infra:L password}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                        <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="{infra:L password_policy_hint}"/>
+                        <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="{infra:L password_policy_hint_min4}"/>
                     </StackPanel>
 
                     <StackPanel Spacing="6">

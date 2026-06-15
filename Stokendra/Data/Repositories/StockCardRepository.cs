@@ -162,6 +162,13 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         using var trans = conn.BeginTransaction();
         try 
         {
+            var hasChildren = conn.ExecuteScalar<bool>(
+                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId=@Id)",
+                new { Id = id },
+                transaction: trans);
+            if (hasChildren)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
+
             conn.Execute("DELETE FROM StockCards WHERE Id=@Id", new { Id = id }, transaction: trans);
             trans.Commit();
             LogAudit("Delete", "StockCards", id, "");
@@ -179,6 +186,14 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try 
         {
+            var hasChildren = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId=@Id)",
+                new { Id = id },
+                transaction: trans,
+                cancellationToken: cancellationToken));
+            if (hasChildren)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
+
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockCards WHERE Id=@Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
             await trans.CommitAsync(cancellationToken);
             LogAudit("Delete", "StockCards", id, "");

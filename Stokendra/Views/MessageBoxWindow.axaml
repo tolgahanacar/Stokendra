@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.MessageBoxWindow"
         Title="Bilgi"
         Width="400"
@@ -38,12 +39,12 @@
                         HorizontalAlignment="Right"
                         Spacing="10">
                 <Button Name="CancelBtn"
-                        Content="İptal"
+                        Content="{infra:L cancel}"
                         Classes="Secondary"
                         Width="90" MinHeight="36"
                         IsVisible="False"/>
                 <Button Name="OkBtn"
-                        Content="Tamam"
+                        Content="{infra:L ok}"
                         Classes="Primary"
                         Width="90" MinHeight="36"/>
             </StackPanel>

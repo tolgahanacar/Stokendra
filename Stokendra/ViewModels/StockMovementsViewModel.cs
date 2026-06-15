@@ -228,9 +228,17 @@ public partial class StockMovementsViewModel : ViewModelBase
         var vm = new AddMovementViewModel(_stockCards, _departments);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _movements.AddAsync(vm.Result);
-            await LoadMovementsAsync();
-            StatusText = LocalizationManager.L("save_settings");
+            try
+            {
+                await _movements.AddAsync(vm.Result);
+                await LoadMovementsAsync();
+                StatusText = LocalizationManager.L("save_settings");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Add movement error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 
@@ -245,9 +253,17 @@ public partial class StockMovementsViewModel : ViewModelBase
             var vm = new AddMovementViewModel(_stockCards, _departments, target);
             if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
             {
-                await Task.Run(() => _movements.Update(vm.Result));
-                await LoadMovementsAsync();
-                StatusText = LocalizationManager.L("save_settings");
+                try
+                {
+                    await Task.Run(() => _movements.Update(vm.Result));
+                    await LoadMovementsAsync();
+                    StatusText = LocalizationManager.L("save_settings");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Edit movement error", ex);
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+                }
             }
         }
         else

@@ -57,7 +57,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowMessageAsync("Hata", $"Departman eklenemedi: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("dept_added_failed"), ex.Message));
         }
     }
 
@@ -66,7 +66,7 @@ public partial class DepartmentsViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(dept)) return;
 
-        bool confirm = await _dialogService.ShowConfirmAsync("Onay", $"{dept} departmanını silmek istediğinize emin misiniz?");
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("dept_delete_confirm_title"), string.Format(LocalizationManager.L("dept_delete_confirm_msg"), dept));
         if (!confirm) return;
 
         try
@@ -76,7 +76,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            await _dialogService.ShowMessageAsync("Hata", $"Departman silinemedi: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("dept_deleted_failed"), ex.Message));
         }
     }
 
@@ -85,7 +85,7 @@ public partial class DepartmentsViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(oldName)) return;
 
-        var vm = new PromptViewModel("Departman Düzenle", $"{oldName} departmanı için yeni isim giriniz:", oldName);
+        var vm = new PromptViewModel(LocalizationManager.L("edit_dept_title"), string.Format(LocalizationManager.L("edit_dept_prompt"), oldName), oldName);
         if (await _dialogService.ShowDialogAsync(vm))
         {
             var newName = vm.InputText?.Trim();
@@ -98,7 +98,7 @@ public partial class DepartmentsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                await _dialogService.ShowMessageAsync("Hata", $"Güncelleme hatası: {ex.Message}");
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("dept_update_failed"), ex.Message));
             }
         }
     }

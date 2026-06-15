@@ -56,7 +56,7 @@ public partial class ServicesViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError("Load error", ex);
-            StatusText = $"Hata: {ex.Message}";
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
     }
 
@@ -85,7 +85,7 @@ public partial class ServicesViewModel : ViewModelBase
 
             Records.Clear();
             foreach (var r in data) Records.Add(r);
-            StatusText = $"{totalCount} kayıttan {Records.Count} tanesi listeleniyor (Sayfa {CurrentPage}/{TotalPages})";
+            StatusText = string.Format(LocalizationManager.L("svc_status_listing"), totalCount, Records.Count, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException)
         {
@@ -94,7 +94,7 @@ public partial class ServicesViewModel : ViewModelBase
         catch (Exception ex) 
         { 
             _logger.LogError("Services load error", ex);
-            StatusText = "Yükleme hatası.";
+            StatusText = LocalizationManager.L("svc_load_error");
         }
         finally { IsLoading = false; }
     }
@@ -148,9 +148,9 @@ public partial class ServicesViewModel : ViewModelBase
         {
             await _services.DeleteAsync(SelectedRecord.Id);
             await LoadAsync();
-            StatusText = "Kayıt silindi.";
+            StatusText = LocalizationManager.L("svc_record_deleted");
         }
-        catch (Exception ex) { await _dialogService.ShowMessageAsync("Hata", $"Silme hatası: {ex.Message}"); }
+        catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message)); }
     }
 
     [RelayCommand]
@@ -159,9 +159,17 @@ public partial class ServicesViewModel : ViewModelBase
         var vm = new AddServiceViewModel();
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _services.AddAsync(vm.Result);
-            await LoadAsync();
-            StatusText = "Servis kaydı eklendi.";
+            try
+            {
+                await _services.AddAsync(vm.Result);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("svc_record_added");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Add service error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 
@@ -172,9 +180,17 @@ public partial class ServicesViewModel : ViewModelBase
         var vm = new AddServiceViewModel(SelectedRecord);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _services.UpdateAsync(vm.Result);
-            await LoadAsync();
-            StatusText = "Servis kaydı güncellendi.";
+            try
+            {
+                await _services.UpdateAsync(vm.Result);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("svc_record_updated");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Edit service error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 
@@ -182,12 +198,12 @@ public partial class ServicesViewModel : ViewModelBase
     public async Task ExportExcelAsync()
     {
         string fileName = $"Servis_Kayitlari_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
-        string? path = await _dialogService.SaveFileAsync("Excel Kaydet", fileName, "Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("svc_excel_save_title"), fileName, LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
-            StatusText = "Excel oluşturuluyor...";
+            StatusText = LocalizationManager.L("svc_excel_saving");
             await Task.Run(() => {
                 var headers = new[] { 
                     LocalizationManager.L("date"), 
@@ -201,25 +217,25 @@ public partial class ServicesViewModel : ViewModelBase
                     s.ServiceDate.ToString("dd.MM.yyyy"), s.DeviceName, s.SerialNumber, s.Company, s.Issue, s.Result
                 });
             });
-            StatusText = "Excel başarıyla kaydedildi.";
-            await _dialogService.ShowMessageAsync("Başarılı", "Excel dosyası başarıyla kaydedildi.");
+            StatusText = LocalizationManager.L("svc_excel_saved");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("svc_excel_saved_dialog"));
         }
         catch (Exception ex) 
         { 
             _logger.LogError("Excel export error", ex);
-            StatusText = $"Hata: {ex.Message}"; 
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }
 
     [RelayCommand]
     public async Task ImportAsync()
     {
-        string? path = await _dialogService.OpenFileAsync("Excel Seç", "Excel Dosyası (*.xlsx)|*.xlsx");
+        string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("svc_excel_select_title"), LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
-            StatusText = "Excel okunuyor...";
+            StatusText = LocalizationManager.L("svc_import_reading");
             await Task.Run(async () => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook(path);
                 var worksheet = workbook.Worksheet(1);
@@ -296,9 +312,9 @@ public partial class ServicesViewModel : ViewModelBase
                 if (toImport.Count > 0) await _services.AddBulkAsync(toImport);
             });
             await LoadAsync();
-            StatusText = "İçeri aktarım tamamlandı.";
+            StatusText = LocalizationManager.L("svc_import_done");
         }
-        catch (Exception ex) { StatusText = $"Hata: {ex.Message}"; }
+        catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
@@ -310,10 +326,10 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             if (Records.Count == 0) return;
-            StatusText = "Yazdırma hazırlanıyor...";
+            StatusText = LocalizationManager.L("svc_print_preparing");
             
             var sb = new System.Text.StringBuilder();
-            sb.Append("<html><head><meta charset='utf-8'><title>Servis Kayıt Raporu</title>");
+            sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("svc_print_report_title")}</title>");
             sb.Append("<style>");
             sb.Append("@page { size: landscape; margin: 0.5cm; } ");
             sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
@@ -330,8 +346,8 @@ public partial class ServicesViewModel : ViewModelBase
             sb.Append("</head><body>");
             
             sb.Append("<div class='top-header'>");
-            sb.Append("<h1>SERVİS KAYIT RAPORU</h1>");
-            sb.Append($"<div class='date-box'>Rapor Tarihi:<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b></div>");
+            sb.Append($"<h1>{LocalizationManager.L("svc_print_report_header")}</h1>");
+            sb.Append($"<div class='date-box'>{LocalizationManager.L("svc_print_report_date")}<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b></div>");
             sb.Append("</div>");
 
             sb.Append("<table><thead><tr>");
@@ -354,18 +370,18 @@ public partial class ServicesViewModel : ViewModelBase
             }
             
             sb.Append("</tbody></table>");
-            sb.Append($"<div class='footer'>Toplam {Records.Count} kayıt listelenmiştir.</div>");
+            sb.Append($"<div class='footer'>{string.Format(LocalizationManager.L("svc_print_total_records"), Records.Count)}</div>");
             sb.Append("</body></html>");
             
-            var previewVm = new PrintPreviewViewModel("Servis Kayıt Raporu", sb.ToString());
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("svc_print_report_title"), sb.ToString());
             await _dialogService.ShowDialogAsync(previewVm);
             
-            StatusText = "Yazdırma tamamlandı.";
+            StatusText = LocalizationManager.L("svc_print_done");
         }
         catch (Exception ex) 
         { 
             _logger.LogError("Print error", ex);
-            StatusText = $"Hata: {ex.Message}"; 
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }
 }

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.AddServiceWindow"
         Title="{Binding Title}"
         Width="480" Height="580"
@@ -22,7 +23,7 @@
             <StackPanel Spacing="3">
                 <TextBlock Text="{Binding Title}"
                            FontSize="18" FontWeight="Bold" Foreground="#E8EEFF"/>
-                <TextBlock Text="Bakım ve onarım detayları"
+                <TextBlock Text="{infra:L svc_subtitle}"
                            FontSize="12" Foreground="#5A6987"/>
             </StackPanel>
         </Border>
@@ -34,37 +35,37 @@
             <StackPanel Spacing="14" Margin="20,14,20,16">
 
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Cihaz Adı" FontSize="12" Foreground="#8A9BBF"/>
-                    <TextBox Text="{Binding DeviceName}" Watermark="Cihaz modelini yazınız..."/>
+                    <TextBlock Text="{infra:L svc_device_name}" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBox Text="{Binding DeviceName}" Watermark="{infra:L svc_device_name_watermark}"/>
                 </StackPanel>
 
                 <Grid ColumnDefinitions="*,*">
                     <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
-                        <TextBlock Text="Seri Numarası" FontSize="12" Foreground="#8A9BBF"/>
-                        <TextBox Text="{Binding SerialNumber}" Watermark="S/N..."/>
+                        <TextBlock Text="{infra:L svc_serial_number}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding SerialNumber}" Watermark="{infra:L svc_serial_watermark}"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
-                        <TextBlock Text="Firma" FontSize="12" Foreground="#8A9BBF"/>
-                        <TextBox Text="{Binding Company}" Watermark="Servis firması..."/>
+                        <TextBlock Text="{infra:L svc_company}" FontSize="12" Foreground="#8A9BBF"/>
+                        <TextBox Text="{Binding Company}" Watermark="{infra:L svc_company_watermark}"/>
                     </StackPanel>
                 </Grid>
 
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Bakım Tarihi" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBlock Text="{infra:L svc_date}" FontSize="12" Foreground="#8A9BBF"/>
                     <DatePicker SelectedDate="{Binding Date}" HorizontalAlignment="Stretch"/>
                 </StackPanel>
 
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Sorun / Talep" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBlock Text="{infra:L svc_issue}" FontSize="12" Foreground="#8A9BBF"/>
                     <TextBox Text="{Binding Issue}"
-                             Watermark="Sorunu detaylandırın..."
+                             Watermark="{infra:L svc_issue_watermark}"
                              Height="75" AcceptsReturn="True" TextWrapping="Wrap"/>
                 </StackPanel>
 
                 <StackPanel Spacing="5">
-                    <TextBlock Text="Yapılan İşlem / Sonuç" FontSize="12" Foreground="#8A9BBF"/>
+                    <TextBlock Text="{infra:L svc_result}" FontSize="12" Foreground="#8A9BBF"/>
                     <TextBox Text="{Binding ResultText}"
-                             Watermark="Sonucu yazınız..."
+                             Watermark="{infra:L svc_result_watermark}"
                              Height="75" AcceptsReturn="True" TextWrapping="Wrap"/>
                 </StackPanel>
 
@@ -78,8 +79,9 @@
                 BorderBrush="#252D3D"
                 BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                <Button Content="İptal"  Classes="Secondary" Command="{Binding CancelCommand}" Width="90" MinHeight="36"/>
-                <Button Content="Kaydet" Classes="Primary"   Command="{Binding SaveCommand}"   Width="90" MinHeight="36"/>
+                <Button Content="{infra:L cancel}"  Classes="Secondary" Command="{Binding CancelCommand}" Width="90" MinHeight="36"/>
+                <Button Content="{infra:L save}" Classes="Primary"   Command="{Binding SaveCommand}"   Width="90" MinHeight="36"
+                        IsEnabled="{Binding DeviceName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
             </StackPanel>
         </Border>
 

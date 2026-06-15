@@ -27,7 +27,7 @@
                                    FontSize="20" FontWeight="Black"
                                    Foreground="#3B82F6"
                                    LetterSpacing="1"/>
-                        <TextBlock Text="Yönetim Paneli"
+                        <TextBlock Text="{infra:L app_management_panel}"
                                    FontSize="10"
                                    FontWeight="Medium"
                                    Foreground="#64748B"/>
@@ -185,7 +185,7 @@
                                 <!-- Çıkış Butonu (kompakt simge) -->
                                 <Button Grid.Column="2"
                                         Command="{Binding LogoutCommand}"
-                                        ToolTip.Tip="Çıkış Yap"
+                                        ToolTip.Tip="{infra:L logout_tooltip}"
                                         Width="32" Height="32"
                                         Padding="0"
                                         CornerRadius="6"
@@ -202,7 +202,7 @@
 
                         <!-- Copyright -->
                         <TextBlock Grid.Row="1"
-                                   Text="© 2026 Tolgahan Acar"
+                                   Text="{infra:L app_copyright}"
                                    FontSize="8" Foreground="#2A3550"
                                    HorizontalAlignment="Center"
                                    Margin="0,4,0,0"/>

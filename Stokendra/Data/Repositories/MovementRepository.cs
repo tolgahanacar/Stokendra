@@ -408,20 +408,47 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException("Cannot associate movements with parent cards.");
         }
 
-        var movementIds = list.Select(m => m.Id).ToList();
-        var cards = list.GroupBy(m => m.StockCardId);
-
-        foreach (var cardGroup in cards)
+        var movementIds = list.Where(m => m.Id > 0).Select(m => m.Id).ToList();
+        var originalMovements = new Dictionary<int, int>();
+        if (movementIds.Count > 0)
         {
-            int cardId = cardGroup.Key;
-            
-            var baseResult = conn.ExecuteScalar<double?>(
-                "SELECT SUM(CASE WHEN Id IN @Ids THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
-                new { Ids = movementIds, StockCardId = cardId },
-                transaction: trans);
+            originalMovements = conn.Query<(int Id, int StockCardId)>(
+                "SELECT Id, StockCardId FROM StockMovements WHERE Id IN @Ids",
+                new { Ids = movementIds },
+                transaction: trans).ToDictionary(x => x.Id, x => x.StockCardId);
+        }
 
-            double baseBalance = baseResult ?? 0;
-            double newImpact = cardGroup.Sum(m => (m.TypeEnum == MovementType.Entry) ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0));
+        var affectedCardIds = new HashSet<int>();
+        foreach (var m in list)
+        {
+            affectedCardIds.Add(m.StockCardId);
+            if (originalMovements.TryGetValue(m.Id, out var origCardId))
+            {
+                affectedCardIds.Add(origCardId);
+            }
+        }
+
+        foreach (var cardId in affectedCardIds)
+        {
+            double baseBalance = 0;
+            if (movementIds.Count > 0)
+            {
+                var baseResult = conn.ExecuteScalar<double?>(
+                    "SELECT SUM(CASE WHEN Id IN @Ids THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
+                    new { Ids = movementIds, StockCardId = cardId },
+                    transaction: trans);
+                baseBalance = baseResult ?? 0;
+            }
+            else
+            {
+                var baseResult = conn.ExecuteScalar<double?>(
+                    "SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) FROM StockMovements WHERE StockCardId=@StockCardId",
+                    new { StockCardId = cardId },
+                    transaction: trans);
+                baseBalance = baseResult ?? 0;
+            }
+
+            double newImpact = list.Where(m => m.StockCardId == cardId).Sum(m => m.TypeEnum == MovementType.Entry ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0));
             
             if (baseBalance + newImpact < 0)
             {
@@ -432,6 +459,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException($"Update invalid: would result in negative stock for '{cardName}'.");
             }
         }
+    }
+
+    private void ValidateUpdate(StockMovement m, SqliteConnection conn)
+    {
+        ValidateBulkUpdate(new[] { m }, conn);
     }
 
     public async Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync(CancellationToken cancellationToken = default)
@@ -584,17 +616,5 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         var @params = new DynamicParameters();
         string sql = BuildQuery("SELECT COUNT(*) FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
         return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
-    }
-
-    private void ValidateUpdate(StockMovement m, SqliteConnection conn)
-    {
-        var baseResult = conn.ExecuteScalar<double?>(
-            "SELECT SUM(CASE WHEN Id=@Id THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
-            new { Id = m.Id, StockCardId = m.StockCardId });
-            
-        double baseBalance = baseResult ?? 0;
-        double newImpact = (m.TypeEnum == MovementType.Entry) ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0);
-        
-        if (baseBalance + newImpact < 0) throw new InvalidOperationException("Update invalid: would result in negative stock.");
     }
 }

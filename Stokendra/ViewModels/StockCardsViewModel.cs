@@ -164,9 +164,17 @@ public partial class StockCardsViewModel : ViewModelBase
         var vm = new AddStockCardViewModel(_stockCards);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _stockCards.AddAsync(vm.Result);
-            await LoadAsync();
-            StatusText = LocalizationManager.L("save_settings"); // saved
+            try
+            {
+                await _stockCards.AddAsync(vm.Result);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("save_settings");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Add card error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 
@@ -177,9 +185,17 @@ public partial class StockCardsViewModel : ViewModelBase
         var vm = new AddStockCardViewModel(_stockCards, SelectedCard);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
-            await _stockCards.UpdateAsync(vm.Result);
-            await LoadAsync();
-            StatusText = LocalizationManager.L("save_settings");
+            try
+            {
+                await _stockCards.UpdateAsync(vm.Result);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("save_settings");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Edit card error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 

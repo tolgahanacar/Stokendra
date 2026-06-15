@@ -70,7 +70,7 @@ public partial class UsersViewModel : ViewModelBase
 
         if (string.IsNullOrWhiteSpace(NewUsername) || string.IsNullOrWhiteSpace(NewPassword))
         {
-            StatusMessage = "Kullanıcı adı ve şifre boş olamaz.";
+            StatusMessage = LocalizationManager.L("username_password_required");
             return;
         }
 
@@ -87,7 +87,7 @@ public partial class UsersViewModel : ViewModelBase
             bool ok = await _userRepository.AddUserAsync(NewUsername.Trim(), NewPassword, NewRole);
             if (ok)
             {
-                StatusMessage = $"{NewUsername} kullanıcısı başarıyla eklendi.";
+                StatusMessage = string.Format(LocalizationManager.L("user_added_success"), NewUsername);
                 IsSuccess = true;
                 NewUsername = "";
                 NewPassword = "";
@@ -96,13 +96,13 @@ public partial class UsersViewModel : ViewModelBase
             }
             else
             {
-                StatusMessage = "Kullanıcı eklenemedi. Bu isimde bir kullanıcı zaten var olabilir.";
+                StatusMessage = LocalizationManager.L("user_add_failed");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Add user error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
         finally
         {
@@ -116,17 +116,17 @@ public partial class UsersViewModel : ViewModelBase
         if (user == null) return;
         if (user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
-            await _dialogService.ShowMessageAsync("Hata", "Ana 'admin' kullanıcısı silinemez.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("admin_user_cannot_delete"));
             return;
         }
 
         if (user.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
         {
-            await _dialogService.ShowMessageAsync("Hata", "Kendinizi silemezsiniz.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("cannot_delete_self"));
             return;
         }
 
-        bool confirm = await _dialogService.ShowConfirmAsync("Kullanıcı Sil", $"'{user.Username}' kullanıcısı silinecektir. Emin misiniz?");
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("delete_user_title"), string.Format(LocalizationManager.L("confirm_delete_user"), user.Username));
         if (!confirm) return;
 
         IsLoading = true;
@@ -135,20 +135,20 @@ public partial class UsersViewModel : ViewModelBase
             bool ok = await _userRepository.DeleteUserAsync(user.Id);
             if (ok)
             {
-                StatusMessage = "Kullanıcı silindi.";
+                StatusMessage = LocalizationManager.L("user_deleted_success");
                 IsSuccess = true;
                 await LoadUsersAsync();
             }
             else
             {
-                StatusMessage = "Kullanıcı silinemedi.";
+                StatusMessage = LocalizationManager.L("user_delete_failed");
                 IsSuccess = false;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError("Delete user error", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
         finally
@@ -163,13 +163,13 @@ public partial class UsersViewModel : ViewModelBase
         if (user == null) return;
         if (user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
-            await _dialogService.ShowMessageAsync("Hata", "Ana 'admin' kullanıcısının rolü değiştirilemez.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("admin_role_cannot_change"));
             return;
         }
 
         if (user.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
         {
-            await _dialogService.ShowMessageAsync("Hata", "Kendi rolünüzü değiştiremezsiniz.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("cannot_change_own_role"));
             return;
         }
 
@@ -178,12 +178,12 @@ public partial class UsersViewModel : ViewModelBase
         if (ok)
         {
             await LoadUsersAsync();
-            StatusMessage = $"{user.Username} kullanıcısının rolü '{nextRole}' olarak güncellendi.";
+            StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), user.Username, nextRole);
             IsSuccess = true;
         }
         else
         {
-            StatusMessage = "Rol güncellenemedi.";
+            StatusMessage = LocalizationManager.L("role_update_failed");
             IsSuccess = false;
         }
     }
@@ -227,13 +227,13 @@ public partial class UsersViewModel : ViewModelBase
                 }
                 else
                 {
-                    await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), "Şifre değiştirilemedi.");
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("password_change_failed"));
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError("Reset password error", ex);
-                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"Şifre değiştirme hatası: {ex.Message}");
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("password_change_error"), ex.Message));
             }
             finally
             {

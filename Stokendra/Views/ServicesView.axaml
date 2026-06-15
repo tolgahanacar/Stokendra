@@ -8,8 +8,8 @@
 
         <!-- Başlık -->
         <StackPanel Grid.Row="0" Margin="40,32,40,0" Spacing="6">
-            <TextBlock Text="Servis Kayıtları" FontSize="28" FontWeight="Bold" Foreground="#F1F5F9"/>
-            <TextBlock Text="Cihaz bakım ve onarım geçmişi" FontSize="13" Foreground="#64748B"/>
+            <TextBlock Text="{infra:L services}" FontSize="28" FontWeight="Bold" Foreground="#F1F5F9"/>
+            <TextBlock Text="{infra:L services_subtitle}" FontSize="13" Foreground="#64748B"/>
         </StackPanel>
 
         <!-- Filtreler -->
@@ -18,14 +18,14 @@
                 BorderBrush="#1E2D45" BorderThickness="1">
             <WrapPanel Orientation="Horizontal">
                 <TextBox Text="{Binding SearchText, Mode=TwoWay}"
-                         Watermark="🔍 Cihaz adı, seri no, firma..."
+                         Watermark="{infra:L service_search_placeholder}"
                          Width="260" Margin="0,0,10,8"/>
                 <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8"/>
                 <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8"/>
-                <Button Content="🔍 Ara" Classes="Primary"
+                <Button Content="{infra:L filter}" Classes="Primary"
                         Command="{Binding SearchCommand}"
                         Margin="0,0,8,8"/>
-                <Button Content="↺ Temizle" Classes="Secondary"
+                <Button Content="{infra:L clear_filter}" Classes="Secondary"
                         Command="{Binding ClearFiltersCommand}"
                         Margin="0,0,8,8"/>
             </WrapPanel>
@@ -33,23 +33,23 @@
 
         <!-- Toolbar -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="40,14,40,0">
-            <Button Content="＋ Ekle" Classes="Primary"
+            <Button Content="{infra:L add}" Classes="Primary"
                     Command="{Binding AddCommand}"
                     IsVisible="{Binding CanEdit}"/>
-            <Button Content="✎ Düzenle" Classes="Secondary"
+            <Button Content="{infra:L edit}" Classes="Secondary"
                     Command="{Binding EditCommand}"
                     IsEnabled="{Binding IsRecordSelected}"
                     IsVisible="{Binding CanEdit}"/>
-            <Button Content="🗑 Sil" Classes="Danger"
+            <Button Content="{infra:L delete}" Classes="Danger"
                     Command="{Binding DeleteCommand}"
                     IsEnabled="{Binding IsRecordSelected}"
                     IsVisible="{Binding CanEdit}"/>
             <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
-            <Button Content="📊 Excel" Classes="Secondary"
+            <Button Content="{infra:L excel}" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
-            <Button Content="🖨 Yazdır" Classes="Secondary"
+            <Button Content="{infra:L print}" Classes="Secondary"
                     Command="{Binding PrintCommand}"/>
-            <Button Content="↺ Yenile" Classes="Secondary"
+            <Button Content="{infra:L refresh}" Classes="Secondary"
                     Command="{Binding RefreshCommand}"/>
         </StackPanel>
 
@@ -63,12 +63,12 @@
                   Background="#0C0E14"
                   BorderThickness="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Cihaz Adı"  Binding="{Binding DeviceName}"     Width="250"/>
-                <DataGridTextColumn Header="Seri No"    Binding="{Binding SerialNumber}"  Width="200"/>
-                <DataGridTextColumn Header="Firma"      Binding="{Binding Company}"         Width="180"/>
-                <DataGridTextColumn Header="Sorun"      Binding="{Binding Issue}"         Width="250"/>
-                <DataGridTextColumn Header="Sonuç"      Binding="{Binding Result}"         Width="250"/>
-                <DataGridTextColumn Header="Tarih"      Binding="{Binding ServiceDate, StringFormat=dd.MM.yyyy}" Width="*"/>
+                <DataGridTextColumn Header="{infra:L device_name}"  Binding="{Binding DeviceName}"     Width="250"/>
+                <DataGridTextColumn Header="{infra:L serial_number}"    Binding="{Binding SerialNumber}"  Width="200"/>
+                <DataGridTextColumn Header="{infra:L company}"      Binding="{Binding Company}"         Width="180"/>
+                <DataGridTextColumn Header="{infra:L problem}"      Binding="{Binding Issue}"         Width="250"/>
+                <DataGridTextColumn Header="{infra:L result}"      Binding="{Binding Result}"         Width="250"/>
+                <DataGridTextColumn Header="{infra:L date}"      Binding="{Binding ServiceDate, StringFormat=dd.MM.yyyy}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
 

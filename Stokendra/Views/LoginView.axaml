@@ -1,8 +1,9 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.LoginView"
-        Title="Stokendra - Giriş"
+        Title="{infra:L login_title}"
         Width="420" Height="520"
         WindowStartupLocation="CenterScreen"
         CanResize="False"
@@ -17,7 +18,7 @@
                            FontSize="26" FontWeight="Bold"
                            Foreground="#38AEFF"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Stok Takip Sistemi"
+                <TextBlock Text="{infra:L login_subtitle}"
                            FontSize="11"
                            Foreground="#5A6987"
                            HorizontalAlignment="Center"/>
@@ -30,25 +31,25 @@
                 <!-- Giriş Formu -->
                 <StackPanel IsVisible="{Binding !IsForgotMode}" Spacing="0">
                     <!-- Kullanıcı Adı -->
-                    <TextBlock Text="Kullanıcı Adı"
+                    <TextBlock Text="{infra:L username}"
                                Foreground="#B9C3DC"
                                FontSize="12" FontWeight="SemiBold"
                                Margin="0,0,0,6"/>
                     <TextBox Text="{Binding Username, Mode=TwoWay}"
-                             Watermark="Kullanıcı adınızı girin"
+                             Watermark="{infra:L username_watermark}"
                              Margin="0,0,0,18"/>
 
                     <!-- Şifre -->
-                    <TextBlock Text="Şifre"
+                    <TextBlock Text="{infra:L password}"
                                Foreground="#B9C3DC"
                                FontSize="12" FontWeight="SemiBold"
                                Margin="0,0,0,6"/>
                     <TextBox Text="{Binding Password, Mode=TwoWay}"
                              PasswordChar="●"
-                             Watermark="Şifrenizi girin"
+                             Watermark="{infra:L password_watermark}"
                              Margin="0,0,0,18"/>
 
-                    <Button Content="Giriş Yap"
+                    <Button Content="{infra:L login_btn}"
                             Command="{Binding DoLoginCommand}"
                             IsDefault="True"
                             HorizontalAlignment="Stretch"
@@ -56,7 +57,7 @@
                             Height="44"
                             FontSize="13" FontWeight="SemiBold"/>
                     
-                    <Button Content="Şifremi Unuttum?"
+                    <Button Content="{infra:L forgot_password}"
                             Classes="MenuButton"
                             Command="{Binding ToggleForgotModeCommand}"
                             HorizontalAlignment="Center"
@@ -66,29 +67,29 @@
 
                 <!-- Şifre Sıfırlama Formu -->
                 <StackPanel IsVisible="{Binding IsForgotMode}" Spacing="0">
-                    <TextBlock Text="Şifre Sıfırlama"
+                    <TextBlock Text="{infra:L password_reset}"
                                Foreground="#38AEFF"
                                FontSize="16" FontWeight="Bold"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,20"/>
 
-                    <TextBlock Text="Kullanıcı Adı" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding Username}" Watermark="Kullanıcı adınız" Margin="0,0,0,12"/>
+                    <TextBlock Text="{infra:L username}" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding Username}" Watermark="{infra:L username}" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Güvenlik Kodu (4 Hane)" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding SecurityCode}" PasswordChar="●" Watermark="****" MaxLength="4" Margin="0,0,0,12"/>
+                    <TextBlock Text="{infra:L security_code_label}" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding SecurityCode}" PasswordChar="●" Watermark="{infra:L security_code_watermark}" MaxLength="4" Margin="0,0,0,12"/>
 
-                    <TextBlock Text="Yeni Şifre" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="Yeni şifreniz" Margin="0,0,0,20"/>
+                    <TextBlock Text="{infra:L new_password}" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
+                    <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="{infra:L new_password_watermark}" Margin="0,0,0,20"/>
 
-                    <Button Content="Şifreyi Sıfırla"
+                    <Button Content="{infra:L reset_password_btn}"
                             Classes="Success"
                             Command="{Binding DoResetPasswordCommand}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
                             Height="44"/>
                     
-                    <Button Content="← Girişe Dön"
+                    <Button Content="{infra:L back_to_login}"
                             Classes="MenuButton"
                             Command="{Binding ToggleForgotModeCommand}"
                             HorizontalAlignment="Center"
@@ -109,10 +110,10 @@
 
         <!-- Footer -->
         <TextBlock Grid.Row="2"
-                   Text="© 2026 Tolgahan Acar"
-                   Foreground="#3A4560"
-                   FontSize="10"
-                   HorizontalAlignment="Center"
-                   Margin="0,0,0,16"/>
+                    Text="{infra:L app_copyright}"
+                    Foreground="#3A4560"
+                    FontSize="10"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,16"/>
     </Grid>
 </Window>
