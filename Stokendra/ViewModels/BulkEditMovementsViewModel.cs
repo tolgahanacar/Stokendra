@@ -107,10 +107,8 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
                 updatedCount++;
             }
         }
-
         if (updatedCount > 0)
         {
-            // Refresh bindings in DataGrid
             var temp = EditingMovements.ToList();
             EditingMovements.Clear();
             foreach (var m in temp) EditingMovements.Add(m);

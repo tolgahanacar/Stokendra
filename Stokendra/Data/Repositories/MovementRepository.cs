@@ -537,7 +537,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             if (row.CardType == "Parent") throw new InvalidOperationException("Cannot add movements to parent cards.");
             if (m.TypeEnum == MovementType.Exit)
             {
-                double current = (double)row.CurrentStock;
+                double current = Convert.ToDouble(row.CurrentStock);
                 if (current < m.Quantity) throw new InvalidOperationException("Insufficient stock.");
             }
         }

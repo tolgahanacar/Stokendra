@@ -84,10 +84,22 @@ public partial class AddMovementViewModel : ViewModelBase
     {
         if (SelectedCard == null) return;
         
-        // Negative Stock Validation
         string tur = SelectedTypeIndex switch { 0 => "Entry", 1 => "Exit", 2 => "Blank", _ => "Entry" };
-        if (tur == "Exit" && Quantity > SelectedCard.CurrentStock)
+        
+        // Mathematically correct negative stock validation
+        double stockWithoutOld = SelectedCard.CurrentStock;
+        if (_editingMovement != null)
         {
+            if (_editingMovement.TypeEnum == MovementType.Exit)
+                stockWithoutOld += _editingMovement.Quantity;
+            else if (_editingMovement.TypeEnum == MovementType.Entry)
+                stockWithoutOld -= _editingMovement.Quantity;
+        }
+
+        double newImpact = tur switch { "Entry" => Quantity, "Exit" => -Quantity, _ => 0 };
+        if (stockWithoutOld + newImpact < 0)
+        {
+            double maxAllowedExit = stockWithoutOld;
             ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({LocalizationManager.L("current_stock")}: {SelectedCard.CurrentStock})";
             return;
         }

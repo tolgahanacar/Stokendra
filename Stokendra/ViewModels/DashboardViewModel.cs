@@ -40,7 +40,7 @@ public partial class DashboardViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            int lowStockThreshold = 0;
+            int lowStockThreshold = AppServices.Current.Settings.LowStockThreshold;
             var stats = await _reports.GetDashboardStatsAsync(lowStockThreshold);
             TotalCards     = stats.TotalCards;
             TotalStock     = FormatNumber(stats.TotalStock);

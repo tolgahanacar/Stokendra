@@ -316,6 +316,48 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             new { Code = s.Code, Id = s.Id },
             transaction: trans);
         if (count > 0)
-            throw new InvalidOperationException("This stock code is already in use.");
+            throw new InvalidOperationException(LocalizationManager.L("stock_code_exists"));
+
+        // Hierarchical validations
+        if (s.ParentId.HasValue)
+        {
+            if (s.ParentId == s.Id)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_self"));
+
+            // Check if parent card exists and is indeed a Parent card
+            var parentType = conn.ExecuteScalar<string>(
+                "SELECT CardType FROM StockCards WHERE Id=@ParentId",
+                new { ParentId = s.ParentId.Value },
+                transaction: trans);
+
+            if (parentType == null)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_not_found"));
+
+            // Cycle detection
+            int? currentParentId = s.ParentId;
+            var visited = new System.Collections.Generic.HashSet<int> { s.Id };
+            while (currentParentId.HasValue)
+            {
+                if (visited.Contains(currentParentId.Value))
+                    throw new InvalidOperationException(LocalizationManager.L("parent_card_loop"));
+                visited.Add(currentParentId.Value);
+
+                currentParentId = conn.ExecuteScalar<int?>(
+                    "SELECT ParentId FROM StockCards WHERE Id=@Id",
+                    new { Id = currentParentId.Value },
+                    transaction: trans);
+            }
+        }
+
+        // Parent card with movements check
+        if (s.CardTypeEnum == CardType.Parent)
+        {
+            var hasMovements = conn.ExecuteScalar<bool>(
+                "SELECT EXISTS(SELECT 1 FROM StockMovements WHERE StockCardId=@Id)",
+                new { Id = s.Id },
+                transaction: trans);
+            if (hasMovements)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_with_movements"));
+        }
     }
 }
