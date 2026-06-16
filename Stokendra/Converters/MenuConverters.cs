@@ -1,4 +1,5 @@
 using Avalonia.Data.Converters;
+using Stokendra.Infrastructure;
 using System;
 using System.Globalization;
 
@@ -61,8 +62,8 @@ public class RoleTextConverter : IValueConverter
         if (value is string role)
         {
             if (role.Equals("admin", StringComparison.OrdinalIgnoreCase))
-                return "Yönetici";
-            return "Kullanıcı";
+                return LocalizationManager.L("role_admin");
+            return LocalizationManager.L("role_user");
         }
         return value;
     }

@@ -20,6 +20,7 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IBackupService _backupService;
     private readonly ILogger _logger;
     private readonly IDbConnectionFactory _connectionFactory;
+    private readonly IUpdateService _updateService;
 
     [ObservableProperty] private string _companyName   = "";
     [ObservableProperty] private string _dbPath        = "";
@@ -46,7 +47,8 @@ public partial class SettingsViewModel : ViewModelBase
         IDialogService dialogService,
         IBackupService backupService,
         ILogger logger,
-        IDbConnectionFactory connectionFactory)
+        IDbConnectionFactory connectionFactory,
+        IUpdateService updateService)
     {
         _users = users;
         _config = config;
@@ -54,6 +56,7 @@ public partial class SettingsViewModel : ViewModelBase
         _backupService = backupService;
         _logger = logger;
         _connectionFactory = connectionFactory;
+        _updateService = updateService;
         Load();
     }
 
@@ -220,7 +223,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task SelectDbFile()
     {
-        var path = await _dialogService.OpenFileAsync(LocalizationManager.L("select_db_file_title"), "SQLite Veritabanı (*.db)|*.db");
+        var path = await _dialogService.OpenFileAsync(LocalizationManager.L("select_db_file_title"), LocalizationManager.L("db_file_filter"));
         if (!string.IsNullOrEmpty(path))
         {
             DbPath = path;
@@ -277,7 +280,7 @@ public partial class SettingsViewModel : ViewModelBase
     public async Task DatabaseBackupAsync()
     {
         string fileName = $"Stokendra_DB_{DateTime.Now:yyyyMMdd_HHmm}.db";
-        string? destPath = await _dialogService.SaveFileAsync(LocalizationManager.L("save_db_backup_title"), fileName, "SQLite Veritabanı (*.db)|*.db");
+        string? destPath = await _dialogService.SaveFileAsync(LocalizationManager.L("save_db_backup_title"), fileName, LocalizationManager.L("db_file_filter"));
         
         if (string.IsNullOrEmpty(destPath)) return;
 
@@ -304,7 +307,7 @@ public partial class SettingsViewModel : ViewModelBase
     public async Task FullBackupAsync()
     {
         string? zipPath = await _dialogService.SaveFileAsync(LocalizationManager.L("save_full_excel_backup_title"), 
-            $"Stokendra_FullExcel_Backup_{DateTime.Now:ddMMyyyy}.zip", "Zip Arşivi (*.zip)|*.zip");
+            $"Stokendra_FullExcel_Backup_{DateTime.Now:ddMMyyyy}.zip", LocalizationManager.L("zip_file_filter"));
         if (string.IsNullOrEmpty(zipPath)) return;
 
         try
@@ -441,6 +444,66 @@ public partial class SettingsViewModel : ViewModelBase
             _logger.LogError("Clear activity logs error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdatesAsync()
+    {
+        StatusMessage = LocalizationManager.L("checking_updates");
+        IsSuccess = false;
+
+        try
+        {
+            var (latestTag, htmlUrl) = await _updateService.GetLatestReleaseAsync();
+            string cleanLatest = latestTag.TrimStart('v', 'V');
+
+            if (Version.TryParse(cleanLatest, out var latestVersion) && 
+                Version.TryParse(AppVersion.TrimStart('v', 'V'), out var currentVersion))
+            {
+                if (latestVersion > currentVersion)
+                {
+                    StatusMessage = string.Format(LocalizationManager.L("update_available"), latestTag, AppVersion);
+                    IsSuccess = true;
+
+                    bool goToDownload = await _dialogService.ShowConfirmAsync(
+                        LocalizationManager.L("update_title"), 
+                        string.Format(LocalizationManager.L("update_available"), latestTag, AppVersion)
+                    );
+
+                    if (goToDownload)
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = htmlUrl,
+                            UseShellExecute = true
+                        });
+                    }
+                }
+                else
+                {
+                    StatusMessage = string.Format(LocalizationManager.L("up_to_date"), AppVersion);
+                    IsSuccess = true;
+                    await _dialogService.ShowMessageAsync(
+                        LocalizationManager.L("info"), 
+                        string.Format(LocalizationManager.L("up_to_date"), AppVersion)
+                    );
+                }
+            }
+            else
+            {
+                throw new FormatException("Version string parsing failed.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Check updates error", ex);
+            StatusMessage = string.Format(LocalizationManager.L("update_error"), ex.Message);
+            IsSuccess = false;
+            await _dialogService.ShowMessageAsync(
+                LocalizationManager.L("error"), 
+                string.Format(LocalizationManager.L("update_error"), ex.Message)
+            );
         }
     }
 }

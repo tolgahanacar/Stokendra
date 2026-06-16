@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Stokendra.Infrastructure;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ public partial class PrintPreviewViewModel : ViewModelBase
 {
     [ObservableProperty] private string _title;
     [ObservableProperty] private string _content;
-    [ObservableProperty] private string _statusText = "Düzenledikten sonra 'Tarayıcıda Aç' diyerek yazdırabilirsiniz.";
+    [ObservableProperty] private string _statusText = LocalizationManager.L("print_preview_status");
 
     public Action? CloseAction { get; set; }
 
@@ -35,7 +36,7 @@ public partial class PrintPreviewViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            StatusText = $"Hata: {ex.Message}";
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
     }
 

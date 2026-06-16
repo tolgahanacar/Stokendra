@@ -45,7 +45,7 @@ public partial class LoginViewModel : ViewModelBase
         {
             if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
             {
-                ErrorMessage = "Kullanıcı adı ve şifre boş olamaz.";
+                ErrorMessage = LocalizationManager.L("username_password_required");
                 return;
             }
 
@@ -58,12 +58,12 @@ public partial class LoginViewModel : ViewModelBase
             }
             else
             {
-                ErrorMessage = "Kullanıcı adı veya şifre hatalı.";
+                ErrorMessage = LocalizationManager.L("login_failed");
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Bağlantı hatası: {ex.Message}";
+            ErrorMessage = string.Format(LocalizationManager.L("connection_error"), ex.Message);
         }
         finally
         {
@@ -88,7 +88,7 @@ public partial class LoginViewModel : ViewModelBase
         ErrorMessage = "";
         if (string.IsNullOrWhiteSpace(Username))
         {
-            ErrorMessage = "Lütfen kullanıcı adınızı girin.";
+            ErrorMessage = LocalizationManager.L("enter_username");
             return;
         }
 
@@ -98,27 +98,27 @@ public partial class LoginViewModel : ViewModelBase
         // veya ayarlardaki MasterCode ile eşleştiriyoruz.
         if (string.IsNullOrWhiteSpace(SecurityCode))
         {
-            ErrorMessage = "Güvenlik kodu gereklidir.";
+            ErrorMessage = LocalizationManager.L("security_code_required");
             return;
         }
 
         // Master code kontrolü (AppSettings'e eklenecek)
         if (SecurityCode != AppServices.Current.Settings.MasterSecurityCode)
         {
-            ErrorMessage = "Güvenlik kodu hatalı.";
+            ErrorMessage = LocalizationManager.L("security_code_incorrect");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(NewPassword) || NewPassword.Length < 4)
         {
-            ErrorMessage = "Yeni şifre en az 4 karakter olmalıdır.";
+            ErrorMessage = LocalizationManager.L("password_min_length");
             return;
         }
 
         // Şifre kullanıcı adını içermemeli
         if (NewPassword.Contains(Username.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            ErrorMessage = "Şifre kullanıcı adını içeremez.";
+            ErrorMessage = LocalizationManager.L("password_contains_username");
             return;
         }
 
@@ -128,18 +128,18 @@ public partial class LoginViewModel : ViewModelBase
             bool ok = await _userRepository.ResetPasswordAsync(Username.Trim(), NewPassword);
             if (ok)
             {
-                ErrorMessage = "Şifre başarıyla sıfırlandı. Giriş yapabilirsiniz.";
+                ErrorMessage = LocalizationManager.L("password_reset_success");
                 IsForgotMode = false;
                 Password = "";
             }
             else
             {
-                ErrorMessage = "Kullanıcı bulunamadı.";
+                ErrorMessage = LocalizationManager.L("user_not_found");
             }
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Hata: {ex.Message}";
+            ErrorMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
         finally
         {

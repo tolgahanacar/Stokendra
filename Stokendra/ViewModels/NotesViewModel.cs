@@ -142,7 +142,7 @@ public partial class NotesViewModel : ViewModelBase
         string? path = await _dialogService.SaveFileAsync(
             LocalizationManager.L("export_excel"), 
             fileName, 
-            "Excel File (*.xlsx)|*.xlsx");
+            LocalizationManager.L("svc_excel_filter"));
             
         if (string.IsNullOrEmpty(path)) return;
 
@@ -151,10 +151,15 @@ public partial class NotesViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("loading");
             await Task.Run(() => {
-                var headers = new[] { "ID", "Başlık", "Açıklama", "Oluşturma Tarihi" };
+                var headers = new[] { 
+                    "ID", 
+                    LocalizationManager.L("title"), 
+                    LocalizationManager.L("description"), 
+                    LocalizationManager.L("created_date_header") 
+                };
                 ExcelService.ExportToExcel(
                     path, 
-                    "Notlar", 
+                    LocalizationManager.L("notes"), 
                     headers, 
                     Notes, 
                     n => new object?[] { 

@@ -28,7 +28,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private ViewModelBase? _currentPage;
     [ObservableProperty] private string _activeMenu = "dashboard";
     [ObservableProperty] private string _currentUser = "";
-    public string CurrentRole => AppServices.Current.Session?.Role == "admin" ? "Yönetici" : "Kullanıcı";
+    public string CurrentRole => AppServices.Current.Session?.Role == "admin" ? LocalizationManager.L("role_admin") : LocalizationManager.L("role_user");
 
     public MainViewModel(
         DashboardViewModel      dashboard,

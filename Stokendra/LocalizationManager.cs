@@ -96,12 +96,24 @@ public static class LocalizationManager
     {
         // lock(_initLock) çağıran tarafından zaten tutulmuş durumda
         var newStrings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        string baseDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppDomain.CurrentDomain.BaseDirectory;
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
         string resDir = Path.Combine(baseDir, "Resources");
         string filePath = Path.Combine(resDir, $"lang_{lang}.json");
 
         if (!File.Exists(filePath))
             filePath = Path.Combine(baseDir, $"lang_{lang}.json");
+
+        if (!File.Exists(filePath))
+        {
+            string? procPath = Environment.ProcessPath;
+            if (!string.IsNullOrEmpty(procPath))
+            {
+                string procDir = Path.GetDirectoryName(procPath)!;
+                filePath = Path.Combine(procDir, "Resources", $"lang_{lang}.json");
+                if (!File.Exists(filePath))
+                    filePath = Path.Combine(procDir, $"lang_{lang}.json");
+            }
+        }
 
         if (File.Exists(filePath))
         {

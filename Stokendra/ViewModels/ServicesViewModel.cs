@@ -213,7 +213,7 @@ public partial class ServicesViewModel : ViewModelBase
                     LocalizationManager.L("problem"), 
                     LocalizationManager.L("result") 
                 };
-                Infrastructure.ExcelService.ExportToExcel(path, "Servis Kayıtları", headers, Records, s => new object?[] {
+                Infrastructure.ExcelService.ExportToExcel(path, LocalizationManager.L("services"), headers, Records, s => new object?[] {
                     s.ServiceDate.ToString("dd.MM.yyyy"), s.DeviceName, s.SerialNumber, s.Company, s.Issue, s.Result
                 });
             });

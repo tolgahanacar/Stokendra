@@ -119,7 +119,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
 
             sb.Append("<div class='info-grid'>");
             sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("current_stock")}:</b><br/><span style='font-size: 24px;'>{Card.CurrentStock} {Card.Unit}</span></div>");
-            sb.Append($"<div class='stat-box'><b>Son 30 Gün (Last 30 Days):</b><br/><span class='green'>▲ {LocalizationManager.L("entry")}: {TotalEntryLast30}</span><br/><span class='red'>▼ {LocalizationManager.L("exit")}: {TotalExitLast30}</span></div>");
+            sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("last_30_days")}:</b><br/><span class='green'>▲ {LocalizationManager.L("entry")}: {TotalEntryLast30}</span><br/><span class='red'>▼ {LocalizationManager.L("exit")}: {TotalExitLast30}</span></div>");
             sb.Append("</div>");
 
             sb.Append("<table><thead><tr>");

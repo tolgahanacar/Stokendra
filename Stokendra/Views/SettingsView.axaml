@@ -196,7 +196,11 @@
 
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Stokendra" FontSize="22" FontWeight="Bold" Foreground="#38AEFF"/>
-                                <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987"/>
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                    <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#5A6987" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="{infra:L check_updates}" Classes="Secondary"
+                                            Command="{Binding CheckForUpdatesCommand}" FontSize="11" Padding="8,4"/>
+                                </Grid>
                             </StackPanel>
                             <TextBlock Text="{infra:L app_subtitle}" FontSize="12" Foreground="#8A9BBF"/>
                             <Separator Height="1" Background="#1E2D45"/>

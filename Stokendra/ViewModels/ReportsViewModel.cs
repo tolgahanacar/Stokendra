@@ -21,17 +21,17 @@ public partial class ReportsViewModel : ViewModelBase
 
     [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
     [ObservableProperty] private DateTime _endDate = DateTime.Today;
-    [ObservableProperty] private string _selectedDepartment = "Tümü";
-    [ObservableProperty] private string _selectedCategory = "Tümü";
-    [ObservableProperty] private string _selectedUser = "Tümü";
+    [ObservableProperty] private string _selectedDepartment = LocalizationManager.L("all");
+    [ObservableProperty] private string _selectedCategory = LocalizationManager.L("all");
+    [ObservableProperty] private string _selectedUser = LocalizationManager.L("all");
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private double _totalConsumption;
     [ObservableProperty] private int _uniqueItemCount;
     [ObservableProperty] private string _statusText = "";
 
-    public ObservableCollection<string> Departments { get; } = new() { "Tümü" };
-    public ObservableCollection<string> Categories { get; } = new() { "Tümü" };
-    public ObservableCollection<string> Users { get; } = new() { "Tümü" };
+    public ObservableCollection<string> Departments { get; } = new() { LocalizationManager.L("all") };
+    public ObservableCollection<string> Categories { get; } = new() { LocalizationManager.L("all") };
+    public ObservableCollection<string> Users { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<StockMovement> ReportRows { get; } = new();
 
     public List<(string Name, double Total)> ChartData { get; private set; } = new();
@@ -80,9 +80,9 @@ public partial class ReportsViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            string? dept = SelectedDepartment == "Tümü" ? null : SelectedDepartment;
-            string? cat = SelectedCategory == "Tümü" ? null : SelectedCategory;
-            string? user = SelectedUser == "Tümü" ? null : SelectedUser;
+            string? dept = SelectedDepartment == LocalizationManager.L("all") ? null : SelectedDepartment;
+            string? cat = SelectedCategory == LocalizationManager.L("all") ? null : SelectedCategory;
+            string? user = SelectedUser == LocalizationManager.L("all") ? null : SelectedUser;
 
             // Büyük veri setlerinde bellek baskısını önlemek için sayfalı yükleme
             const int batchSize = 5000;
@@ -127,7 +127,7 @@ public partial class ReportsViewModel : ViewModelBase
 
             TotalConsumption = total;
             UniqueItemCount = uniqueIds.Count;
-            StatusText = $"{allMovements.Count} kayıt bulundu.";
+            StatusText = string.Format(LocalizationManager.L("records_found"), allMovements.Count);
 
             ChartData = totalsByCard.OrderByDescending(x => x.Value).Take(10)
                 .Select(x => (x.Key, x.Value)).ToList();
@@ -137,7 +137,7 @@ public partial class ReportsViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError("Report generation error", ex);
-            await _dialogService.ShowMessageAsync("Hata", $"Rapor oluşturulamadı: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("report_generation_failed"), ex.Message));
         }
         finally { IsLoading = false; }
     }
@@ -147,16 +147,23 @@ public partial class ReportsViewModel : ViewModelBase
     {
         if (ReportRows.Count == 0)
         {
-            await _dialogService.ShowMessageAsync("Uyarı", "Dışa aktarılacak veri bulunamadı.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("no_data_to_export"));
             return;
         }
 
-        var path = await _dialogService.SaveFileAsync("Raporu Kaydet", "Stok_Tuketim_Raporu.xlsx", "Excel Dosyası (*.xlsx)|*.xlsx");
+        var path = await _dialogService.SaveFileAsync(LocalizationManager.L("save_report_title"), "Stok_Tuketim_Raporu.xlsx", LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
-            string[] headers = { "Tarih", "Stok Kartı", "Miktar", "Teslim Edilen", "Departman", "Açıklama" };
+            string[] headers = { 
+                LocalizationManager.L("date"), 
+                LocalizationManager.L("stock_card_header"), 
+                LocalizationManager.L("quantity"), 
+                LocalizationManager.L("delivered_to_header"), 
+                LocalizationManager.L("department"), 
+                LocalizationManager.L("description") 
+            };
             ExcelService.ExportToExcel(path, "TuketimRaporu", headers, ReportRows, r => new object?[]
             {
                 r.Date.ToString("dd.MM.yyyy HH:mm"),
@@ -167,12 +174,12 @@ public partial class ReportsViewModel : ViewModelBase
                 r.Description
             });
 
-            await _dialogService.ShowMessageAsync("Başarılı", "Rapor başarıyla kaydedildi.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("report_saved_success"));
         }
         catch (Exception ex)
         {
             _logger.LogError("Report export error", ex);
-            await _dialogService.ShowMessageAsync("Hata", $"Rapor kaydedilemedi: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("report_save_failed"), ex.Message));
         }
     }
 
@@ -181,17 +188,17 @@ public partial class ReportsViewModel : ViewModelBase
     {
         if (ReportRows.Count == 0)
         {
-            await _dialogService.ShowMessageAsync("Uyarı", "Yazdırılacak veri bulunamadı.");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("no_data_to_print"));
             return;
         }
 
         try
         {
-            StatusText = "Yazdırma hazırlanıyor...";
+            StatusText = LocalizationManager.L("reports_print_preparing");
             string tempPath = Path.Combine(Path.GetTempPath(), $"Stok_Tuketim_Raporu_{DateTime.Now:yyyyMMdd_HHmm}.html");
             
             var sb = new System.Text.StringBuilder();
-            sb.Append("<html><head><meta charset='utf-8'><title>Stok Tüketim Raporu</title>");
+            sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("consumption_report_title")}</title>");
             sb.Append("<style>");
             sb.Append("@page { size: portrait; margin: 1cm; } ");
             sb.Append("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; } ");
@@ -211,22 +218,22 @@ public partial class ReportsViewModel : ViewModelBase
             sb.Append("</head><body>");
             
             sb.Append("<div class='top-header'>");
-            sb.Append("<h1>STOK TÜKETİM RAPORU</h1>");
-            sb.Append($"<div class='date-box'>Rapor Tarihi:<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b><br/>{StartDate:dd.MM.yyyy} - {EndDate:dd.MM.yyyy}</div>");
+            sb.Append($"<h1>{LocalizationManager.L("consumption_report_header")}</h1>");
+            sb.Append($"<div class='date-box'>{LocalizationManager.L("report_date_label")}<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b><br/>{StartDate:dd.MM.yyyy} - {EndDate:dd.MM.yyyy}</div>");
             sb.Append("</div>");
 
             sb.Append("<div class='summary'>");
-            sb.Append($"<div class='summary-item'><div class='summary-value'>{TotalConsumption}</div><div class='summary-label'>Toplam Tüketim</div></div>");
-            sb.Append($"<div class='summary-item'><div class='summary-value'>{UniqueItemCount}</div><div class='summary-label'>Benzersiz Ürün</div></div>");
-            sb.Append($"<div class='summary-item'><div class='summary-value'>{ReportRows.Count}</div><div class='summary-label'>İşlem Sayısı</div></div>");
+            sb.Append($"<div class='summary-item'><div class='summary-value'>{TotalConsumption}</div><div class='summary-label'>{LocalizationManager.L("total_consumption")}</div></div>");
+            sb.Append($"<div class='summary-item'><div class='summary-value'>{UniqueItemCount}</div><div class='summary-label'>{LocalizationManager.L("unique_items")}</div></div>");
+            sb.Append($"<div class='summary-item'><div class='summary-value'>{ReportRows.Count}</div><div class='summary-label'>{LocalizationManager.L("transaction_count")}</div></div>");
             sb.Append("</div>");
 
             sb.Append("<table><thead><tr>");
-            sb.Append("<th>Tarih</th>");
-            sb.Append("<th>Stok Adı</th>");
-            sb.Append("<th>Miktar</th>");
-            sb.Append("<th>Departman</th>");
-            sb.Append("<th>Teslim Alan</th>");
+            sb.Append($"<th>{LocalizationManager.L("date")}</th>");
+            sb.Append($"<th>{LocalizationManager.L("stock_name")}</th>");
+            sb.Append($"<th>{LocalizationManager.L("quantity")}</th>");
+            sb.Append($"<th>{LocalizationManager.L("department")}</th>");
+            sb.Append($"<th>{LocalizationManager.L("delivered_to_header")}</th>");
             sb.Append("</tr></thead><tbody>");
             
             foreach (var r in ReportRows)
@@ -241,18 +248,18 @@ public partial class ReportsViewModel : ViewModelBase
             }
             
             sb.Append("</tbody></table>");
-            sb.Append($"<div class='footer'>Stokendra Modernized UI - {DateTime.Now:dd.MM.yyyy HH:mm} | Yazdıran: {AppServices.Current.Session?.Username ?? "admin"}</div>");
+            sb.Append($"<div class='footer'>{string.Format(LocalizationManager.L("printed_by"), DateTime.Now.ToString("dd.MM.yyyy HH:mm"), AppServices.Current.Session?.Username ?? "admin")}</div>");
             sb.Append("</body></html>");
             
-            var previewVm = new PrintPreviewViewModel("Stok Tüketim Raporu", sb.ToString());
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("consumption_report_title"), sb.ToString());
             await _dialogService.ShowDialogAsync(previewVm);
             
-            StatusText = "Yazdırma tamamlandı veya iptal edildi.";
+            StatusText = LocalizationManager.L("print_done_or_cancelled");
         }
         catch (Exception ex)
         {
             _logger.LogError("Report print error", ex);
-            await _dialogService.ShowMessageAsync("Hata", $"Yazdırma penceresi açılamadı: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("print_window_open_failed"), ex.Message));
         }
     }
 
@@ -261,9 +268,9 @@ public partial class ReportsViewModel : ViewModelBase
     {
         StartDate = DateTime.Today.AddDays(-30);
         EndDate = DateTime.Today;
-        SelectedDepartment = "Tümü";
-        SelectedCategory = "Tümü";
-        SelectedUser = "Tümü";
+        SelectedDepartment = LocalizationManager.L("all");
+        SelectedCategory = LocalizationManager.L("all");
+        SelectedUser = LocalizationManager.L("all");
         _ = GenerateReport();
     }
 }

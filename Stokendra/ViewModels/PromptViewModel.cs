@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Stokendra.Infrastructure;
 using System;
 
 namespace Stokendra.ViewModels;
@@ -10,7 +11,7 @@ public partial class PromptViewModel : ViewModelBase
     [ObservableProperty] private string _message;
     [ObservableProperty] private string _inputText;
     [ObservableProperty] private char _passwordChar = '\0';
-    [ObservableProperty] private string _watermark = "Değer giriniz...";
+    [ObservableProperty] private string _watermark = LocalizationManager.L("prompt_default_watermark");
 
     public PromptViewModel(string title, string message, string initialValue = "")
     {

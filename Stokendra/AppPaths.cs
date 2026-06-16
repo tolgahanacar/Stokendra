@@ -6,7 +6,9 @@ namespace Stokendra;
 /// </summary>
 public static class AppPaths
 {
-    private static readonly string AppDataRoot = Path.Combine(
+    public static string? TestDataRootOverride { get; set; }
+
+    private static string AppDataRoot => TestDataRootOverride ?? Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "Stokendra");
 

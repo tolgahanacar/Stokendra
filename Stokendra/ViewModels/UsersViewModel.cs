@@ -53,7 +53,7 @@ public partial class UsersViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError("Failed to load users", ex);
-            StatusMessage = $"Hata: {ex.Message}";
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
         finally
