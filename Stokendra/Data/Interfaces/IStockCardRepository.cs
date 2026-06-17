@@ -34,6 +34,9 @@ public interface IStockCardRepository
     /// <summary>Gets the stock card with the specified ID. Returns null if not found.</summary>
     StockCard? GetById(int id);
 
+    /// <summary>Gets the stock card with the specified ID asynchronously. Returns null if not found.</summary>
+    Task<StockCard?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+
     /// <summary>Adds a new stock card. The generated ID is assigned to stockCard.Id.</summary>
     void Add(StockCard stockCard);
 

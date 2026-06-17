@@ -49,7 +49,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            Card = await Task.Run(() => _stockCards.GetById(_cardId));
+            Card = await _stockCards.GetByIdAsync(_cardId);
             if (Card == null) return;
 
             var all = await _movements.GetAllAsync(stockCardId: _cardId);

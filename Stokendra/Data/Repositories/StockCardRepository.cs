@@ -59,6 +59,12 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         return list.Count > 0 ? list[0] : null;
     }
 
+    public async Task<StockCard?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var list = await GetStockCardsAsync(null, null, id, cancellationToken);
+        return list.Count > 0 ? list[0] : null;
+    }
+
     public void Add(StockCard stockCard)
     {
         using var conn = ConnectionFactory.CreateConnection();

@@ -189,7 +189,7 @@ public partial class StockMovementsViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() => _movements.Delete(SelectedMovement.Id));
+            await _movements.DeleteAsync(SelectedMovement.Id);
             await LoadMovementsAsync();
             StatusText = LocalizationManager.L("bulk_movement_delete_success", 1);
         }
@@ -211,7 +211,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         try
         {
             var ids = SelectedMovements.Select(m => m.Id).ToList();
-            await Task.Run(() => _movements.DeleteBulk(ids));
+            await _movements.DeleteBulkAsync(ids);
             await LoadMovementsAsync();
             StatusText = LocalizationManager.L("bulk_movement_delete_success", ids.Count);
         }
@@ -255,7 +255,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             {
                 try
                 {
-                    await Task.Run(() => _movements.Update(vm.Result));
+                    await _movements.UpdateAsync(vm.Result);
                     await LoadMovementsAsync();
                     StatusText = LocalizationManager.L("save_settings");
                 }
