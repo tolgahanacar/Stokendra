@@ -32,7 +32,7 @@ public partial class ReportsViewModel : ViewModelBase
     public ObservableCollection<string> Departments { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Categories { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Users { get; } = new() { LocalizationManager.L("all") };
-    public ObservableCollection<StockMovement> ReportRows { get; } = new();
+    [ObservableProperty] private List<StockMovement> _reportRows = new();
 
     public List<(string Name, double Total)> ChartData { get; private set; } = new();
 
@@ -108,14 +108,14 @@ public partial class ReportsViewModel : ViewModelBase
                 page++;
             }
 
-            ReportRows.Clear();
+            var rowsList = new List<StockMovement>();
             double total = 0;
             var uniqueIds = new HashSet<int>();
             var totalsByCard = new Dictionary<string, double>();
 
             foreach (var m in allMovements)
             {
-                ReportRows.Add(m);
+                rowsList.Add(m);
                 total += m.Quantity;
                 uniqueIds.Add(m.StockCardId);
                 
@@ -124,6 +124,8 @@ public partial class ReportsViewModel : ViewModelBase
                 else
                     totalsByCard[m.StockCardName] = m.Quantity;
             }
+
+            ReportRows = rowsList;
 
             TotalConsumption = total;
             UniqueItemCount = uniqueIds.Count;
@@ -195,7 +197,6 @@ public partial class ReportsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("reports_print_preparing");
-            string tempPath = Path.Combine(Path.GetTempPath(), $"Stok_Tuketim_Raporu_{DateTime.Now:yyyyMMdd_HHmm}.html");
             
             var sb = new System.Text.StringBuilder();
             sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("consumption_report_title")}</title>");

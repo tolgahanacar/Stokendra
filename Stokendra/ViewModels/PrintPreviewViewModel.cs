@@ -32,6 +32,18 @@ public partial class PrintPreviewViewModel : ViewModelBase
             var psi = new System.Diagnostics.ProcessStartInfo { FileName = tempPath, UseShellExecute = true };
             System.Diagnostics.Process.Start(psi);
             
+            // Fire-and-forget deletion after a delay
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(10000); // 10 seconds is plenty of time for the browser to read the file
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch { }
+            });
+            
             CloseAction?.Invoke();
         }
         catch (Exception ex)

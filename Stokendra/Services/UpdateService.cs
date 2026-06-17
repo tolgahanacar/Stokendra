@@ -7,12 +7,16 @@ namespace Stokendra.Services;
 
 public class UpdateService : IUpdateService
 {
+    private static readonly HttpClient _client = new();
+
+    static UpdateService()
+    {
+        _client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-Updater");
+    }
+
     public async Task<(string TagName, string HtmlUrl)> GetLatestReleaseAsync()
     {
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("User-Agent", "Stokendra-Updater");
-
-        var response = await client.GetAsync("https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest");
+        var response = await _client.GetAsync("https://api.github.com/repos/tolgahanacar/Stokendra/releases/latest");
         if (!response.IsSuccessStatusCode)
         {
             throw new HttpRequestException($"GitHub API returned status code {response.StatusCode}");

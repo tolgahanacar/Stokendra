@@ -13,6 +13,7 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly IReportRepository _reports;
     private readonly IMovementRepository _movements;
     private readonly IStockCardRepository _stockCards;
+    private readonly System.Threading.SemaphoreSlim _loadLock = new(1, 1);
 
     [ObservableProperty] private int _totalCards;
     [ObservableProperty] private string _totalStock = "0";
@@ -37,6 +38,7 @@ public partial class DashboardViewModel : ViewModelBase
 
     public async Task LoadAsync()
     {
+        if (!await _loadLock.WaitAsync(0)) return;
         IsLoading = true;
         try
         {
@@ -72,6 +74,7 @@ public partial class DashboardViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+            _loadLock.Release();
         }
     }
 

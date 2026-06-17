@@ -12,6 +12,8 @@ public partial class AddStockCardViewModel : ViewModelBase
 {
     private readonly IStockCardRepository _stockCards;
     private readonly StockCard? _editingCard;
+    private List<StockCard> _allCards = new();
+    private Task? _initTask;
 
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _name = "";
@@ -26,6 +28,7 @@ public partial class AddStockCardViewModel : ViewModelBase
     [ObservableProperty] private double _unitPrice = 0;
     [ObservableProperty] private int _selectedTypeIndex = 0; // 0: Child, 1: Parent
     [ObservableProperty] private StockCard? _selectedParent;
+    [ObservableProperty] private string _errorMessage = "";
 
     public bool IsChildCard => SelectedTypeIndex == 0;
     partial void OnSelectedTypeIndexChanged(int value) => OnPropertyChanged(nameof(IsChildCard));
@@ -57,13 +60,13 @@ public partial class AddStockCardViewModel : ViewModelBase
             Title = LocalizationManager.L("new_stock_card");
         }
 
-        _ = InitAsync();
+        _initTask = InitAsync();
     }
 
     private async Task InitAsync()
     {
-        var all = await _stockCards.GetAllAsync();
-        var parents = all.Where(k => k.CardType == "Parent" && k.Id != _editingCard?.Id).ToList();
+        _allCards = await _stockCards.GetAllAsync();
+        var parents = _allCards.Where(k => k.CardType == "Parent" && k.Id != _editingCard?.Id).ToList();
         
         ParentCards.Clear();
         foreach (var p in parents) ParentCards.Add(p);
@@ -77,22 +80,50 @@ public partial class AddStockCardViewModel : ViewModelBase
     public StockCard? Result { get; private set; }
 
     [RelayCommand]
-    private void Save()
+    private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(Name)) return;
+        ErrorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(Name))
+        {
+            ErrorMessage = LocalizationManager.L("name_required");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Code))
+        {
+            ErrorMessage = LocalizationManager.L("code_required");
+            return;
+        }
+
+        if (_initTask != null)
+        {
+            await _initTask;
+        }
+
+        var cleanedCode = Code.Trim().ToUpperInvariant();
+        var duplicateExists = _allCards.Any(k => 
+            k.Code.Equals(cleanedCode, System.StringComparison.OrdinalIgnoreCase) && 
+            k.Id != (_editingCard?.Id ?? 0));
+
+        if (duplicateExists)
+        {
+            ErrorMessage = LocalizationManager.L("stock_code_exists");
+            return;
+        }
 
         Result = new StockCard
         {
             Id = _editingCard?.Id ?? 0,
-            Name = Name,
-            Code = Code,
-            Description = Description,
+            Name = Name.Trim(),
+            Code = cleanedCode,
+            Description = Description ?? "",
             MinStock = MinStock,
-            Category = Category,
-            Unit = Unit,
-            Location = Location,
-            Supplier = Supplier,
-            Barcode = Barcode,
+            Category = Category ?? "",
+            Unit = Unit ?? "Adet",
+            Location = Location ?? "",
+            Supplier = Supplier ?? "",
+            Barcode = Barcode ?? "",
             UnitPrice = UnitPrice,
             CardType = SelectedTypeIndex == 1 ? "Parent" : "Child",
             ParentId = SelectedTypeIndex == 0 ? SelectedParent?.Id : null

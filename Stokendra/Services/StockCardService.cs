@@ -37,9 +37,5 @@ public class StockCardService : IStockCardService
         return await _stockCardRepository.GetAllAsync();
     }
 
-    public int GetLowStockCount()
-    {
-        // Keep this sync or use GetChildCards (which is now optimized)
-        return _stockCardRepository.GetChildCards().Count(k => k.CurrentStock <= (k.MinStock > 0 ? k.MinStock : 3));
-    }
+
 }

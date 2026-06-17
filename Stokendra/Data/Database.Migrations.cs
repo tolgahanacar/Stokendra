@@ -442,7 +442,6 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Notes_Date ON Notes(Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_ParentId ON StockCards(ParentId)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_ServiceRecords_Date_Id ON ServiceRecords(ServiceDate DESC, Id DESC)");
-        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_AppConfig_Key ON AppConfig(Key)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_Code ON StockCards(Code)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_CardType ON StockCards(CardType)");
         TryAlter(connection, transaction, "CREATE UNIQUE INDEX IF NOT EXISTS UX_StockCards_Code ON StockCards(Code COLLATE NOCASE)");
@@ -497,7 +496,7 @@ public sealed partial class Database
             if (Convert.ToInt64(userCount.ExecuteScalar() ?? 0, CultureInfo.InvariantCulture) == 0)
             {
                 string salt = GenerateSalt();
-                string hash = HashPasswordV3("admin", salt);
+                string hash = HashPasswordV4("admin", salt);
                 using var insertUser = CreateCommand(connection, transaction,
                     "INSERT INTO Users (Username,PasswordHash,Salt,Role) VALUES ('admin',$h,$s,'admin')");
                 insertUser.Parameters.AddWithValue("$h", hash);
@@ -557,6 +556,14 @@ public sealed partial class Database
         using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, PasswordIterationsV3, HashAlgorithmName.SHA512);
         byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
         return "v3:" + Convert.ToBase64String(hash);
+    }
+
+    private static string HashPasswordV4(string password, string salt)
+    {
+        byte[] saltBytes = Convert.FromBase64String(salt);
+        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 600000, HashAlgorithmName.SHA512);
+        byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
+        return "v4:" + Convert.ToBase64String(hash);
     }
 
     private static SqliteCommand CreateCommand(SqliteConnection connection, SqliteTransaction? transaction, string sql)

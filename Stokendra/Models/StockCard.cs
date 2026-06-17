@@ -189,6 +189,7 @@ public class StockCard : ObservableObject
 
     /// <summary>Color code for stock status.</summary>
     public string StatusColor => 
+        IsDepleted ? "#EF4444" : // Red 500 (Okunabilir Kırmızı)
         CurrentStock > MinStock ? "#10B981" : // Emerald 500 (Okunabilir Yeşil)
         CurrentStock < MinStock ? "#EF4444" : // Red 500 (Okunabilir Kırmızı)
         "#D97706"; // Amber 600 (Sarı/Turuncu)

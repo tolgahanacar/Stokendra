@@ -1,4 +1,3 @@
-using ClosedXML.Excel;
 using System.IO.Compression;
 using Stokendra.Infrastructure;
 using Stokendra.Models;
@@ -173,194 +172,112 @@ public class BackupService : IBackupService
         }
     }
 
-
-
     private async Task ExportStokKartlariAsync(string tempDir)
     {
         var tumKartlar = await _stockCardRepository.GetAllAsync();
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("StokKartlari");
-
-        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
         string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "Konum", "Tedarikçi", "Barkod", "BirimFiyat", "MinStok", "Açıklama" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < tumKartlar.Count; i++)
-        {
-            var k = tumKartlar[i];
-            int r = i + 2;
-            ws.Cell(r, 1).Value = k.Code;
-            ws.Cell(r, 2).Value = k.Name;
-            ws.Cell(r, 3).Value = k.Category;
-            ws.Cell(r, 4).Value = k.Unit;
-            ws.Cell(r, 5).Value = k.Location;
-            ws.Cell(r, 6).Value = k.Supplier;
-            ws.Cell(r, 7).Value = k.Barcode;
-            ws.Cell(r, 8).Value = k.UnitPrice;
-            ws.Cell(r, 9).Value = k.MinStock;
-            ws.Cell(r, 10).Value = k.Description;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, tumKartlar.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "StokKartlari.xlsx")));
+        string filePath = Path.Combine(tempDir, "StokKartlari.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "StokKartlari",
+            headers,
+            tumKartlar,
+            k => new object?[] { k.Code, k.Name, k.Category, k.Unit, k.Location, k.Supplier, k.Barcode, k.UnitPrice, k.MinStock, k.Description }
+        ));
     }
 
     private async Task ExportStokHareketleriAsync(string tempDir)
     {
         var hareketler = await _movementRepository.GetAllAsync();
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("StokHareketleri");
-
-        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
         string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < hareketler.Count; i++)
-        {
-            var h = hareketler[i];
-            int r = i + 2;
-            ws.Cell(r, 1).Value = h.StockCardCode;
-            ws.Cell(r, 2).Value = h.StockCardName;
-            ws.Cell(r, 3).Value = h.Recipient;
-            ws.Cell(r, 4).Value = (h.Type == "Entry" || h.Type == "Giris") ? "[G] Giriş" : "[Ç] Çıkış";
-            ws.Cell(r, 5).Value = h.Quantity;
-            ws.Cell(r, 6).Value = h.Department;
-            ws.Cell(r, 7).Value = h.Date.ToString("dd.MM.yyyy HH:mm");
-            ws.Cell(r, 8).Value = h.Description;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, hareketler.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "StokHareketleri.xlsx")));
+        string filePath = Path.Combine(tempDir, "StokHareketleri.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "StokHareketleri",
+            headers,
+            hareketler,
+            h => new object?[] {
+                h.StockCardCode,
+                h.StockCardName,
+                h.Recipient,
+                (h.Type == "Entry" || h.Type == "Giris") ? "[G] Giriş" : "[Ç] Çıkış",
+                h.Quantity,
+                h.Department,
+                h.Date.ToString("dd.MM.yyyy HH:mm"),
+                h.Description
+            }
+        ));
     }
 
     private async Task ExportServisKayitlariAsync(string tempDir)
     {
         var servisler = await _serviceRecordRepository.GetAllAsync();
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("ServisKayitlari");
-
-        // İçe aktarma (Import) yapısına birebir uyumlu başlıklar
         string[] headers = { "Bakım Tarihi", "Cihaz Adı", "Seri Numarası", "Firma", "Sorun", "Sonuç" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < servisler.Count; i++)
-        {
-            var s = servisler[i];
-            int r = i + 2;
-            ws.Cell(r, 1).Value = s.ServiceDate.ToString("dd.MM.yyyy");
-            ws.Cell(r, 2).Value = s.DeviceName;
-            ws.Cell(r, 3).Value = s.SerialNumber;
-            ws.Cell(r, 4).Value = s.Company;
-            ws.Cell(r, 5).Value = s.Issue;
-            ws.Cell(r, 6).Value = s.Result;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, servisler.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "ServisKayitlari.xlsx")));
+        string filePath = Path.Combine(tempDir, "ServisKayitlari.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "ServisKayitlari",
+            headers,
+            servisler,
+            s => new object?[] {
+                s.ServiceDate.ToString("dd.MM.yyyy"),
+                s.DeviceName,
+                s.SerialNumber,
+                s.Company,
+                s.Issue,
+                s.Result
+            }
+        ));
     }
 
     private async Task ExportNotlarAsync(string tempDir)
     {
         var notlar = await _noteRepository.GetAllAsync();
         if (notlar.Count == 0) return;
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("Notlar");
-
         string[] headers = { "ID", "Tarih", "Başlık", "İçerik" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < notlar.Count; i++)
-        {
-            var n = notlar[i];
-            int r = i + 2;
-            ws.Cell(r, 1).Value = n.Id;
-            ws.Cell(r, 2).Value = n.CreatedAt.ToString("dd.MM.yyyy HH:mm");
-            ws.Cell(r, 3).Value = n.Title;
-            ws.Cell(r, 4).Value = n.Content;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, notlar.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Notlar.xlsx")));
+        string filePath = Path.Combine(tempDir, "Notlar.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "Notlar",
+            headers,
+            notlar,
+            n => new object?[] {
+                n.Id,
+                n.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
+                n.Title,
+                n.Content
+            }
+        ));
     }
 
     private async Task ExportDepartmanlarAsync(string tempDir)
     {
         var deptlar = await _departmentRepository.GetAllAsync();
         if (deptlar.Count == 0) return;
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("Departmanlar");
-
         string[] headers = { "Departman Adı" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < deptlar.Count; i++)
-        {
-            ws.Cell(i + 2, 1).Value = deptlar[i];
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, deptlar.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Departmanlar.xlsx")));
-    }
-
-    private void SetHeaders(IXLWorksheet ws, string[] headers)
-    {
-        for (int i = 0; i < headers.Length; i++)
-        {
-            var cell = ws.Cell(1, i + 1);
-            cell.Value = headers[i];
-            cell.Style.Font.Bold = true;
-            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(30, 37, 52);
-            cell.Style.Font.FontColor = XLColor.White;
-            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-        }
-    }
-
-    private void ApplyTableStyle(IXLWorksheet ws, int rowCount, int colCount)
-    {
-        if (rowCount == 0) return;
-        var range = ws.Range(1, 1, rowCount + 1, colCount);
-        range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-        range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
-        range.Style.Border.OutsideBorderColor = XLColor.FromArgb(180, 180, 180);
-        range.Style.Border.InsideBorderColor = XLColor.FromArgb(220, 220, 220);
-
-        for (int r = 2; r <= rowCount + 1; r++)
-        {
-            if (r % 2 == 0)
-                ws.Range(r, 1, r, colCount).Style.Fill.BackgroundColor = XLColor.FromArgb(245, 247, 250);
-        }
+        string filePath = Path.Combine(tempDir, "Departmanlar.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "Departmanlar",
+            headers,
+            deptlar,
+            d => new object?[] { d }
+        ));
     }
 
     private async Task ExportBirimlerAsync(string tempDir)
     {
         var birimler = _configRepository.GetUnits();
         if (birimler.Count == 0) return;
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("Birimler");
-
         string[] headers = { "ID", "Birim Adı" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < birimler.Count; i++)
-        {
-            ws.Cell(i + 2, 1).Value = birimler[i].Id;
-            ws.Cell(i + 2, 2).Value = birimler[i].Name;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, birimler.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "Birimler.xlsx")));
+        string filePath = Path.Combine(tempDir, "Birimler.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "Birimler",
+            headers,
+            birimler,
+            b => new object?[] { b.Id, b.Name }
+        ));
     }
 
     private async Task ExportAuditLogAsync(string tempDir)
@@ -385,26 +302,14 @@ public class BackupService : IBackupService
         }
 
         if (rows.Count == 0) return;
-
-        using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet("AuditLog");
-
         string[] headers = { "ID", "Tarih", "İşlem Tipi", "Tablo", "Kayıt ID", "Detay" };
-        SetHeaders(ws, headers);
-
-        for (int i = 0; i < rows.Count; i++)
-        {
-            int r = i + 2;
-            ws.Cell(r, 1).Value = rows[i].Id;
-            ws.Cell(r, 2).Value = rows[i].Date;
-            ws.Cell(r, 3).Value = rows[i].Action;
-            ws.Cell(r, 4).Value = rows[i].TableName;
-            ws.Cell(r, 5).Value = rows[i].RecordId;
-            ws.Cell(r, 6).Value = rows[i].Details;
-        }
-
-        ws.Columns().AdjustToContents();
-        ApplyTableStyle(ws, rows.Count, headers.Length);
-        await Task.Run(() => wb.SaveAs(Path.Combine(tempDir, "AuditLog.xlsx")));
+        string filePath = Path.Combine(tempDir, "AuditLog.xlsx");
+        await Task.Run(() => ExcelService.ExportToExcel(
+            filePath,
+            "AuditLog",
+            headers,
+            rows,
+            r => new object?[] { r.Id, r.Date, r.Action, r.TableName, r.RecordId, r.Details }
+        ));
     }
 }

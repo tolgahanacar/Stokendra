@@ -55,6 +55,12 @@ public interface IStockCardRepository
     /// <summary>Generates the next sequential stock code (e.g. "042").</summary>
     string GetNextCode();
 
+    /// <summary>Adds multiple stock cards in a single transaction.</summary>
+    void AddBulk(IEnumerable<StockCard> stockCards);
+
+    /// <summary>Adds multiple stock cards asynchronously in a single transaction.</summary>
+    Task AddBulkAsync(IEnumerable<StockCard> stockCards, CancellationToken cancellationToken = default);
+
     /// <summary>Gets a paged list of stock cards with search and type filters directly from the database.</summary>
     Task<List<StockCard>> GetPagedAsync(int page, int pageSize, string? searchTerm, string? cardType = null, CancellationToken cancellationToken = default);
 

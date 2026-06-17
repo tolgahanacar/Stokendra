@@ -213,6 +213,59 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         return (max + 1).ToString("D3", CultureInfo.InvariantCulture);
     }
 
+    public void AddBulk(IEnumerable<StockCard> stockCards)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = conn.BeginTransaction();
+        try
+        {
+            var sql = """
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                SELECT last_insert_rowid();
+                """;
+            foreach (var card in stockCards)
+            {
+                ValidateCard(card, conn, trans);
+                card.Id = conn.ExecuteScalar<int>(sql, card, transaction: trans);
+                LogAudit("Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
+            }
+            trans.Commit();
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
+        }
+    }
+
+    public async Task AddBulkAsync(IEnumerable<StockCard> stockCards, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var sql = """
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                SELECT last_insert_rowid();
+                """;
+            foreach (var card in stockCards)
+            {
+                ValidateCard(card, conn, (SqliteTransaction)trans);
+                card.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                    sql, card, transaction: trans, cancellationToken: cancellationToken));
+                LogAudit("Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
+            }
+            await trans.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     private List<StockCard> GetStockCards(string? type, int? parentId, int? id)
     {
         using var conn = ConnectionFactory.CreateConnection();
@@ -274,16 +327,46 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         string where = "1=1";
         if (!string.IsNullOrEmpty(cardType))
         {
-            where += " AND CardType = @CardType";
+            where += " AND s.CardType = @CardType";
             @params.Add("CardType", cardType);
         }
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            where += " AND (Name LIKE @Search OR Code LIKE @Search OR Category LIKE @Search OR ParentName LIKE @Search)";
+            where += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR s.Category LIKE @Search OR u.Name LIKE @Search)";
             @params.Add("Search", $"%{searchTerm}%");
         }
         
-        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances WHERE {where} ORDER BY Code ASC LIMIT @Limit OFFSET @Offset";
+        var sql = $"""
+            SELECT 
+                s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
+                u.Name as ParentName,
+                CAST(COALESCE(entry.TotalEntry, 0) AS REAL) as TotalEntry,
+                CAST(COALESCE(exit.TotalExit, 0) AS REAL) as TotalExit,
+                CAST(COALESCE(entry.TotalEntry, 0) - COALESCE(exit.TotalExit, 0) AS REAL) as CurrentStock
+            FROM (
+                SELECT s.Id
+                FROM StockCards s
+                LEFT JOIN StockCards u ON s.ParentId = u.Id
+                WHERE {where}
+                ORDER BY s.Code ASC
+                LIMIT @Limit OFFSET @Offset
+            ) paged
+            INNER JOIN StockCards s ON paged.Id = s.Id
+            LEFT JOIN StockCards u ON s.ParentId = u.Id
+            LEFT JOIN (
+                SELECT StockCardId, SUM(Quantity) as TotalEntry
+                FROM StockMovements
+                WHERE Type = 'Entry'
+                GROUP BY StockCardId
+            ) entry ON s.Id = entry.StockCardId
+            LEFT JOIN (
+                SELECT StockCardId, SUM(Quantity) as TotalExit
+                FROM StockMovements
+                WHERE Type = 'Exit'
+                GROUP BY StockCardId
+            ) exit ON s.Id = exit.StockCardId
+            ORDER BY s.Code ASC
+            """;
             
         @params.Add("Limit", pageSize);
         @params.Add("Offset", (page - 1) * pageSize);

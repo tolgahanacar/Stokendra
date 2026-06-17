@@ -19,6 +19,7 @@ public partial class LoginViewModel : ViewModelBase
     private string _errorMessage = "";
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DoLoginCommand))]
     private bool _isBusy = false;
 
     [ObservableProperty]

@@ -212,7 +212,11 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
         if (a == null || b == null) return false;
         byte[] aBytes = Encoding.UTF8.GetBytes(a.Trim());
         byte[] bBytes = Encoding.UTF8.GetBytes(b.Trim());
-        return aBytes.Length == bBytes.Length &&
-               CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+        
+        bool equal = aBytes.Length == bBytes.Length;
+        byte[] cmpBytes = equal ? bBytes : aBytes;
+        bool result = CryptographicOperations.FixedTimeEquals(aBytes, cmpBytes);
+        
+        return equal && result;
     }
 }

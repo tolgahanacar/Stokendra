@@ -19,10 +19,6 @@ public interface IStockCardService
     /// </summary>
     Task<List<StockCard>> GetAllAsync();
 
-    /// <summary>
-    /// Returns the number of stock cards with low stock levels.
-    /// </summary>
-    int GetLowStockCount();
 }
 
 /// <summary>Paged result model.</summary>
