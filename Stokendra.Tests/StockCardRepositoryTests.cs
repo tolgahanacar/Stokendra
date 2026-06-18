@@ -164,4 +164,22 @@ public class StockCardRepositoryTests : IDisposable
         var ex = Assert.Throws<InvalidOperationException>(() => _repository.Update(card));
         Assert.Equal(LocalizationManager.L("parent_card_with_movements"), ex.Message);
     }
+
+    [Fact]
+    public async Task Test_GetLowStockCards_OnlyReturnsChildCards()
+    {
+        // Arrange: Create a parent card and a child card. Both have 0 movements, so stock is 0.
+        var parent = new StockCard { Code = "PRT999", Name = "Parent Printer", CardType = "Parent" };
+        await _repository.AddAsync(parent);
+
+        var child = new StockCard { Code = "CHD999", Name = "Child Toner", CardType = "Child", ParentId = parent.Id };
+        await _repository.AddAsync(child);
+
+        // Act
+        var lowStockCards = await _repository.GetLowStockCardsAsync(10, 3);
+
+        // Assert
+        Assert.Contains(lowStockCards, c => c.Code == "CHD999");
+        Assert.DoesNotContain(lowStockCards, c => c.Code == "PRT999");
+    }
 }

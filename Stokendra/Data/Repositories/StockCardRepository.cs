@@ -41,7 +41,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
 
             SELECT *, (TotalEntry - TotalExit) as CurrentStock
             FROM StockBalances
-            WHERE CurrentStock <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END
+            WHERE CardType = 'Child' AND CurrentStock <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END
             ORDER BY CurrentStock ASC, Code ASC
             LIMIT @Limit
             """;
