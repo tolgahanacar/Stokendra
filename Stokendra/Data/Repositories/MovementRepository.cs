@@ -29,7 +29,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         var @params = new DynamicParameters();
         string sql = BuildQuery("SELECT h.*, s.Name as StockCardName, s.Code as StockCardCode FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, null, recipient, @params);
         sql += " ORDER BY h.Date DESC, h.Id DESC";
-        var result = await conn.QueryAsync<StockMovement>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
+        var result = await conn.QueryAsync<StockMovement>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken)).ConfigureAwait(false);
         return result.ToList();
     }
 

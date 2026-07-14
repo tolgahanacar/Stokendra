@@ -65,15 +65,22 @@ public partial class AddStockCardViewModel : ViewModelBase
 
     private async Task InitAsync()
     {
-        _allCards = await _stockCards.GetAllAsync();
-        var parents = _allCards.Where(k => k.CardType == "Parent" && k.Id != _editingCard?.Id).ToList();
-        
-        ParentCards.Clear();
-        foreach (var p in parents) ParentCards.Add(p);
-
-        if (_editingCard?.ParentId != null)
+        try
         {
-            SelectedParent = ParentCards.FirstOrDefault(p => p.Id == _editingCard.ParentId);
+            _allCards = await _stockCards.GetAllAsync();
+            var parents = _allCards.Where(k => k.CardType == "Parent" && k.Id != _editingCard?.Id).ToList();
+            
+            ParentCards.Clear();
+            foreach (var p in parents) ParentCards.Add(p);
+
+            if (_editingCard?.ParentId != null)
+            {
+                SelectedParent = ParentCards.FirstOrDefault(p => p.Id == _editingCard.ParentId);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("AddStockCardViewModel init error", ex);
         }
     }
 

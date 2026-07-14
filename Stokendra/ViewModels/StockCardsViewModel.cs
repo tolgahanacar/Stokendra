@@ -34,7 +34,7 @@ public partial class StockCardsViewModel : ViewModelBase
     
     partial void OnSelectedCardChanged(StockCard? value) => OnPropertyChanged(nameof(IsCardSelected));
 
-    public ObservableCollection<StockCard> Cards { get; } = new();
+    public BulkObservableCollection<StockCard> Cards { get; } = new();
     public ObservableCollection<StockCard> SelectedCards { get; } = new();
 
     private List<StockCard> _allCards = new();
@@ -75,15 +75,23 @@ public partial class StockCardsViewModel : ViewModelBase
         }
     }
 
+    private CancellationTokenSource? _loadingCts;
+
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
+        _loadingCts?.Cancel();
+        _loadingCts?.Dispose();
+        _loadingCts = new CancellationTokenSource();
+        var token = _loadingCts.Token;
+
         IsLoading = true;
         try
         {
-            _allCards = await _stockCards.GetAllAsync();
+            _allCards = await _stockCards.GetAllAsync(token);
             ApplySearch();
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex) 
         { 
             _logger.LogError("StockCards load error", ex);
@@ -123,7 +131,7 @@ public partial class StockCardsViewModel : ViewModelBase
                 k.Category.ToTurkishLower().Contains(term)).ToList();
 
         Cards.Clear();
-        foreach (var k in data) Cards.Add(k);
+        Cards.AddRange(data);
         StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
     }
 
@@ -302,6 +310,7 @@ public partial class StockCardsViewModel : ViewModelBase
                 }
 
                 var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
+                var cardsToImport = new List<StockCard>();
 
                 foreach (var row in rows)
                 {
@@ -327,9 +336,14 @@ public partial class StockCardsViewModel : ViewModelBase
 
                     if (!string.IsNullOrEmpty(k.Code) && !string.IsNullOrEmpty(k.Name))
                     {
-                        _stockCards.Add(k);
-                        count++;
+                        cardsToImport.Add(k);
                     }
+                }
+
+                if (cardsToImport.Count > 0)
+                {
+                    _stockCards.AddBulk(cardsToImport);
+                    count = cardsToImport.Count;
                 }
             });
             await LoadAsync();

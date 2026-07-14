@@ -49,7 +49,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         var result = await conn.QueryAsync<StockCard>(new CommandDefinition(
             sql, 
             new { Limit = limit, Fallback = fallbackThreshold }, 
-            cancellationToken: cancellationToken));
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
         return result.ToList();
     }
 

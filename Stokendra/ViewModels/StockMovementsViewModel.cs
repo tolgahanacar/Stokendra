@@ -48,7 +48,7 @@ public partial class StockMovementsViewModel : ViewModelBase
 
     partial void OnSelectedMovementChanged(StockMovement? value) => OnPropertyChanged(nameof(IsMovementSelected));
 
-    public ObservableCollection<StockMovement> Movements { get; } = new();
+    public BulkObservableCollection<StockMovement> Movements { get; } = new();
     public ObservableCollection<StockMovement> SelectedMovements { get; } = new();
 
     public ObservableCollection<string>       StockItems { get; } = new();
@@ -130,7 +130,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             token.ThrowIfCancellationRequested();
 
             Movements.Clear();
-            foreach (var h in data) Movements.Add(h);
+            Movements.AddRange(data);
             StatusText = LocalizationManager.L("total_movements_page", totalCount, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException) 

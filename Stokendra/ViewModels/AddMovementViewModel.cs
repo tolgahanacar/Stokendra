@@ -57,23 +57,30 @@ public partial class AddMovementViewModel : ViewModelBase
 
     private async Task InitAsync()
     {
-        var cards = await _stockCards.GetChildCardsAsync();
-        foreach (var c in cards) AllCards.Add(c);
-
-        if (_editingMovement != null)
+        try
         {
-            SelectedCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StockCardId);
+            var cards = await _stockCards.GetChildCardsAsync();
+            foreach (var c in cards) AllCards.Add(c);
+
+            if (_editingMovement != null)
+            {
+                SelectedCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StockCardId);
+            }
+
+            var depts = await _departments.GetAllAsync();
+            foreach (var d in depts) AllDepartments.Add(d);
+            
+            if (_editingMovement == null)
+            {
+                // Default Values
+                SelectedTypeIndex = 1; // Exit (Çıkış)
+                SelectedCard = AllCards.FirstOrDefault();
+                Department = AllDepartments.Count > 0 ? AllDepartments[0] : "";
+            }
         }
-
-        var depts = await _departments.GetAllAsync();
-        foreach (var d in depts) AllDepartments.Add(d);
-        
-        if (_editingMovement == null)
+        catch (Exception ex)
         {
-            // Default Values
-            SelectedTypeIndex = 1; // Exit (Çıkış)
-            SelectedCard = AllCards.FirstOrDefault();
-            Department = AllDepartments.Count > 0 ? AllDepartments[0] : "";
+            AppLogger.LogError("AddMovementViewModel init error", ex);
         }
     }
 

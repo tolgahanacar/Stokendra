@@ -69,7 +69,7 @@ public partial class DashboardViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Dashboard load error: {ex.Message}");
+            AppLogger.LogError("Dashboard load error", ex);
         }
         finally
         {

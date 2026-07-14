@@ -26,7 +26,7 @@ public partial class StocksViewModel : ViewModelBase
 
     public bool IsNotLoading => !IsLoading;
 
-    public ObservableCollection<StockCard> Stocks { get; } = new();
+    public BulkObservableCollection<StockCard> Stocks { get; } = new();
     private List<StockCard> _allStocks = new();
 
     // For Debounce
@@ -53,15 +53,23 @@ public partial class StocksViewModel : ViewModelBase
         }
     }
 
+    private CancellationTokenSource? _loadingCts;
+
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
     public async Task LoadAsync()
     {
+        _loadingCts?.Cancel();
+        _loadingCts?.Dispose();
+        _loadingCts = new CancellationTokenSource();
+        var token = _loadingCts.Token;
+
         IsLoading = true;
         try
         {
-            _allStocks = await _stockCards.GetChildCardsAsync();
+            _allStocks = await _stockCards.GetChildCardsAsync(null, token);
             ApplyFilter();
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }
         finally { IsLoading = false; }
     }
@@ -98,7 +106,7 @@ public partial class StocksViewModel : ViewModelBase
                 k.Category.ToTurkishLower().Contains(term)).ToList();
 
         Stocks.Clear();
-        foreach (var k in data) Stocks.Add(k);
+        Stocks.AddRange(data);
         
         int lowStockCount = data.Count(k => k.CurrentStock <= k.MinStock && k.CurrentStock > 0);
         int depletedCount = data.Count(k => k.CurrentStock <= 0);
