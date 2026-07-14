@@ -74,9 +74,16 @@ public partial class ReportsViewModel : ViewModelBase
         }
     }
 
+    private System.Threading.CancellationTokenSource? _cts;
+
     [RelayCommand]
     public async Task GenerateReport()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new System.Threading.CancellationTokenSource();
+        var token = _cts.Token;
+
         IsLoading = true;
         try
         {
@@ -91,6 +98,7 @@ public partial class ReportsViewModel : ViewModelBase
 
             while (true)
             {
+                token.ThrowIfCancellationRequested();
                 var batch = await _movements.GetPagedAsync(
                     page, batchSize,
                     stockCardId: null,
@@ -100,13 +108,16 @@ public partial class ReportsViewModel : ViewModelBase
                     movementType: "Exit",
                     category: cat,
                     searchTerm: null,
-                    recipient: user);
+                    recipient: user,
+                    cancellationToken: token);
 
                 if (batch.Count == 0) break;
                 allMovements.AddRange(batch);
                 if (batch.Count < batchSize) break;
                 page++;
             }
+
+            token.ThrowIfCancellationRequested();
 
             var rowsList = new List<StockMovement>();
             double total = 0;
@@ -135,6 +146,10 @@ public partial class ReportsViewModel : ViewModelBase
                 .Select(x => (x.Key, x.Value)).ToList();
             
             OnPropertyChanged(nameof(ChartData));
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignored, operation was intentionally cancelled
         }
         catch (Exception ex)
         {
