@@ -66,7 +66,7 @@ class Program
 
 
         // ── Data ──────────────────────────────────────────────────────────
-        var settings = AppSettings.Yukle();
+        var settings = AppSettings.Load();
         LocalizationManager.Initialize(settings.Language);
         string dbPath = !string.IsNullOrWhiteSpace(settings.DbPath) ? settings.DbPath : AppPaths.DefaultDatabasePath;
         var database  = new Database(dbPath);

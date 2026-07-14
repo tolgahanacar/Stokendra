@@ -39,7 +39,7 @@ public class AppSettings
     /// <summary>
     /// Ayarları disk'ten yükler. Dosya yoksa veya bozuksa varsayılan ayarları döner.
     /// </summary>
-    public static AppSettings Yukle()
+    public static AppSettings Load()
     {
         if (File.Exists(AppPaths.SettingsFilePath))
         {
@@ -57,7 +57,7 @@ public class AppSettings
             }
             catch (Exception ex)
             {
-                AppLogger.LogError("AppSettings.Yukle error: " + ex);
+                AppLogger.LogError("AppSettings.Load error: " + ex);
             }
         }
         return new AppSettings();
@@ -67,7 +67,7 @@ public class AppSettings
     /// Ayarları disk'e kaydeder. Atomik yazma için geçici dosya kullanır.
     /// </summary>
     /// <returns>Kayıt başarılıysa true, hata oluşursa false döner.</returns>
-    public bool Kaydet()
+    public bool Save()
     {
         try
         {
@@ -87,8 +87,17 @@ public class AppSettings
         }
         catch (Exception ex)
         {
-            AppLogger.LogError("AppSettings.Kaydet error: " + ex);
+            AppLogger.LogError("AppSettings.Save error: " + ex);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Ayarları asenkron olarak disk'e kaydeder.
+    /// </summary>
+    /// <returns>Kayıt başarılıysa true, hata oluşursa false döner.</returns>
+    public async Task<bool> SaveAsync()
+    {
+        return await Task.Run(() => Save());
     }
 }

@@ -511,7 +511,7 @@ public sealed partial class Database
 
         try
         {
-            var settings = AppSettings.Yukle();
+            var settings = AppSettings.Load();
             string[] keys = { "CompanyName", "AutoBackupPath", "DbPath", "LastSettingsUpdated" };
             
             foreach (var key in keys)

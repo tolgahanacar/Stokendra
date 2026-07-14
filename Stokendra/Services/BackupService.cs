@@ -70,7 +70,7 @@ public class BackupService : IBackupService
             });
 
             _settings.LastBackupDate = DateTime.Now;
-            _settings.Kaydet();
+            _settings.Save();
         }
         catch (Exception ex)
         {

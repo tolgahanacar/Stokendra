@@ -151,7 +151,7 @@ public partial class SettingsViewModel : ViewModelBase
             dbPathChanged = true;
         }
 
-        bool saved = settings.Kaydet();
+        bool saved = await settings.SaveAsync();
         if (saved)
         {
             try
