@@ -64,6 +64,17 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="16" Margin="0,8,0,0">
                         
+                        <!-- 🚀 Hızlı Başlangıç -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="🚀" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_user_quickstart_title}" FontSize="16" FontWeight="Bold" Foreground="#FFD700"/>
+                                    <TextBlock Text="{infra:L guide_user_quickstart_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <!-- 📇 Stock Cards Guide -->
                         <Border Classes="Card">
                             <Grid ColumnDefinitions="48,*">
@@ -128,6 +139,17 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Spacing="16" Margin="0,8,0,0">
                         
+                        <!-- ⚡ SQLite Performans & Optimizasyonları -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="⚡" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_dev_perf_title}" FontSize="16" FontWeight="Bold" Foreground="#FFD700"/>
+                                    <TextBlock Text="{infra:L guide_dev_perf_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
                         <!-- 🏗 MVVM Architecture -->
                         <Border Classes="Card">
                             <Grid ColumnDefinitions="48,*">

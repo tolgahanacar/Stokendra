@@ -88,27 +88,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Aktivite Günlüğü -->
-                    <Border Classes="Card" VerticalAlignment="Top">
-                        <Grid RowDefinitions="Auto,*,Auto">
-                            <TextBlock Grid.Row="0" Text="{infra:L activity_log_header}" FontSize="15" FontWeight="Bold" Foreground="#38AEFF" Margin="0,0,0,12"/>
-                            
-                            <ListBox Grid.Row="1" ItemsSource="{Binding ActivityLogs}" Height="180" Background="#0C0E14" CornerRadius="6" Padding="6" FontSize="11" Foreground="#CBD5E1">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4"/>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                            
-                            <Button Grid.Row="2" Content="{infra:L clear_activity_log_btn}" Classes="Danger"
-                                    Command="{Binding ClearActivityLogsCommand}"
-                                    IsEnabled="{Binding CanEdit}"
-                                    Margin="0,12,0,0"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                    Height="36"/>
-                        </Grid>
-                    </Border>
+
 
                 </StackPanel>
 

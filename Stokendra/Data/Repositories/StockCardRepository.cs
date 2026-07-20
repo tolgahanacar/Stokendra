@@ -16,7 +16,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
 {
     private const string StockBalancesCte = """
         WITH StockBalances AS (
-            SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
+            SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
                    u.Name as ParentName,
                    CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
                    CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
@@ -73,8 +73,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         {
             ValidateCard(stockCard, conn, trans);
             var sql = """
-                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
-                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
             stockCard.Id = conn.ExecuteScalar<int>(sql, stockCard, transaction: trans);
@@ -96,8 +96,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         {
             ValidateCard(stockCard, conn, (SqliteTransaction)trans);
             var sql = """
-                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
-                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
             stockCard.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
@@ -122,8 +122,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             var sql = """
                 UPDATE StockCards SET 
                     Code=@Code, Name=@Name, CardType=@CardType, ParentId=@ParentId, Category=@Category, 
-                    Unit=@Unit, MinStock=@MinStock, Location=@Location, Supplier=@Supplier, Barcode=@Barcode, 
-                    UnitPrice=@UnitPrice, Description=@Description 
+                    Unit=@Unit, MinStock=@MinStock, 
+                    Description=@Description 
                 WHERE Id=@Id
                 """;
             conn.Execute(sql, stockCard, transaction: trans);
@@ -147,8 +147,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             var sql = """
                 UPDATE StockCards SET 
                     Code=@Code, Name=@Name, CardType=@CardType, ParentId=@ParentId, Category=@Category, 
-                    Unit=@Unit, MinStock=@MinStock, Location=@Location, Supplier=@Supplier, Barcode=@Barcode, 
-                    UnitPrice=@UnitPrice, Description=@Description 
+                    Unit=@Unit, MinStock=@MinStock, 
+                    Description=@Description 
                 WHERE Id=@Id
                 """;
             await conn.ExecuteAsync(new CommandDefinition(sql, stockCard, transaction: trans, cancellationToken: cancellationToken));
@@ -226,8 +226,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         try
         {
             var sql = """
-                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
-                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
             foreach (var card in stockCards)
@@ -252,8 +252,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         try
         {
             var sql = """
-                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Location, Supplier, Barcode, UnitPrice, Description)
-                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Location, @Supplier, @Barcode, @UnitPrice, @Description);
+                INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
+                VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
             foreach (var card in stockCards)
@@ -344,7 +344,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         
         var sql = $"""
             SELECT 
-                s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Location, s.Supplier, s.Barcode, s.UnitPrice, s.Description,
+                s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
                 u.Name as ParentName,
                 CAST(COALESCE(entry.TotalEntry, 0) AS REAL) as TotalEntry,
                 CAST(COALESCE(exit.TotalExit, 0) AS REAL) as TotalExit,
@@ -413,7 +413,6 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         if (string.IsNullOrWhiteSpace(s.Code)) throw new InvalidOperationException("Stock code cannot be empty.");
         
         if (s.MinStock < 0) s.MinStock = 0;
-        if (s.UnitPrice < 0) s.UnitPrice = 0;
 
         var count = conn.ExecuteScalar<int>(
             "SELECT COUNT(*) FROM StockCards WHERE Code=@Code AND Id<>@Id",

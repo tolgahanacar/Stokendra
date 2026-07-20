@@ -86,14 +86,12 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"        Width="80"  MinWidth="60"/>
                 <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"        Width="2*"  MinWidth="120"/>
-                <DataGridTextColumn Header="{infra:L card_type}"     Binding="{Binding CardType}"    Width="100" MinWidth="80"/>
+                <DataGridTextColumn Header="{infra:L card_type}"     Binding="{Binding CardTypeDisplay}" Width="100" MinWidth="80"/>
                 <DataGridTextColumn Header="{infra:L parent_card}"   Binding="{Binding ParentName}"  Width="*"   MinWidth="150"/>
                 <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"    Width="*"   MinWidth="80"/>
                 <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding CurrentStock}" Width="100" MinWidth="80"/>
                 <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}"     Width="100" MinWidth="80"/>
                 <DataGridTextColumn Header="{infra:L unit}"          Binding="{Binding Unit}"         Width="100" MinWidth="70"/>
-                <DataGridTextColumn Header="{infra:L location}"      Binding="{Binding Location}"     Width="*"   MinWidth="80"/>
-                <DataGridTextColumn Header="{infra:L barcode}"       Binding="{Binding Barcode}"      Width="*"   MinWidth="100"/>
             </DataGrid.Columns>
         </DataGrid>
 

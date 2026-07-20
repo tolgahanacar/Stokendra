@@ -86,22 +86,13 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Min Stock + Unit Price -->
-                <Grid ColumnDefinitions="*,*">
-                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
-                        <TextBlock Text="{infra:L min_stock}" FontSize="12" Foreground="#8A9BBF"/>
-                        <NumericUpDown Value="{Binding MinStock}"
-                                       Minimum="0"
-                                       HorizontalAlignment="Stretch"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
-                        <TextBlock Text="{infra:L unit_price}" FontSize="12" Foreground="#8A9BBF"/>
-                        <NumericUpDown Value="{Binding UnitPrice}"
-                                       Minimum="0"
-                                       FormatString="N2"
-                                       HorizontalAlignment="Stretch"/>
-                    </StackPanel>
-                </Grid>
+                <!-- Min Stock -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="{infra:L min_stock}" FontSize="12" Foreground="#8A9BBF"/>
+                    <NumericUpDown Value="{Binding MinStock}"
+                                   Minimum="0"
+                                   HorizontalAlignment="Stretch"/>
+                </StackPanel>
 
                 <!-- Description -->
                 <StackPanel Spacing="5">
@@ -112,25 +103,6 @@
                               AcceptsReturn="True"
                               TextWrapping="Wrap"/>
                 </StackPanel>
-
-                <!-- Location + Supplier -->
-                <Grid ColumnDefinitions="*,*">
-                    <StackPanel Grid.Column="0" Spacing="5" Margin="0,0,8,0">
-                        <TextBlock Text="{infra:L location}" FontSize="12" Foreground="#8A9BBF"/>
-                        <TextBox Text="{Binding Location}" Watermark="{infra:L location}"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="5" Margin="8,0,0,0">
-                        <TextBlock Text="{infra:L supplier}" FontSize="12" Foreground="#8A9BBF"/>
-                        <TextBox Text="{Binding Supplier}"/>
-                    </StackPanel>
-                </Grid>
-
-                <!-- Barcode -->
-                <StackPanel Spacing="5">
-                    <TextBlock Text="{infra:L barcode}" FontSize="12" Foreground="#8A9BBF"/>
-                    <TextBox Text="{Binding Barcode}"/>
-                </StackPanel>
-
             </StackPanel>
         </ScrollViewer>
 

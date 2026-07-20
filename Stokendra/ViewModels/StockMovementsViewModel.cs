@@ -355,15 +355,15 @@ public partial class StockMovementsViewModel : ViewModelBase
                     string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
                     if (header == "stok kodu" || header == "kod" || header == "stokkodu" || header == "kodno" || header == "code")
                         colCode = i;
-                    else if (header == "teslim edilen" || header == "teslim alan" || header == "personel" || header == "kisi" || header == "kişi" || header == "recipient")
+                    else if (header == "teslim edilen" || header == "teslim alan" || header == "personel" || header == "kisi" || header == "kişi" || header == "recipient" || header.Contains("teslim") || header.Contains("alinan") || header.Contains("alınan"))
                         colRecipient = i;
-                    else if (header == "tür" || header == "tur" || header == "işlem" || header == "islem" || header == "tip" || header == "islem tipi" || header == "type")
+                    else if (header == "tür" || header == "tur" || header == "işlem" || header == "islem" || header == "tip" || header == "islem tipi" || header == "type" || header.Contains("giriş") || header.Contains("giris") || header.Contains("çıkış") || header.Contains("cikis"))
                         colType = i;
                     else if (header == "miktar" || header == "adet" || header == "sayı" || header == "sayi" || header == "quantity")
                         colQuantity = i;
                     else if (header == "departman" || header == "bölüm" || header == "bolum" || header == "department")
                         colDepartment = i;
-                    else if (header == "tarih" || header == "işlem tarihi" || header == "islem tarihi" || header == "date")
+                    else if (header == "tarih" || header == "işlem tarihi" || header == "islem tarihi" || header == "date" || header.Contains("tarih") || header.Contains("date"))
                         colDate = i;
                     else if (header == "açıklama" || header == "aciklama" || header == "not" || header == "description")
                         colDescription = i;

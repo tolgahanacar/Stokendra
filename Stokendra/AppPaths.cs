@@ -24,31 +24,7 @@ public static class AppPaths
     /// <summary>Varsayılan veritabanı dosyasının tam yolu.</summary>
     public static string DefaultDatabasePath => Path.Combine(ApplicationDataDirectory, "stok.db");
 
-    /// <summary>Kullanıcı aktivite günlüğü dosyasının tam yolu.</summary>
-    public static string ActivityLogPath => Path.Combine(
-        EnsureDirectory(Path.Combine(ApplicationDataDirectory, "logs")),
-        "userActivity.txt");
 
-    /// <summary>
-    /// Kullanıcı aktivitesini günlük dosyasına yazar.
-    /// </summary>
-    /// <param name="action">Gerçekleştirilen işlem (örn. "ekle", "sil").</param>
-    /// <param name="module">İşlemin yapıldığı modül (örn. "stokkartlari").</param>
-    /// <param name="details">İşlem detayı.</param>
-    public static void LogActivity(string action, string module, string details)
-    {
-        try
-        {
-            // Tab-separated format: ayrıştırılabilir, detay içindeki özel karakterlerden etkilenmez
-            string logLine = string.Join("\t",
-                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                action?.Replace("\t", " ") ?? "",
-                module?.Replace("\t", " ") ?? "",
-                details?.Replace("\t", " ").Replace("\r", "").Replace("\n", " ") ?? "");
-            File.AppendAllText(ActivityLogPath, logLine + Environment.NewLine);
-        }
-        catch { }
-    }
 
     /// <summary>
     /// Veritabanı yolunu normalize eder. Göreceli yolları uygulama veri dizinine göre çözümler.

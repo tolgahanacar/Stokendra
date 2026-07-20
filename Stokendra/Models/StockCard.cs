@@ -17,10 +17,6 @@ public class StockCard : ObservableObject
     private double _totalExit;
     private string _category = "";
     private string _unit = "Adet";
-    private string _location = "";
-    private string _supplier = "";
-    private string _barcode = "";
-    private double _unitPrice;
     private string _cardType = "Child";
     private int? _parentId;
     private string _parentName = "";
@@ -104,33 +100,7 @@ public class StockCard : ObservableObject
         set => SetProperty(ref _unit, value);
     }
 
-    /// <summary>Warehouse/shelf location.</summary>
-    public string Location
-    {
-        get => _location;
-        set => SetProperty(ref _location, value);
-    }
 
-    /// <summary>Supplier name.</summary>
-    public string Supplier
-    {
-        get => _supplier;
-        set => SetProperty(ref _supplier, value);
-    }
-
-    /// <summary>Barcode value.</summary>
-    public string Barcode
-    {
-        get => _barcode;
-        set => SetProperty(ref _barcode, value);
-    }
-
-    /// <summary>Unit price.</summary>
-    public double UnitPrice
-    {
-        get => _unitPrice;
-        set => SetProperty(ref _unitPrice, value);
-    }
 
     /// <summary>
     /// Card type string representation ("Child" or "Parent").
@@ -144,12 +114,21 @@ public class StockCard : ObservableObject
             if (SetProperty(ref _cardType, value))
             {
                 OnPropertyChanged(nameof(CardTypeEnum));
+                OnPropertyChanged(nameof(CardTypeDisplay));
                 OnPropertyChanged(nameof(IsParentCard));
                 OnPropertyChanged(nameof(IsLowStock));
                 OnPropertyChanged(nameof(IsDepleted));
             }
         }
     }
+
+    /// <summary>Localized display name for card type.</summary>
+    public string CardTypeDisplay => CardTypeEnum switch
+    {
+        Models.CardType.Parent => LocalizationManager.L("card_type_parent"),
+        Models.CardType.Child => LocalizationManager.L("card_type_child"),
+        _ => CardType
+    };
 
     /// <summary>Parent card ID. Valid only for Child cards.</summary>
     public int? ParentId

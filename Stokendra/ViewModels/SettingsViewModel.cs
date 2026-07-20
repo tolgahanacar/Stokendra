@@ -39,7 +39,6 @@ public partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private string _databaseSize = "";
 
     public List<string> Languages { get; } = new() { "Türkçe", "English" };
-    public ObservableCollection<string> ActivityLogs { get; } = new();
 
     public SettingsViewModel(
         IUserRepository users,
@@ -73,7 +72,6 @@ public partial class SettingsViewModel : ViewModelBase
         AppVersion = $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0"}";
         
         UpdateDatabaseInfo();
-        LoadActivityLogs();
     }
 
     private void UpdateDatabaseInfo()
@@ -99,37 +97,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    private void LoadActivityLogs()
-    {
-        ActivityLogs.Clear();
-        try
-        {
-            if (File.Exists(AppPaths.ActivityLogPath))
-            {
-                var lines = File.ReadLines(AppPaths.ActivityLogPath).Reverse().Take(12).ToList();
-                foreach (var line in lines)
-                {
-                    var parts = line.Split('\t');
-                    if (parts.Length >= 4)
-                    {
-                        ActivityLogs.Add($"{parts[0]} | {parts[1]} | {parts[2]} | {parts[3]}");
-                    }
-                    else
-                    {
-                        ActivityLogs.Add(line);
-                    }
-                }
-            }
-            if (ActivityLogs.Count == 0)
-            {
-                ActivityLogs.Add(LocalizationManager.L("no_activity_log"));
-            }
-        }
-        catch (Exception ex)
-        {
-            ActivityLogs.Add(string.Format(LocalizationManager.L("activity_log_load_failed"), ex.Message));
-        }
-    }
+
 
     [RelayCommand]
     public async Task SaveSettingsAsync()
@@ -169,7 +137,7 @@ public partial class SettingsViewModel : ViewModelBase
                 _logger.LogError("Failed to update database AppConfig or AuditLog", ex);
             }
 
-            LoadActivityLogs();
+
 
             if (langChanged || dbPathChanged)
             {
@@ -268,7 +236,6 @@ public partial class SettingsViewModel : ViewModelBase
             OldPassword     = "";
             NewPassword     = "";
             ConfirmPassword = "";
-            LoadActivityLogs();
         }
         else
         {
@@ -292,7 +259,6 @@ public partial class SettingsViewModel : ViewModelBase
             });
             StatusMessage = LocalizationManager.L("db_backup_success");
             IsSuccess = true;
-            LoadActivityLogs();
             await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_backup_dialog_msg"));
         }
         catch (Exception ex)
@@ -321,7 +287,6 @@ public partial class SettingsViewModel : ViewModelBase
 
             StatusMessage = LocalizationManager.L("full_backup_success");
             IsSuccess = true;
-            LoadActivityLogs();
             await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("full_backup_dialog_msg"));
         }
         catch (Exception ex)
@@ -343,7 +308,6 @@ public partial class SettingsViewModel : ViewModelBase
             await Task.Run(() => _config.TruncateAuditLog());
             StatusMessage = LocalizationManager.L("audit_log_cleared_success");
             IsSuccess = true;
-            LoadActivityLogs();
             await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("audit_log_cleared_dialog_msg"));
         }
         catch (Exception ex)
@@ -375,7 +339,6 @@ public partial class SettingsViewModel : ViewModelBase
             {
                 StatusMessage = LocalizationManager.L("db_integrity_success_status");
                 IsSuccess = true;
-                LoadActivityLogs();
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_integrity_success_dialog_msg"));
             }
             else
@@ -412,7 +375,6 @@ public partial class SettingsViewModel : ViewModelBase
             UpdateDatabaseInfo();
             StatusMessage = LocalizationManager.L("db_optimize_success_status");
             IsSuccess = true;
-            LoadActivityLogs();
             await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("db_optimize_success_dialog_msg"));
         }
         catch (Exception ex)
@@ -423,29 +385,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    public async Task ClearActivityLogsAsync()
-    {
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("activity_log_clear_confirm_title"), LocalizationManager.L("activity_log_clear_confirm_msg"));
-        if (!confirm) return;
 
-        try
-        {
-            if (File.Exists(AppPaths.ActivityLogPath))
-            {
-                File.WriteAllText(AppPaths.ActivityLogPath, "");
-            }
-            LoadActivityLogs();
-            StatusMessage = LocalizationManager.L("activity_log_cleared_success");
-            IsSuccess = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Clear activity logs error", ex);
-            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
-            IsSuccess = false;
-        }
-    }
 
     [RelayCommand]
     public async Task CheckForUpdatesAsync()

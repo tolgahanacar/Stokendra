@@ -17,7 +17,7 @@ public sealed partial class Database : IDisposable
     private readonly string _databasePath;
     private readonly string _connectionString;
 
-    private const int CurrentSchemaVersion = 13;
+    private const int CurrentSchemaVersion = 15;
     private const string DateFormat = "yyyy-MM-dd HH:mm:ss";
     private const int PasswordIterationsV2 = 20000;
     private const int PasswordIterationsV3 = 120000;
@@ -98,7 +98,8 @@ public sealed partial class Database : IDisposable
         ExecutePragma(connection, "synchronous", "NORMAL"); // Uyumlu ve yüksek performans
         ExecutePragma(connection, "journal_mode", "WAL");
         ExecutePragma(connection, "temp_store", "MEMORY");
-        ExecutePragma(connection, "cache_size", "-32000"); // 32MB cache
+        ExecutePragma(connection, "cache_size", "-131072"); // 128MB cache size
+        ExecutePragma(connection, "mmap_size", "268435456"); // 256MB memory map
     }
 
     private static void ExecutePragma(SqliteConnection connection, string pragma, string value)
@@ -135,6 +136,8 @@ public sealed partial class Database : IDisposable
             if (version < 11) MigrateToV11(connection, null);
             if (version < 12) MigrateToV12(connection, null);
             if (version < 13) MigrateToV13(connection, null);
+            if (version < 14) MigrateToV14(connection, null);
+            if (version < 15) MigrateToV15(connection, null);
 
             EnsureSchema(connection, null);
             EnsureIndexes(connection, null);

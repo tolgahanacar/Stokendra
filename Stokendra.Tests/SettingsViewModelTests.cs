@@ -531,21 +531,6 @@ public class SettingsViewModelTests : IDisposable
         _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<Exception>());
     }
 
-    [Fact]
-    public async Task Test_ClearActivityLogs_Success()
-    {
-        // Arrange
-        var vm = CreateViewModel();
-        _dialogServiceMock.ShowConfirmAsync(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Task.FromResult(true));
-
-        // Act
-        await vm.ClearActivityLogsAsync();
-
-        // Assert
-        Assert.Equal(LocalizationManager.L("activity_log_cleared_success"), vm.StatusMessage);
-        Assert.True(vm.IsSuccess);
-    }
 
     [Fact]
     public async Task Test_CheckForUpdates_NewVersionAvailable_PromptsUser()

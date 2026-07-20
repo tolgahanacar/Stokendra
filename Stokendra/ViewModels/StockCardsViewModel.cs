@@ -266,8 +266,8 @@ public partial class StockCardsViewModel : ViewModelBase
                 int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
                 
                 // Dynamically find column indexes (1-based) supporting both languages
-                int colCode = 0, colName = 0, colCategory = 0, colUnit = 0, colLocation = 0;
-                int colSupplier = 0, colBarcode = 0, colUnitPrice = 0, colMinStock = 0, colDescription = 0;
+                int colCode = 0, colName = 0, colCategory = 0, colUnit = 0;
+                int colMinStock = 0, colDescription = 0;
 
                 for (int i = 1; i <= colCount; i++)
                 {
@@ -280,14 +280,7 @@ public partial class StockCardsViewModel : ViewModelBase
                         colCategory = i;
                     else if (header == "unit" || header == "birim")
                         colUnit = i;
-                    else if (header == "location" || header == "konum")
-                        colLocation = i;
-                    else if (header == "supplier" || header == "tedarikçi" || header == "tedarikci")
-                        colSupplier = i;
-                    else if (header == "barcode" || header == "barkod")
-                        colBarcode = i;
-                    else if (header == "unitprice" || header == "birimfiyat" || header == "birim fiyat" || header == "fiyat" || header == "fiyati")
-                        colUnitPrice = i;
+
                     else if (header == "minstock" || header == "minstok" || header == "min stok" || header == "minimum stok" || header == "min")
                         colMinStock = i;
                     else if (header == "description" || header == "açıklama" || header == "aciklama")
@@ -301,12 +294,8 @@ public partial class StockCardsViewModel : ViewModelBase
                     colName = 2;
                     colCategory = 3;
                     colUnit = 4;
-                    colLocation = 5;
-                    colSupplier = 6;
-                    colBarcode = 7;
-                    colUnitPrice = 8;
-                    colMinStock = 9;
-                    colDescription = 10;
+                    colMinStock = 5;
+                    colDescription = 6;
                 }
 
                 var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
@@ -325,10 +314,6 @@ public partial class StockCardsViewModel : ViewModelBase
                         Name = name,
                         Category = colCategory > 0 ? (row.Cell(colCategory).GetValue<string>() ?? "").Trim() : "",
                         Unit = colUnit > 0 ? (row.Cell(colUnit).GetValue<string>() ?? "Adet").Trim() : "Adet",
-                        Location = colLocation > 0 ? (row.Cell(colLocation).GetValue<string>() ?? "").Trim() : "",
-                        Supplier = colSupplier > 0 ? (row.Cell(colSupplier).GetValue<string>() ?? "").Trim() : "",
-                        Barcode = colBarcode > 0 ? (row.Cell(colBarcode).GetValue<string>() ?? "").Trim() : "",
-                        UnitPrice = colUnitPrice > 0 ? (row.Cell(colUnitPrice).TryGetValue<double>(out double valPrice) ? valPrice : 0.0) : 0.0,
                         MinStock = colMinStock > 0 ? (row.Cell(colMinStock).TryGetValue<int>(out int valMin) ? valMin : 0) : 0,
                         CardType = "Child",
                         Description = colDescription > 0 ? (row.Cell(colDescription).GetValue<string>() ?? "").Trim() : ""
@@ -368,14 +353,14 @@ public partial class StockCardsViewModel : ViewModelBase
             await Task.Run(() => {
                 using var workbook = new ClosedXML.Excel.XLWorkbook();
                 var ws = workbook.Worksheets.Add("StockCards");
-                string[] headers = { "Code", "Name", "Category", "Unit", "Location", "Supplier", "Barcode", "UnitPrice", "MinStock", "Description" };
+                string[] headers = { "Code", "Name", "Category", "Unit", "MinStock", "Description" };
                 for (int i = 0; i < headers.Length; i++) { ws.Cell(1, i + 1).Value = headers[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; }
                 
                 ws.Cell(2, 1).Value = "100.001";
                 ws.Cell(2, 2).Value = "Sample Product";
                 ws.Cell(2, 3).Value = "Office";
                 ws.Cell(2, 4).Value = "Pcs";
-                ws.Cell(2, 9).Value = 5;
+                ws.Cell(2, 5).Value = 5;
                 
                 ws.Columns().AdjustToContents();
                 workbook.SaveAs(path);
@@ -424,11 +409,10 @@ public partial class StockCardsViewModel : ViewModelBase
                     LocalizationManager.L("category"), 
                     LocalizationManager.L("current_stock"), 
                     LocalizationManager.L("min_stock"), 
-                    LocalizationManager.L("unit"), 
-                    LocalizationManager.L("location") 
+                    LocalizationManager.L("unit") 
                 };
                 ExcelService.ExportToExcel(path, "StockCards", headers, Cards, k => new object?[] {
-                    k.Code, k.Name, k.CardType, k.ParentName, k.Category, k.CurrentStock, k.MinStock, k.Unit, k.Location
+                    k.Code, k.Name, k.CardTypeDisplay, k.ParentName, k.Category, k.CurrentStock, k.MinStock, k.Unit
                 });
             });
             StatusText = LocalizationManager.L("export_success", path);

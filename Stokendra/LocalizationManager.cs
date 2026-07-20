@@ -41,7 +41,9 @@ public static class LocalizationManager
             ["title"] = "Başlık",
             ["content"] = "İçerik",
             ["entry_symbol"] = "[G]",
-            ["exit_symbol"] = "[Ç]"
+            ["exit_symbol"] = "[Ç]",
+            ["card_type_parent"] = "Üst",
+            ["card_type_child"] = "Alt"
         },
         ["en"] = new Dictionary<string, string>
         {
@@ -74,7 +76,9 @@ public static class LocalizationManager
             ["title"] = "Title",
             ["content"] = "Content",
             ["entry_symbol"] = "[E]",
-            ["exit_symbol"] = "[X]"
+            ["exit_symbol"] = "[X]",
+            ["card_type_parent"] = "Parent",
+            ["card_type_child"] = "Child"
         }
     };
 

@@ -47,7 +47,7 @@
     <None Update="Resources\lang_en.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Resources\ornek_import.csv">
+    <None Update="Resources\exampleImport.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

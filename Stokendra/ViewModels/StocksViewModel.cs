@@ -141,8 +141,7 @@ public partial class StocksViewModel : ViewModelBase
                 LocalizationManager.L("category"), 
                 LocalizationManager.L("current_stock"), 
                 LocalizationManager.L("min_stock"), 
-                LocalizationManager.L("unit"), 
-                LocalizationManager.L("location") 
+                LocalizationManager.L("unit") 
             };
             ExcelService.ExportToExcel(path, "StockStatus", headers, Stocks, s => new object?[]
             {
@@ -151,8 +150,7 @@ public partial class StocksViewModel : ViewModelBase
                 s.Category,
                 s.CurrentStock,
                 s.MinStock,
-                s.Unit,
-                s.Location
+                s.Unit
             });
 
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("export_success", path));

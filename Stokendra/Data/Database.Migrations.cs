@@ -21,11 +21,7 @@ public sealed partial class Database
                 ParentId INTEGER DEFAULT NULL,
                 CreatedAt TEXT DEFAULT '',
                 UpdatedAt TEXT DEFAULT '',
-                Unit TEXT DEFAULT 'Adet',
-                Location TEXT DEFAULT '',
-                Supplier TEXT DEFAULT '',
-                Barcode TEXT DEFAULT '',
-                UnitPrice REAL DEFAULT 0
+                Unit TEXT DEFAULT 'Adet'
             )",
             @"CREATE TABLE IF NOT EXISTS StockMovements (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,6 +126,21 @@ public sealed partial class Database
         // to prevent partial migration errors and foreign key constraint failures.
     }
 
+    private static void MigrateToV14(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Location;");
+        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Supplier;");
+        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Barcode;");
+    }
+
+    private static void MigrateToV15(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN UnitPrice;");
+        TryAlter(connection, transaction, "PRAGMA journal_size_limit = 67108864;"); // 64MB limit
+        TryAlter(connection, transaction, "PRAGMA auto_vacuum = INCREMENTAL;");
+        TryAlter(connection, transaction, "PRAGMA vacuum;");
+    }
+
     private static void MigrateToV13(SqliteConnection connection, SqliteTransaction? transaction)
     {
         string? GetSourceTable(string trName, string enName)
@@ -166,11 +177,7 @@ public sealed partial class Database
                     ParentId INTEGER DEFAULT NULL,
                     CreatedAt TEXT DEFAULT '',
                     UpdatedAt TEXT DEFAULT '',
-                    Unit TEXT DEFAULT 'Adet',
-                    Location TEXT DEFAULT '',
-                    Supplier TEXT DEFAULT '',
-                    Barcode TEXT DEFAULT '',
-                    UnitPrice REAL DEFAULT 0
+                    Unit TEXT DEFAULT 'Adet'
                 )
             ");
 
@@ -185,16 +192,12 @@ public sealed partial class Database
             string colCreatedAt = GetSelectColumn(connection, transaction, srcCards, "CreatedAt", "OlusturmaTarihi", "CreatedAt");
             string colUpdatedAt = GetSelectColumn(connection, transaction, srcCards, "UpdatedAt", "GuncellenmeTarihi", "UpdatedAt");
             string colUnit = GetSelectColumn(connection, transaction, srcCards, "Unit", "Birim", "Unit");
-            string colLocation = GetSelectColumn(connection, transaction, srcCards, "Location", "Konum", "Location");
-            string colSupplier = GetSelectColumn(connection, transaction, srcCards, "Supplier", "Tedarikci", "Supplier");
-            string colBarcode = GetSelectColumn(connection, transaction, srcCards, "Barcode", "Barkod", "Barcode");
-            string colUnitPrice = GetSelectColumn(connection, transaction, srcCards, "UnitPrice", "BirimFiyat", "UnitPrice");
 
             string exprCardType = $"CASE WHEN {colCardType} IN ('Alt', 'child', 'Child') THEN 'Child' WHEN {colCardType} IN ('Ust', 'Üst', 'parent', 'Parent') THEN 'Parent' ELSE 'Child' END";
 
             string insertSql = $@"
-                INSERT INTO StockCards_temp (Id, Name, Code, Description, MinStock, Category, CardType, ParentId, CreatedAt, UpdatedAt, Unit, Location, Supplier, Barcode, UnitPrice)
-                SELECT {colId}, COALESCE({colName}, ''), COALESCE({colCode}, ''), COALESCE({colDesc}, ''), COALESCE({colMinStock}, 0), COALESCE({colCategory}, ''), {exprCardType}, {colParentId}, COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, ''), COALESCE({colUnit}, 'Adet'), COALESCE({colLocation}, ''), COALESCE({colSupplier}, ''), COALESCE({colBarcode}, ''), COALESCE({colUnitPrice}, 0.0)
+                INSERT INTO StockCards_temp (Id, Name, Code, Description, MinStock, Category, CardType, ParentId, CreatedAt, UpdatedAt, Unit)
+                SELECT {colId}, COALESCE({colName}, ''), COALESCE({colCode}, ''), COALESCE({colDesc}, ''), COALESCE({colMinStock}, 0), COALESCE({colCategory}, ''), {exprCardType}, {colParentId}, COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, ''), COALESCE({colUnit}, 'Adet')
                 FROM [{srcCards}]
             ";
             TryAlter(connection, transaction, insertSql);

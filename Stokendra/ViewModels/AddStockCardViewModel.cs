@@ -22,10 +22,6 @@ public partial class AddStockCardViewModel : ViewModelBase
     [ObservableProperty] private int _minStock = 0;
     [ObservableProperty] private string _category = "";
     [ObservableProperty] private string _unit = "Adet";
-    [ObservableProperty] private string _location = "";
-    [ObservableProperty] private string _supplier = "";
-    [ObservableProperty] private string _barcode = "";
-    [ObservableProperty] private double _unitPrice = 0;
     [ObservableProperty] private int _selectedTypeIndex = 0; // 0: Child, 1: Parent
     [ObservableProperty] private StockCard? _selectedParent;
     [ObservableProperty] private string _errorMessage = "";
@@ -49,10 +45,6 @@ public partial class AddStockCardViewModel : ViewModelBase
             MinStock = card.MinStock;
             Category = card.Category;
             Unit = card.Unit;
-            Location = card.Location;
-            Supplier = card.Supplier;
-            Barcode = card.Barcode;
-            UnitPrice = card.UnitPrice;
             SelectedTypeIndex = card.CardType == "Parent" ? 1 : 0;
         }
         else
@@ -128,10 +120,6 @@ public partial class AddStockCardViewModel : ViewModelBase
             MinStock = MinStock,
             Category = Category ?? "",
             Unit = Unit ?? "Adet",
-            Location = Location ?? "",
-            Supplier = Supplier ?? "",
-            Barcode = Barcode ?? "",
-            UnitPrice = UnitPrice,
             CardType = SelectedTypeIndex == 1 ? "Parent" : "Child",
             ParentId = SelectedTypeIndex == 0 ? SelectedParent?.Id : null
         };

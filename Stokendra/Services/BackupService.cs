@@ -175,14 +175,14 @@ public class BackupService : IBackupService
     private async Task ExportStokKartlariAsync(string tempDir)
     {
         var tumKartlar = await _stockCardRepository.GetAllAsync();
-        string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "Konum", "Tedarikçi", "Barkod", "BirimFiyat", "MinStok", "Açıklama" };
+        string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "MinStok", "Açıklama" };
         string filePath = Path.Combine(tempDir, "StokKartlari.xlsx");
         await Task.Run(() => ExcelService.ExportToExcel(
             filePath,
             "StokKartlari",
             headers,
             tumKartlar,
-            k => new object?[] { k.Code, k.Name, k.Category, k.Unit, k.Location, k.Supplier, k.Barcode, k.UnitPrice, k.MinStock, k.Description }
+            k => new object?[] { k.Code, k.Name, k.Category, k.Unit, k.MinStock, k.Description }
         ));
     }
 
