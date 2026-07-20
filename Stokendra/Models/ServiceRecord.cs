@@ -6,64 +6,35 @@ namespace Stokendra.Models;
 /// <summary>
 /// Device maintenance/service record domain model.
 /// </summary>
-public class ServiceRecord : ObservableObject
+public partial class ServiceRecord : ObservableObject
 {
-    private int _id;
-    private string _deviceName = "";
-    private string _serialNumber = "";
-    private string _company = "";
-    private DateTime _serviceDate;
-    private string _issue = "";
-    private string _result = "";
-
     /// <summary>Primary key.</summary>
-    public int Id
-    {
-        get => _id;
-        set => SetProperty(ref _id, value);
-    }
+    [ObservableProperty]
+    private int _id;
 
     /// <summary>Device name (required).</summary>
-    public string DeviceName
-    {
-        get => _deviceName;
-        set => SetProperty(ref _deviceName, value);
-    }
+    [ObservableProperty]
+    private string _deviceName = string.Empty;
 
     /// <summary>Device serial number.</summary>
-    public string SerialNumber
-    {
-        get => _serialNumber;
-        set => SetProperty(ref _serialNumber, value);
-    }
+    [ObservableProperty]
+    private string _serialNumber = string.Empty;
 
     /// <summary>Maintenance company name.</summary>
-    public string Company
-    {
-        get => _company;
-        set => SetProperty(ref _company, value);
-    }
+    [ObservableProperty]
+    private string _company = string.Empty;
 
     /// <summary>Maintenance/service date.</summary>
-    public DateTime ServiceDate
-    {
-        get => _serviceDate;
-        set => SetProperty(ref _serviceDate, value);
-    }
+    [ObservableProperty]
+    private DateTime _serviceDate;
 
     /// <summary>Identified problem/issue description.</summary>
-    public string Issue
-    {
-        get => _issue;
-        set => SetProperty(ref _issue, value);
-    }
+    [ObservableProperty]
+    private string _issue = string.Empty;
 
     /// <summary>Action taken and service result.</summary>
-    public string Result
-    {
-        get => _result;
-        set => SetProperty(ref _result, value);
-    }
+    [ObservableProperty]
+    private string _result = string.Empty;
 
     /// <inheritdoc/>
     public override string ToString() => $"{DeviceName} ({SerialNumber}) - {ServiceDate:dd.MM.yyyy}";
