@@ -29,10 +29,15 @@ public partial class StockCardsViewModel : ViewModelBase
 
     public bool IsNotLoading => !IsLoading;
 
-    public bool IsCardSelected => SelectedCard != null;
+    public bool IsCardSelected => SelectedCard != null || SelectedCards.Count > 0;
+    public bool IsSingleCardSelected => (SelectedCard != null && SelectedCards.Count <= 1) || SelectedCards.Count == 1;
     [ObservableProperty] private bool _isMultipleSelected;
     
-    partial void OnSelectedCardChanged(StockCard? value) => OnPropertyChanged(nameof(IsCardSelected));
+    partial void OnSelectedCardChanged(StockCard? value)
+    {
+        OnPropertyChanged(nameof(IsCardSelected));
+        OnPropertyChanged(nameof(IsSingleCardSelected));
+    }
 
     public BulkObservableCollection<StockCard> Cards { get; } = new();
     public ObservableCollection<StockCard> SelectedCards { get; } = new();
@@ -57,6 +62,8 @@ public partial class StockCardsViewModel : ViewModelBase
         
         SelectedCards.CollectionChanged += (s, e) => {
             IsMultipleSelected = SelectedCards.Count >= 2;
+            OnPropertyChanged(nameof(IsCardSelected));
+            OnPropertyChanged(nameof(IsSingleCardSelected));
         };
         
         SafeLoadAsync();
@@ -142,31 +149,6 @@ public partial class StockCardsViewModel : ViewModelBase
     public async Task RefreshAsync() => await LoadAsync();
 
     [RelayCommand]
-    public async Task DeleteCardAsync()
-    {
-        if (SelectedCard == null) return;
-        
-        bool confirm = await _dialogService.ShowConfirmAsync(
-            LocalizationManager.L("confirm_delete_title"), 
-            LocalizationManager.L("confirm_delete", $"{SelectedCard.Code} - {SelectedCard.Name}")
-        );
-        
-        if (!confirm) return;
-
-        try
-        {
-            await _stockCards.DeleteAsync(SelectedCard.Id);
-            await LoadAsync();
-            StatusText = LocalizationManager.L("bulk_delete_success", 1);
-        }
-        catch (Exception ex) 
-        { 
-            _logger.LogError("Delete card error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
-        }
-    }
-
-    [RelayCommand]
     public async Task AddCardAsync()
     {
         var vm = new AddStockCardViewModel(_stockCards);
@@ -176,11 +158,11 @@ public partial class StockCardsViewModel : ViewModelBase
             {
                 await _stockCards.AddAsync(vm.Result);
                 await LoadAsync();
-                StatusText = LocalizationManager.L("save_settings");
+                StatusText = LocalizationManager.L("card_added_success", vm.Result.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Add card error", ex);
+                _logger.LogError("Add stock card error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -189,49 +171,80 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditCardAsync()
     {
-        if (SelectedCard == null) return;
-        var vm = new AddStockCardViewModel(_stockCards, SelectedCard);
+        var cardToEdit = SelectedCard ?? SelectedCards.FirstOrDefault();
+        if (cardToEdit == null) return;
+
+        var vm = new AddStockCardViewModel(_stockCards, cardToEdit);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
             try
             {
                 await _stockCards.UpdateAsync(vm.Result);
                 await LoadAsync();
-                StatusText = LocalizationManager.L("save_settings");
+                StatusText = LocalizationManager.L("card_updated_success", vm.Result.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Edit card error", ex);
+                _logger.LogError("Edit stock card error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
     }
 
     [RelayCommand]
-    public async Task BulkDeleteAsync()
+    public async Task DeleteCardAsync()
     {
-        if (SelectedCards.Count < 2) return;
-
-        bool confirm = await _dialogService.ShowConfirmAsync(
-            LocalizationManager.L("confirm_bulk_delete_title"), 
-            LocalizationManager.L("confirm_bulk_delete", SelectedCards.Count)
-        );
-        
-        if (!confirm) return;
-
-        try
+        if (SelectedCards.Count >= 2)
         {
-            foreach (var k in SelectedCards.ToList())
-                await _stockCards.DeleteAsync(k.Id);
-            await LoadAsync();
-            StatusText = LocalizationManager.L("bulk_delete_success", SelectedCards.Count);
+            int count = SelectedCards.Count;
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_bulk_delete_title"), 
+                LocalizationManager.L("confirm_bulk_delete", count)
+            );
+            
+            if (!confirm) return;
+
+            try
+            {
+                foreach (var k in SelectedCards.ToList())
+                    await _stockCards.DeleteAsync(k.Id);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("bulk_delete_success", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Bulk delete cards error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError("Bulk delete cards error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            var cardToDelete = SelectedCard ?? SelectedCards.FirstOrDefault();
+            if (cardToDelete == null) return;
+            
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_delete_title"), 
+                LocalizationManager.L("confirm_delete", $"{cardToDelete.Code} - {cardToDelete.Name}")
+            );
+            
+            if (!confirm) return;
+
+            try
+            {
+                await _stockCards.DeleteAsync(cardToDelete.Id);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("bulk_delete_success", 1);
+            }
+            catch (Exception ex) 
+            { 
+                _logger.LogError("Delete card error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
+
+    [RelayCommand]
+    public async Task BulkDeleteAsync() => await DeleteCardAsync();
 
     [RelayCommand]
     public async Task BulkEntryAsync()

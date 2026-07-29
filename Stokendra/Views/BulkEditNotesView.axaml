@@ -1,0 +1,142 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Stokendra.ViewModels"
+        xmlns:infra="using:Stokendra.Infrastructure"
+        xmlns:models="using:Stokendra.Models"
+        x:Class="Stokendra.Views.BulkEditNotesView"
+        Title="{Binding Title}"
+        Width="900" Height="600"
+        MinWidth="750" MinHeight="450"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        Background="#111522"
+        x:CompileBindings="False">
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#181D2A" Padding="24,16,24,14" BorderBrush="#1F2636" BorderThickness="0,0,0,1">
+            <StackPanel Spacing="3">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
+                <TextBlock Text="Seçilen notları toplu veya tekil olarak düzenleyin"
+                           FontSize="12" Foreground="#64748B"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Bulk Apply Panel -->
+        <Border Grid.Row="1" Background="#161B27" Margin="20,16,20,0"
+                CornerRadius="10" Padding="16,14"
+                BorderBrush="#1F2B3E" BorderThickness="1">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{infra:L bulk_apply_header}" 
+                           FontSize="12" FontWeight="Bold" Foreground="#38AEFF"/>
+                
+                <Grid ColumnDefinitions="*,*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10" ColumnSpacing="16">
+                    <!-- Date (Row 0, Col 0) -->
+                    <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDate, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L date_filter}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" HorizontalAlignment="Stretch" Height="28"/>
+                    </Grid>
+
+                    <!-- Title Prefix (Row 0, Col 1) -->
+                    <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyTitlePrefix, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L title}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding TitlePrefix, Mode=TwoWay}" 
+                                 IsEnabled="{Binding IsApplyTitlePrefix}"
+                                 Watermark="Prefix..."
+                                 Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Content Append (Row 1, Col 0-1) -->
+                    <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyContent, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L description}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding ContentAppend, Mode=TwoWay}" 
+                                 IsEnabled="{Binding IsApplyContent}"
+                                 Watermark="Ek metin..."
+                                 Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- Apply Button -->
+                    <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" 
+                            Content="{infra:L apply_btn}" 
+                            Classes="Primary"
+                            Command="{Binding ApplyBulkCommand}"
+                            Width="90" Height="68"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Grid Container -->
+        <Border Grid.Row="2" Background="#161B27" Margin="20,12,20,16"
+                CornerRadius="10" BorderBrush="#1F2B3E" BorderThickness="1">
+            <DataGrid ItemsSource="{Binding EditingNotes}"
+                      SelectionMode="Single"
+                      IsReadOnly="False"
+                      CanUserResizeColumns="True"
+                      Background="Transparent"
+                      RowBackground="#161B27"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTemplateColumn Header="{infra:L title}" Width="200">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:Note">
+                                <TextBox Text="{Binding Title, Mode=TwoWay}"
+                                         Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="{infra:L description}" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:Note">
+                                <TextBox Text="{Binding Content, Mode=TwoWay}"
+                                         Height="28" Padding="6,4" VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="{infra:L date}" Width="160">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:Note">
+                                <CalendarDatePicker SelectedDate="{Binding CreatedAt, Mode=TwoWay}"
+                                                    Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+
+        <!-- Footer -->
+        <Border Grid.Row="3" Background="#181D2A" Padding="24,14,24,14" BorderBrush="#1F2636" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="#FF453A"
+                           FontSize="12"
+                           FontWeight="Medium"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,0,16,0"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12">
+                    <Button Content="{infra:L cancel}"
+                            Classes="Secondary"
+                            Command="{Binding CancelCommand}"
+                            Width="100" MinHeight="36"/>
+                    <Button Content="{infra:L save}"
+                            Classes="Primary"
+                            Command="{Binding SaveCommand}"
+                            Width="100" MinHeight="36"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</Window>

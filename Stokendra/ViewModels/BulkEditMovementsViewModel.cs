@@ -34,6 +34,14 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
     [ObservableProperty] private bool _isApplyDate;
     [ObservableProperty] private DateTime? _date = DateTime.Today;
 
+    partial void OnIsApplyDateChanged(bool value)
+    {
+        if (value && !Date.HasValue)
+        {
+            Date = EditingMovements.FirstOrDefault()?.Date.Date ?? DateTime.Today;
+        }
+    }
+
     public ObservableCollection<StockMovement> EditingMovements { get; } = new();
     public ObservableCollection<string> AllDepartments { get; } = new();
 
@@ -58,6 +66,8 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         {
             EditingMovements.Add(m.Clone());
         }
+
+        Date = selectedMovements.FirstOrDefault()?.Date.Date ?? DateTime.Today;
 
         _ = InitAsync();
     }

@@ -3,19 +3,14 @@
         xmlns:vm="using:Stokendra.ViewModels"
         xmlns:infra="using:Stokendra.Infrastructure"
         xmlns:models="using:Stokendra.Models"
-        xmlns:views="using:Stokendra.Views"
-        x:Class="Stokendra.Views.BulkEditMovementsView"
+        x:Class="Stokendra.Views.BulkEditServicesView"
         Title="{Binding Title}"
-        Width="1000" Height="650"
+        Width="1050" Height="650"
         MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
         Background="#111522"
         x:CompileBindings="False">
-
-    <Design.DataContext>
-        <vm:BulkEditMovementsViewModel/>
-    </Design.DataContext>
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
@@ -24,7 +19,7 @@
             <StackPanel Spacing="3">
                 <TextBlock Text="{Binding Title}"
                            FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
-                <TextBlock Text="{infra:L bulk_edit_desc}"
+                <TextBlock Text="Seçilen servis kayıtlarını toplu veya tekil olarak düzenleyin"
                            FontSize="12" Foreground="#64748B"/>
             </StackPanel>
         </Border>
@@ -41,41 +36,38 @@
                     <!-- Date (Row 0, Col 0) -->
                     <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
                         <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDate, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Grid.Column="1" Text="{infra:L date_filter}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" Watermark="{infra:L date_filter}" HorizontalAlignment="Stretch" Height="28"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L maintenance_date}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding ServiceDate, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" Watermark="{infra:L date_filter}" HorizontalAlignment="Stretch" Height="28"/>
                     </Grid>
 
-                    <!-- Department (Row 0, Col 1) -->
+                    <!-- Company (Row 0, Col 1) -->
                     <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDepartment, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Grid.Column="1" Text="{infra:L dept_colon}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <ComboBox Grid.Column="2" ItemsSource="{Binding AllDepartments}"
-                                  SelectedItem="{Binding SelectedDepartment, Mode=TwoWay}"
-                                  IsEnabled="{Binding IsApplyDepartment}"
-                                  HorizontalAlignment="Stretch" Height="28"/>
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyCompany, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L company}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding Company, Mode=TwoWay}" 
+                                 IsEnabled="{Binding IsApplyCompany}"
+                                 Height="28" Padding="6,4" VerticalAlignment="Center"/>
                     </Grid>
 
-                    <!-- Recipient (Row 1, Col 0) -->
+                    <!-- Problem (Row 1, Col 0) -->
                     <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyRecipient, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Grid.Column="1" Text="{infra:L recipient_colon}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <TextBox Grid.Column="2" Text="{Binding Recipient, Mode=TwoWay}" 
-                                 IsEnabled="{Binding IsApplyRecipient}"
-                                 Watermark="{infra:L recipient_watermark}"
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyIssue, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L problem}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding Issue, Mode=TwoWay}" 
+                                 IsEnabled="{Binding IsApplyIssue}"
                                  Height="28" Padding="6,4" VerticalAlignment="Center"/>
                     </Grid>
 
-                    <!-- Description (Row 1, Col 1) -->
+                    <!-- Result (Row 1, Col 1) -->
                     <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDescription, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock Grid.Column="1" Text="{infra:L desc_colon}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <TextBox Grid.Column="2" Text="{Binding Description, Mode=TwoWay}" 
-                                 IsEnabled="{Binding IsApplyDescription}"
-                                 Watermark="{infra:L description_watermark}"
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyResult, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Grid.Column="1" Text="{infra:L result}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
+                        <TextBox Grid.Column="2" Text="{Binding ResultText, Mode=TwoWay}" 
+                                 IsEnabled="{Binding IsApplyResult}"
                                  Height="28" Padding="6,4" VerticalAlignment="Center"/>
                     </Grid>
 
-                    <!-- Apply Button (Row 0-1, Col 2) -->
+                    <!-- Apply Button -->
                     <Button Grid.Row="0" Grid.RowSpan="2" Grid.Column="2" 
                             Content="{infra:L apply_btn}" 
                             Classes="Primary"
@@ -90,7 +82,7 @@
         <!-- Grid Container -->
         <Border Grid.Row="2" Background="#161B27" Margin="20,12,20,16"
                 CornerRadius="10" BorderBrush="#1F2B3E" BorderThickness="1">
-            <DataGrid ItemsSource="{Binding EditingMovements}"
+            <DataGrid ItemsSource="{Binding EditingRecords}"
                       SelectionMode="Single"
                       IsReadOnly="False"
                       CanUserResizeColumns="True"
@@ -98,75 +90,50 @@
                       RowBackground="#161B27"
                       BorderThickness="0">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="{infra:L code_no}" Binding="{Binding StockCardCode}" IsReadOnly="True" Width="80"/>
-                    <DataGridTextColumn Header="{infra:L stock_name}" Binding="{Binding StockCardName}" IsReadOnly="True" Width="1.5*"/>
-                    
-                    <DataGridTemplateColumn Header="{infra:L type}" IsReadOnly="True" Width="80">
+                    <DataGridTemplateColumn Header="{infra:L device_name}" Width="200">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <TextBlock Text="{Binding DisplayType}" 
-                                           Foreground="{Binding DisplayColor}"
-                                           FontWeight="Bold" 
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <TextBox Text="{Binding DeviceName, Mode=TwoWay}" Height="28" Padding="6,4" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{infra:L quantity}" Width="110">
+                    <DataGridTemplateColumn Header="{infra:L serial_number}" Width="150">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <NumericUpDown Value="{Binding Quantity, Mode=TwoWay}"
-                                               Minimum="0"
-                                               FormatString="N2"
-                                               Height="28"
-                                               VerticalAlignment="Center"
-                                               Margin="4,2"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <TextBox Text="{Binding SerialNumber, Mode=TwoWay}" Height="28" Padding="6,4" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{infra:L department}" Width="140">
+                    <DataGridTemplateColumn Header="{infra:L company}" Width="150">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <ComboBox ItemsSource="{Binding DataContext.AllDepartments, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding Department, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"
-                                          Height="28"
-                                          VerticalAlignment="Center"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <TextBox Text="{Binding Company, Mode=TwoWay}" Height="28" Padding="6,4" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{infra:L delivered_to}" Width="150">
+                    <DataGridTemplateColumn Header="{infra:L problem}" Width="200">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <TextBox Text="{Binding Recipient, Mode=TwoWay}" 
-                                         Height="28" 
-                                         Padding="6,4"
-                                         VerticalAlignment="Center"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <TextBox Text="{Binding Issue, Mode=TwoWay}" Height="28" Padding="6,4" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{infra:L date}" Width="160">
+                    <DataGridTemplateColumn Header="{infra:L result}" Width="200">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <CalendarDatePicker SelectedDate="{Binding Date, Mode=TwoWay}"
-                                                     HorizontalAlignment="Stretch"
-                                                     Height="28"
-                                                     VerticalAlignment="Center"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <TextBox Text="{Binding Result, Mode=TwoWay}" Height="28" Padding="6,4" VerticalAlignment="Center"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="{infra:L description}" Width="*">
+                    <DataGridTemplateColumn Header="{infra:L maintenance_date}" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate x:DataType="models:StockMovement">
-                                <TextBox Text="{Binding Description, Mode=TwoWay}" 
-                                         Height="28" 
-                                         Padding="6,4"
-                                         VerticalAlignment="Center"/>
+                            <DataTemplate x:DataType="models:ServiceRecord">
+                                <CalendarDatePicker SelectedDate="{Binding ServiceDate, Mode=TwoWay}" Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

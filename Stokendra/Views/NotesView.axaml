@@ -37,12 +37,13 @@
                             <Button Content="{infra:L edit}" Classes="Secondary" Margin="0,0,4,0"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Command="{Binding EditNoteCommand}"
-                                    IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                    CommandParameter="{Binding #NotesGrid.SelectedItems}"
+                                    IsEnabled="{Binding HasSelection}"/>
                             <Button Content="{infra:L delete}" Classes="Danger" Margin="4,0,0,0"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Command="{Binding DeleteSelectedCommand}"
                                     CommandParameter="{Binding #NotesGrid.SelectedItems}"
-                                    IsEnabled="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                                    IsEnabled="{Binding HasSelection}"/>
                         </UniformGrid>
                     </StackPanel>
                     

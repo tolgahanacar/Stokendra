@@ -43,7 +43,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     [ObservableProperty] private int _totalPages = 1;
     private const int PageSize = 30;
 
-    public bool IsMovementSelected => SelectedMovement != null;
+    public bool IsMovementSelected => SelectedMovement != null || SelectedMovements.Count > 0;
     [ObservableProperty] private bool _isMultipleSelected;
 
     partial void OnSelectedMovementChanged(StockMovement? value) => OnPropertyChanged(nameof(IsMovementSelected));
@@ -71,6 +71,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         
         SelectedMovements.CollectionChanged += (s, e) => {
             IsMultipleSelected = SelectedMovements.Count >= 2;
+            OnPropertyChanged(nameof(IsMovementSelected));
         };
 
         // Populate localized type filter choices
@@ -148,6 +149,8 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public void ClearFilters()
     {
+        _searchCts?.Cancel();
+        _cts?.Cancel();
         StartDate          = new DateTime(2024, 1, 1);
         EndDate            = DateTime.Today;
         SearchText         = "";
@@ -182,45 +185,55 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteMovementAsync()
     {
-        if (SelectedMovement == null) return;
-        
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("confirm_delete_title"), LocalizationManager.L("confirm_movement_delete"));
-        if (!confirm) return;
-
-        try
+        if (SelectedMovements.Count >= 2)
         {
-            await _movements.DeleteAsync(SelectedMovement.Id);
-            await LoadMovementsAsync();
-            StatusText = LocalizationManager.L("bulk_movement_delete_success", 1);
+            int count = SelectedMovements.Count;
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_bulk_delete_title"), 
+                LocalizationManager.L("confirm_bulk_movement_delete", count)
+            );
+            if (!confirm) return;
+
+            try
+            {
+                var ids = SelectedMovements.Select(m => m.Id).ToList();
+                await _movements.DeleteBulkAsync(ids);
+                await LoadMovementsAsync();
+                StatusText = LocalizationManager.L("bulk_movement_delete_success", count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Bulk delete error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
-        catch (Exception ex) 
-        { 
-            _logger.LogError("Delete error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+        else
+        {
+            var itemToDelete = SelectedMovement ?? SelectedMovements.FirstOrDefault();
+            if (itemToDelete == null) return;
+            
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_delete_title"), 
+                LocalizationManager.L("confirm_movement_delete")
+            );
+            if (!confirm) return;
+
+            try
+            {
+                await _movements.DeleteAsync(itemToDelete.Id);
+                await LoadMovementsAsync();
+                StatusText = LocalizationManager.L("bulk_movement_delete_success", 1);
+            }
+            catch (Exception ex) 
+            { 
+                _logger.LogError("Delete error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+            }
         }
     }
 
     [RelayCommand]
-    public async Task DeleteBulkAsync()
-    {
-        if (SelectedMovements.Count < 2) return;
-
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("confirm_bulk_delete_title"), LocalizationManager.L("confirm_bulk_movement_delete", SelectedMovements.Count));
-        if (!confirm) return;
-
-        try
-        {
-            var ids = SelectedMovements.Select(m => m.Id).ToList();
-            await _movements.DeleteBulkAsync(ids);
-            await LoadMovementsAsync();
-            StatusText = LocalizationManager.L("bulk_movement_delete_success", ids.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Bulk delete error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
-        }
-    }
+    public async Task DeleteBulkAsync() => await DeleteMovementAsync();
 
     [RelayCommand]
     public async Task AddMovementAsync()

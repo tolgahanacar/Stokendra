@@ -26,7 +26,6 @@
                           Watermark="{infra:L search_placeholder}"
                           Width="350"/>
                 <Button Content="{infra:L clear_filter}" Classes="Secondary" Command="{Binding ClearSearchCommand}"/>
-                <Button Content="↺" Classes="Secondary" Command="{Binding RefreshCommand}"/>
                 <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}"/>
                 <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportCommand}"/>
             </StackPanel>

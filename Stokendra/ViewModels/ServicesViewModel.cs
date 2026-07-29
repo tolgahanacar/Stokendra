@@ -34,16 +34,22 @@ public partial class ServicesViewModel : ViewModelBase
     [ObservableProperty] private int _totalPages = 1;
     private const int PageSize = 20;
 
-    public bool IsRecordSelected => SelectedRecord != null;
+    public bool IsRecordSelected => SelectedRecord != null || SelectedRecords.Count > 0;
     partial void OnSelectedRecordChanged(ServiceRecord? value) => OnPropertyChanged(nameof(IsRecordSelected));
 
     public ObservableCollection<ServiceRecord> Records { get; } = new();
+    public ObservableCollection<ServiceRecord> SelectedRecords { get; } = new();
 
     public ServicesViewModel(IServiceRecordRepository services, IDialogService dialogService, ILogger logger)
     {
         _services = services;
         _dialogService = dialogService;
         _logger = logger;
+
+        SelectedRecords.CollectionChanged += (s, e) => {
+            OnPropertyChanged(nameof(IsRecordSelected));
+        };
+
         SafeLoadAsync();
     }
 
@@ -105,9 +111,11 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public void ClearFilters()
     {
-        SearchText = "";
-        StartDate  = new DateTime(2000, 1, 1);
-        EndDate    = DateTime.Today;
+        _searchCts?.Cancel();
+        _cts?.Cancel();
+        SearchText  = "";
+        StartDate   = new DateTime(2000, 1, 1);
+        EndDate     = DateTime.Today;
         CurrentPage = 1;
         _ = LoadAsync();
     }
@@ -137,20 +145,54 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteAsync()
     {
-        if (SelectedRecord == null) return;
-        
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("confirm_delete_title"), 
-            LocalizationManager.L("confirm_service_delete"));
-            
-        if (!confirm) return;
-
-        try
+        if (SelectedRecords.Count >= 2)
         {
-            await _services.DeleteAsync(SelectedRecord.Id);
-            await LoadAsync();
-            StatusText = LocalizationManager.L("svc_record_deleted");
+            int count = SelectedRecords.Count;
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_bulk_delete_title"), 
+                LocalizationManager.L("confirm_bulk_service_delete", count)
+            );
+            if (!confirm) return;
+
+            try
+            {
+                foreach (var record in SelectedRecords.ToList())
+                {
+                    await _services.DeleteAsync(record.Id);
+                }
+                await LoadAsync();
+                StatusText = LocalizationManager.L("svc_record_deleted");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Bulk delete service error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message));
+            }
         }
-        catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message)); }
+        else
+        {
+            var itemToDelete = SelectedRecord ?? SelectedRecords.FirstOrDefault();
+            if (itemToDelete == null) return;
+            
+            bool confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_delete_title"), 
+                LocalizationManager.L("confirm_service_delete")
+            );
+                
+            if (!confirm) return;
+
+            try
+            {
+                await _services.DeleteAsync(itemToDelete.Id);
+                await LoadAsync();
+                StatusText = LocalizationManager.L("svc_record_deleted");
+            }
+            catch (Exception ex) 
+            { 
+                _logger.LogError("Delete service error", ex);
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message)); 
+            }
+        }
     }
 
     [RelayCommand]
@@ -176,20 +218,33 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditAsync()
     {
-        if (SelectedRecord == null) return;
-        var vm = new AddServiceViewModel(SelectedRecord);
-        if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
+        if (SelectedRecords.Count >= 2)
         {
-            try
+            var vm = new BulkEditServicesViewModel(SelectedRecords.ToList(), _services, _dialogService, _logger);
+            if (await _dialogService.ShowDialogAsync(vm) == true)
             {
-                await _services.UpdateAsync(vm.Result);
                 await LoadAsync();
-                StatusText = LocalizationManager.L("svc_record_updated");
+                StatusText = LocalizationManager.L("bulk_edit_success", SelectedRecords.Count);
             }
-            catch (Exception ex)
+        }
+        else
+        {
+            var itemToEdit = SelectedRecord ?? SelectedRecords.FirstOrDefault();
+            if (itemToEdit == null) return;
+            var vm = new AddServiceViewModel(itemToEdit);
+            if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
             {
-                _logger.LogError("Edit service error", ex);
-                await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+                try
+                {
+                    await _services.UpdateAsync(vm.Result);
+                    await LoadAsync();
+                    StatusText = LocalizationManager.L("svc_record_updated");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Edit service error", ex);
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+                }
             }
         }
     }

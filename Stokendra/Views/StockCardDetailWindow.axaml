@@ -150,7 +150,7 @@
                              Command="{Binding AddMovementCommand}"
                              MinHeight="36"/>
                     <Button Content="{infra:L print}"
-                             Classes="Secondary"
+                             Classes="Success"
                              Command="{Binding PrintCommand}"
                              MinHeight="36"/>
                 </StackPanel>

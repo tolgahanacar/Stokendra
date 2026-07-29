@@ -72,14 +72,31 @@ public partial class NotesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void EditNote()
+    public async Task EditNoteAsync(System.Collections.IList? items)
     {
-        if (SelectedNote == null) return;
-        _editingId   = SelectedNote.Id;
-        EditTitle    = SelectedNote.Title;
-        EditContent  = SelectedNote.Content;
-        EditCreatedAt = new DateTimeOffset(SelectedNote.CreatedAt);
-        IsEditing    = true;
+        var list = items?.Cast<Note>().ToList() ?? SelectedNotes.ToList();
+        if (list.Count == 0 && SelectedNote != null) list.Add(SelectedNote);
+        if (list.Count == 0) return;
+
+        if (list.Count >= 2)
+        {
+            var vm = new BulkEditNotesViewModel(list, _notes, _dialogService, _logger);
+            bool? success = await _dialogService.ShowDialogAsync(vm);
+            if (success == true)
+            {
+                await LoadAsync();
+                StatusText = LocalizationManager.L("bulk_edit_success", list.Count);
+            }
+        }
+        else
+        {
+            var note = list.First();
+            _editingId = note.Id;
+            EditTitle = note.Title;
+            EditContent = note.Content;
+            EditCreatedAt = new DateTimeOffset(note.CreatedAt);
+            IsEditing = true;
+        }
     }
 
     [RelayCommand]
@@ -121,18 +138,40 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteSelectedAsync(System.Collections.IList? items)
     {
-        var list = items?.Cast<Note>().ToList() ?? new List<Note>();
+        var list = items?.Cast<Note>().ToList() ?? SelectedNotes.ToList();
         if (list.Count == 0 && SelectedNote != null) list.Add(SelectedNote);
         if (list.Count == 0) return;
 
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("confirm_delete_title"), LocalizationManager.L("confirm_note_delete"));
+        bool confirm;
+        if (list.Count >= 2)
+        {
+            confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_bulk_delete_title"),
+                LocalizationManager.L("confirm_bulk_note_delete", list.Count));
+        }
+        else
+        {
+            confirm = await _dialogService.ShowConfirmAsync(
+                LocalizationManager.L("confirm_delete_title"),
+                LocalizationManager.L("confirm_note_delete"));
+        }
+
         if (!confirm) return;
 
-        try {
+        try
+        {
             await Task.Run(() => _notes.DeleteBulk(list.Select(x => x.Id).ToList()));
+            IsEditing = false;
+            SelectedNote = null;
+            SelectedNotes.Clear();
             await LoadAsync();
             StatusText = LocalizationManager.L("bulk_delete_success", list.Count);
-        } catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message); }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("Notes delete error", ex);
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message);
+        }
     }
 
     [RelayCommand]

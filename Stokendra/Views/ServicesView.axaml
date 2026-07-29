@@ -47,17 +47,17 @@
             <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
             <Button Content="{infra:L excel}" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
-            <Button Content="{infra:L print}" Classes="Secondary"
+            <Button Content="{infra:L print}" Classes="Success"
                     Command="{Binding PrintCommand}"/>
-            <Button Content="{infra:L refresh}" Classes="Secondary"
-                    Command="{Binding RefreshCommand}"/>
         </StackPanel>
 
         <!-- DataGrid -->
         <DataGrid Grid.Row="3"
+                  Name="ServicesGrid"
                   Margin="40,16,40,16"
                   ItemsSource="{Binding Records}"
                   SelectedItem="{Binding SelectedRecord}"
+                  SelectionMode="Extended"
                   IsReadOnly="True"
                   CanUserResizeColumns="True"
                   Background="#0C0E14"
