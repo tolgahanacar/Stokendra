@@ -105,6 +105,26 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
         LogAudit("Delete", "ServiceRecords", id, "");
     }
 
+    public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return;
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM ServiceRecords WHERE Id IN @Ids", new { Ids = idList }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Delete", "ServiceRecords", 0, "Bulk ServiceRecord Delete");
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
+            throw; 
+        }
+    }
+
     public async Task AddBulkAsync(IEnumerable<ServiceRecord> records, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();

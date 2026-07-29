@@ -15,8 +15,6 @@ public partial class BulkEditServicesViewModel : ViewModelBase
 {
     private readonly IServiceRecordRepository _services;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
 
@@ -51,13 +49,10 @@ public partial class BulkEditServicesViewModel : ViewModelBase
     public BulkEditServicesViewModel(
         List<ServiceRecord> selectedRecords,
         IServiceRecordRepository services,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _services = services;
         _dialogService = dialogService;
-        _logger = logger;
-
         Title = LocalizationManager.L("bulk_edit_title", selectedRecords.Count);
 
         foreach (var r in selectedRecords)
@@ -144,7 +139,7 @@ public partial class BulkEditServicesViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Bulk services edit save error", ex);
+            AppLogger.LogError("Bulk services edit save error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
         }
     }

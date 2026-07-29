@@ -526,5 +526,9 @@
   "last_30_days": "Last 30 Days",
   "db_file_filter": "SQLite Database (*.db)|*.db",
   "zip_file_filter": "Zip Archive (*.zip)|*.zip",
-  "created_date_header": "Created Date"
+  "created_date_header": "Created Date",
+  "preparing_print": "Preparing print...",
+  "printing_finished": "Printing finished.",
+  "movement_saved_success": "Stock movement saved successfully.",
+  "note_saved_success": "Note saved successfully."
 }

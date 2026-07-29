@@ -17,13 +17,6 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
     {
     }
 
-    public List<Note> GetAll()
-    {
-        using var conn = ConnectionFactory.CreateConnection();
-        var sql = "SELECT Id, Date, Title, Content, CreatedAt, UpdatedAt FROM Notes ORDER BY CreatedAt DESC, Id DESC";
-        return conn.Query<Note>(sql).ToList();
-    }
-
     public async Task<List<Note>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
@@ -32,7 +25,7 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         return result.ToList();
     }
 
-    public void Add(Note note)
+    public async Task AddAsync(Note note, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(note.Title)) throw new InvalidOperationException("Title cannot be empty.");
         // note.CreatedAt is preserved from note if set, otherwise uses its default initialized value.
@@ -43,42 +36,42 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
                     VALUES (@Date, @Title, @Content, @CreatedAt, @UpdatedAt);
                     SELECT last_insert_rowid();";
         
-        note.Id = conn.ExecuteScalar<int>(sql, new {
+        note.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, new {
             Date = note.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             note.Title,
             Content = note.Content ?? "",
             CreatedAt = note.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             UpdatedAt = note.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
-        });
+        }, cancellationToken: cancellationToken));
         
         LogAudit("Insert", "Notes", note.Id, $"Title: {note.Title}");
     }
 
-    public void Update(Note note)
+    public async Task UpdateAsync(Note note, CancellationToken cancellationToken = default)
     {
         note.UpdatedAt = DateTime.Now;
         using var conn = ConnectionFactory.CreateConnection();
         var sql = "UPDATE Notes SET Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
         
-        conn.Execute(sql, new {
+        await conn.ExecuteAsync(new CommandDefinition(sql, new {
             note.Title,
             Content = note.Content ?? "",
             CreatedAt = note.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             UpdatedAt = note.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             note.Id
-        });
+        }, cancellationToken: cancellationToken));
         
         LogAudit("Update", "Notes", note.Id, $"Title: {note.Title}");
     }
 
-    public void Delete(int id)
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        conn.Execute("DELETE FROM Notes WHERE Id=@Id", new { Id = id });
+        await conn.ExecuteAsync(new CommandDefinition("DELETE FROM Notes WHERE Id=@Id", new { Id = id }, cancellationToken: cancellationToken));
         LogAudit("Delete", "Notes", id, "");
     }
 
-    public void DeleteBulk(IEnumerable<int> ids)
+    public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
     {
         var idList = ids.ToList();
         if (idList.Count == 0) return;
@@ -86,7 +79,7 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try {
-            conn.Execute("DELETE FROM Notes WHERE Id IN @Ids", new { Ids = idList }, trans);
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM Notes WHERE Id IN @Ids", new { Ids = idList }, trans, cancellationToken: cancellationToken));
             trans.Commit();
             LogAudit("Delete", "Notes", 0, "Bulk Note Delete");
         } catch { trans.Rollback(); throw; }

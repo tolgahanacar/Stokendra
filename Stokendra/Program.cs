@@ -86,7 +86,6 @@ class Program
         services.AddSingleton<IConfigRepository,       ConfigRepository>();
 
         // ── Services ──────────────────────────────────────────────────────
-        services.AddSingleton<IStockCardService, StockCardService>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IUpdateService, UpdateService>();
         services.AddSingleton<AppServices>();
@@ -118,7 +117,6 @@ class Program
 
         // ── Infrastructure ────────────────────────────────────────────────
         services.AddSingleton<IDialogService, DialogService>();
-        services.AddSingleton<ILogger, Logger>();
 
         var container = services.BuildServiceProvider();
         ServiceContainer.Initialize(container);

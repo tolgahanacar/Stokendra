@@ -15,8 +15,6 @@ public partial class BulkEditNotesViewModel : ViewModelBase
 {
     private readonly INoteRepository _notes;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
 
@@ -37,13 +35,10 @@ public partial class BulkEditNotesViewModel : ViewModelBase
     public BulkEditNotesViewModel(
         List<Note> selectedNotes,
         INoteRepository notes,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _notes = notes;
         _dialogService = dialogService;
-        _logger = logger;
-
         Title = LocalizationManager.L("bulk_edit_title", selectedNotes.Count);
 
         foreach (var n in selectedNotes)
@@ -114,20 +109,17 @@ public partial class BulkEditNotesViewModel : ViewModelBase
                 }
             }
 
-            await Task.Run(() =>
+            foreach (var n in EditingNotes)
             {
-                foreach (var n in EditingNotes)
-                {
-                    n.UpdatedAt = DateTime.Now;
-                    _notes.Update(n);
-                }
-            });
+                n.UpdatedAt = DateTime.Now;
+                await _notes.UpdateAsync(n);
+            }
 
             CloseAction?.Invoke(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError("Bulk notes edit error", ex);
+            AppLogger.LogError("Bulk notes edit error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
         }
     }

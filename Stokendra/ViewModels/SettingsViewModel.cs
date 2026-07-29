@@ -18,7 +18,6 @@ public partial class SettingsViewModel : ViewModelBase
     private readonly IConfigRepository _config;
     private readonly IDialogService _dialogService;
     private readonly IBackupService _backupService;
-    private readonly ILogger _logger;
     private readonly IDbConnectionFactory _connectionFactory;
     private readonly IUpdateService _updateService;
 
@@ -45,7 +44,6 @@ public partial class SettingsViewModel : ViewModelBase
         IConfigRepository config,
         IDialogService dialogService,
         IBackupService backupService,
-        ILogger logger,
         IDbConnectionFactory connectionFactory,
         IUpdateService updateService)
     {
@@ -53,7 +51,6 @@ public partial class SettingsViewModel : ViewModelBase
         _config = config;
         _dialogService = dialogService;
         _backupService = backupService;
-        _logger = logger;
         _connectionFactory = connectionFactory;
         _updateService = updateService;
         Load();
@@ -134,7 +131,7 @@ public partial class SettingsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to update database AppConfig or AuditLog", ex);
+                AppLogger.LogError("Failed to update database AppConfig or AuditLog", ex);
             }
 
 
@@ -162,7 +159,7 @@ public partial class SettingsViewModel : ViewModelBase
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Failed to restart application automatically", ex);
+                    AppLogger.LogError("Failed to restart application automatically", ex);
                 }
             }
             else
@@ -263,7 +260,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Database backup error", ex);
+            AppLogger.LogError("Database backup error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -291,7 +288,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Full zip backup error", ex);
+            AppLogger.LogError("Full zip backup error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -312,7 +309,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Audit log truncate error", ex);
+            AppLogger.LogError("Audit log truncate error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -350,7 +347,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Database integrity check error", ex);
+            AppLogger.LogError("Database integrity check error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -379,7 +376,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Database vacuum error", ex);
+            AppLogger.LogError("Database vacuum error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -437,7 +434,7 @@ public partial class SettingsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Check updates error", ex);
+            AppLogger.LogError("Check updates error", ex);
             StatusMessage = string.Format(LocalizationManager.L("update_error"), ex.Message);
             IsSuccess = false;
             await _dialogService.ShowMessageAsync(

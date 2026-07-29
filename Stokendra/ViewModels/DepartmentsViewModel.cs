@@ -12,19 +12,16 @@ public partial class DepartmentsViewModel : ViewModelBase
 {
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _newDepartmentName = "";
     [ObservableProperty] private string? _selectedDepartment;
     [ObservableProperty] private bool _isLoading;
 
     public ObservableCollection<string> Departments { get; } = new();
 
-    public DepartmentsViewModel(IDepartmentRepository departments, IDialogService dialogService, ILogger logger)
+    public DepartmentsViewModel(IDepartmentRepository departments, IDialogService dialogService)
     {
         _departments = departments;
         _dialogService = dialogService;
-        _logger = logger;
         _ = LoadAsync();
     }
 
@@ -39,7 +36,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Departments load error", ex);
+            AppLogger.LogError("Departments load error", ex);
         }
         finally { IsLoading = false; }
     }

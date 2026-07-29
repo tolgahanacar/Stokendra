@@ -16,8 +16,6 @@ public partial class StocksViewModel : ViewModelBase
 {
     private readonly IStockCardRepository _stockCards;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
@@ -32,11 +30,10 @@ public partial class StocksViewModel : ViewModelBase
     // For Debounce
     private CancellationTokenSource? _filterCts;
 
-    public StocksViewModel(IStockCardRepository stockCards, IDialogService dialogService, ILogger logger)
+    public StocksViewModel(IStockCardRepository stockCards, IDialogService dialogService)
     {
         _stockCards = stockCards;
         _dialogService = dialogService;
-        _logger = logger;
         SafeLoadAsync();
     }
 
@@ -48,7 +45,7 @@ public partial class StocksViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Load error", ex);
+            AppLogger.LogError("Load error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
     }
@@ -85,13 +82,13 @@ public partial class StocksViewModel : ViewModelBase
         try
         {
             // 250ms debounce
-            await Task.Delay(250, token);
+            await Task.Delay(300, token);
             ApplyFilter();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _logger.LogError("Filter schedule error", ex);
+            AppLogger.LogError("Filter schedule error", ex);
         }
     }
 
@@ -157,7 +154,7 @@ public partial class StocksViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Stocks export error", ex);
+            AppLogger.LogError("Stocks export error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("export_error")}: {ex.Message}");
         }
     }
@@ -173,75 +170,56 @@ public partial class StocksViewModel : ViewModelBase
 
         try
         {
-            StatusText = "Preparing print...";
+            StatusText = LocalizationManager.L("preparing_print");
             
             double grandTotalIn = Stocks.Sum(s => s.TotalEntry);
             double grandTotalOut = Stocks.Sum(s => s.TotalExit);
             double grandTotalResult = grandTotalIn - grandTotalOut;
 
-            var sb = new System.Text.StringBuilder();
-            sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("detail_report")}</title>");
-            sb.Append("<style>");
-            sb.Append("@page { size: portrait; margin: 0.5cm; } ");
-            sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
-            sb.Append(".top-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e293b; padding-bottom: 8px; margin-bottom: 15px; } ");
-            sb.Append(".top-header h1 { margin: 0; color: #1e293b; font-size: 20px; font-weight: 800; } ");
-            sb.Append(".date-box { text-align: right; font-size: 11px; color: #4b5563; } ");
-            sb.Append("table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; } ");
-            sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ");
-            sb.Append("th { background: #f1f5f9; font-weight: bold; text-align: center; font-size: 10px; text-transform: uppercase; } ");
-            sb.Append(".num { text-align: center; } ");
-            sb.Append(".bold { font-weight: bold; } ");
-            sb.Append(".footer-row { background: #f8fafc; font-weight: 800; } ");
-            sb.Append(".footer-row td { border-top: 2px solid #1e293b; font-size: 12px; } ");
-            sb.Append("@media print { body { -webkit-print-color-adjust: exact; } table { page-break-inside: auto; } tr { page-break-inside: avoid; page-break-after: auto; } } ");
-            sb.Append("</style>");
-            sb.Append("<script>window.onload = function() { window.print(); }</script>");
-            sb.Append("</head><body>");
+            var sbHeaders = new System.Text.StringBuilder();
+            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("code_no")}</th>");
+            sbHeaders.Append($"<th style='width: 45%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
+            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("entry")}</th>");
+            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("exit")}</th>");
+            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
             
-            sb.Append("<div class='top-header'>");
-            sb.Append($"<h1>{LocalizationManager.L("detail_report").ToUpper()}</h1>");
-            sb.Append($"<div class='date-box'>{LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"))}</div>");
-            sb.Append("</div>");
-
-            sb.Append("<table><thead><tr>");
-            sb.Append($"<th style='width: 15%;'>{LocalizationManager.L("code_no")}</th>");
-            sb.Append($"<th style='width: 45%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
-            sb.Append($"<th style='width: 12%;'>{LocalizationManager.L("entry")}</th>");
-            sb.Append($"<th style='width: 12%;'>{LocalizationManager.L("exit")}</th>");
-            sb.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
-            sb.Append("</tr></thead><tbody>");
-            
+            var sbBody = new System.Text.StringBuilder();
             foreach (var s in Stocks)
             {
-                sb.Append("<tr>");
-                sb.Append($"<td class='num'>{s.Code}</td>");
-                sb.Append($"<td style='text-align: left; padding-left: 8px;'>{s.Name}</td>");
-                sb.Append($"<td class='num'>{s.TotalEntry}</td>");
-                sb.Append($"<td class='num'>{s.TotalExit}</td>");
-                sb.Append($"<td class='num bold'>{s.CurrentStock}</td>");
-                sb.Append("</tr>");
+                sbBody.Append("<tr>");
+                sbBody.Append($"<td class='num'>{s.Code}</td>");
+                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{s.Name}</td>");
+                sbBody.Append($"<td class='num'>{s.TotalEntry}</td>");
+                sbBody.Append($"<td class='num'>{s.TotalExit}</td>");
+                sbBody.Append($"<td class='num bold'>{s.CurrentStock}</td>");
+                sbBody.Append("</tr>");
             }
             
             // Grand Total Row
-            sb.Append("<tr class='footer-row'>");
-            sb.Append($"<td colspan='2' style='text-align: right; padding-right: 15px;'>{LocalizationManager.L("grand_total")}</td>");
-            sb.Append($"<td class='num'>{grandTotalIn}</td>");
-            sb.Append($"<td class='num'>{grandTotalOut}</td>");
-            sb.Append($"<td class='num'>{grandTotalResult}</td>");
-            sb.Append("</tr>");
-
-            sb.Append("</tbody></table>");
-            sb.Append("</body></html>");
+            sbBody.Append("<tr class='footer-row'>");
+            sbBody.Append($"<td colspan='2' style='text-align: right; padding-right: 15px;'>{LocalizationManager.L("grand_total")}</td>");
+            sbBody.Append($"<td class='num'>{grandTotalIn}</td>");
+            sbBody.Append($"<td class='num'>{grandTotalOut}</td>");
+            sbBody.Append($"<td class='num'>{grandTotalResult}</td>");
+            sbBody.Append("</tr>");
             
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("detail_report"), sb.ToString());
+            string html = PrintTemplateBuilder.BuildReportHtml(
+                title: LocalizationManager.L("detail_report"),
+                headerTitle: LocalizationManager.L("detail_report").ToUpper(),
+                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
+                tableHeadersHtml: sbHeaders.ToString(),
+                tableBodyHtml: sbBody.ToString(),
+                footerHtml: ""
+            );
+            
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("detail_report"), html);
             await _dialogService.ShowDialogAsync(previewVm);
             
-            StatusText = "Printing finished.";
+            StatusText = LocalizationManager.L("printing_finished");
         }
         catch (Exception ex)
         {
-            _logger.LogError("Stocks print error", ex);
+            AppLogger.LogError("Stocks print error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("export_error")}: {ex.Message}");
         }
     }

@@ -17,8 +17,6 @@ public partial class StockCardDetailViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private StockCard? _card;
     [ObservableProperty] private double _totalEntryLast30;
     [ObservableProperty] private double _totalExitLast30;
@@ -31,16 +29,13 @@ public partial class StockCardDetailViewModel : ViewModelBase
         IStockCardRepository stockCards,
         IMovementRepository movements,
         IDepartmentRepository departments,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _cardId = cardId;
         _stockCards = stockCards;
         _movements = movements;
         _departments = departments;
         _dialogService = dialogService;
-        _logger = logger;
-
         _ = LoadDataAsync();
     }
 
@@ -62,7 +57,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Load detail error", ex);
+            AppLogger.LogError("Load detail error", ex);
         }
         finally { IsLoading = false; }
     }
@@ -83,7 +78,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Add movement from detail error", ex);
+                AppLogger.LogError("Add movement from detail error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -147,7 +142,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Print detail error", ex);
+            AppLogger.LogError("Print detail error", ex);
         }
     }
 

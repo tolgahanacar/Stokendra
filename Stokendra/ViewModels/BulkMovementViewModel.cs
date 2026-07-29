@@ -30,8 +30,6 @@ public partial class BulkMovementViewModel : ViewModelBase
     private readonly IDepartmentRepository _departments;
     private readonly IStockCardRepository _stockCards;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private int _selectedTypeIndex = 1; // 0: Entry, 1: Exit
     [ObservableProperty] private string _selectedDepartment = "";
     [ObservableProperty] private string _deliveredTo = "";
@@ -50,15 +48,12 @@ public partial class BulkMovementViewModel : ViewModelBase
         IMovementRepository movements,
         IDepartmentRepository departments,
         IStockCardRepository stockCards,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _movements = movements;
         _departments = departments;
         _stockCards = stockCards;
         _dialogService = dialogService;
-        _logger = logger;
-
         _ = InitializeAsync();
     }
 
@@ -78,7 +73,7 @@ public partial class BulkMovementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Bulk movement init error", ex);
+            AppLogger.LogError("Bulk movement init error", ex);
         }
         finally { IsLoading = false; }
     }
@@ -132,7 +127,7 @@ public partial class BulkMovementViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Bulk movement save error", ex);
+            AppLogger.LogError("Bulk movement save error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
         }
     }

@@ -15,8 +15,6 @@ public partial class UsersViewModel : ViewModelBase
 {
     private readonly IUserRepository _userRepository;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _newUsername = "";
     [ObservableProperty] private string _newPassword = "";
     [ObservableProperty] private string _newRole = "user";
@@ -28,11 +26,10 @@ public partial class UsersViewModel : ViewModelBase
     public ObservableCollection<User> Users { get; } = new();
     public List<string> Roles { get; } = new() { "admin", "user" };
 
-    public UsersViewModel(IUserRepository userRepository, IDialogService dialogService, ILogger logger)
+    public UsersViewModel(IUserRepository userRepository, IDialogService dialogService)
     {
         _userRepository = userRepository;
         _dialogService = dialogService;
-        _logger = logger;
         _ = LoadUsersAsync();
     }
 
@@ -52,7 +49,7 @@ public partial class UsersViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to load users", ex);
+            AppLogger.LogError("Failed to load users", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -101,7 +98,7 @@ public partial class UsersViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Add user error", ex);
+            AppLogger.LogError("Add user error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
         finally
@@ -147,7 +144,7 @@ public partial class UsersViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Delete user error", ex);
+            AppLogger.LogError("Delete user error", ex);
             StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
         }
@@ -232,7 +229,7 @@ public partial class UsersViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Reset password error", ex);
+                AppLogger.LogError("Reset password error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("password_change_error"), ex.Message));
             }
             finally

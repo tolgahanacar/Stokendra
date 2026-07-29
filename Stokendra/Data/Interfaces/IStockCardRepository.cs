@@ -55,6 +55,9 @@ public interface IStockCardRepository
     /// <summary>Deletes the stock card with the specified ID asynchronously. Cascade deletes linked movements.</summary>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes multiple stock cards in bulk asynchronously.</summary>
+    Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
     /// <summary>Generates the next sequential stock code (e.g. "042").</summary>
     string GetNextCode();
 

@@ -526,5 +526,9 @@
   "last_30_days": "Son 30 Gün",
   "db_file_filter": "SQLite Veritabanı (*.db)|*.db",
   "zip_file_filter": "Zip Arşivi (*.zip)|*.zip",
-  "created_date_header": "Oluşturma Tarihi"
+  "created_date_header": "Oluşturma Tarihi",
+  "preparing_print": "Yazdırma hazırlanıyor...",
+  "printing_finished": "Yazdırma tamamlandı.",
+  "movement_saved_success": "Stok hareketi başarıyla kaydedildi.",
+  "note_saved_success": "Not başarıyla kaydedildi."
 }

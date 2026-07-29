@@ -10,21 +10,18 @@ namespace Stokendra.Data.Interfaces;
 /// </summary>
 public interface INoteRepository
 {
-    /// <summary>Gets all notes ordered by date descending.</summary>
-    List<Note> GetAll();
-
     /// <summary>Gets all notes asynchronously.</summary>
     Task<List<Note>> GetAllAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Adds a new note. The generated ID is assigned to note.Id.</summary>
-    void Add(Note note);
+    /// <summary>Adds a new note asynchronously. The generated ID is assigned to note.Id.</summary>
+    Task AddAsync(Note note, CancellationToken cancellationToken = default);
 
-    /// <summary>Updates an existing note.</summary>
-    void Update(Note note);
+    /// <summary>Updates an existing note asynchronously.</summary>
+    Task UpdateAsync(Note note, CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes the note with the specified ID.</summary>
-    void Delete(int id);
+    /// <summary>Deletes the note with the specified ID asynchronously.</summary>
+    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes multiple notes in bulk.</summary>
-    void DeleteBulk(IEnumerable<int> ids);
+    /// <summary>Deletes multiple notes in bulk asynchronously.</summary>
+    Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
 }

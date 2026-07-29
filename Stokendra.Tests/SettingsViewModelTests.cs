@@ -32,7 +32,6 @@ public class SettingsViewModelTests : IDisposable
     private readonly IConfigRepository _configMock;
     private readonly IDialogService _dialogServiceMock;
     private readonly IBackupService _backupServiceMock;
-    private readonly ILogger _loggerMock;
     private readonly IDbConnectionFactory _connectionFactoryMock;
     private readonly IUpdateService _updateServiceMock;
 
@@ -59,7 +58,6 @@ public class SettingsViewModelTests : IDisposable
         _configMock = Substitute.For<IConfigRepository>();
         _dialogServiceMock = Substitute.For<IDialogService>();
         _backupServiceMock = Substitute.For<IBackupService>();
-        _loggerMock = Substitute.For<ILogger>();
         _connectionFactoryMock = Substitute.For<IDbConnectionFactory>();
         _updateServiceMock = Substitute.For<IUpdateService>();
     }
@@ -83,7 +81,6 @@ public class SettingsViewModelTests : IDisposable
             _configMock,
             _dialogServiceMock,
             _backupServiceMock,
-            _loggerMock,
             connFactory ?? new SqliteConnectionFactory(_tempDbPath),
             _updateServiceMock
         );
@@ -177,7 +174,6 @@ public class SettingsViewModelTests : IDisposable
 
         // Assert
         // Should catch the write error, log it, and complete without throwing
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<Exception>());
         Assert.Equal(LocalizationManager.L("settings_saved"), vm.StatusMessage);
         Assert.True(vm.IsSuccess);
     }
@@ -367,7 +363,6 @@ public class SettingsViewModelTests : IDisposable
         // Assert
         Assert.False(vm.IsSuccess);
         Assert.Contains("Disk Full", vm.StatusMessage);
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<IOException>());
     }
 
     [Fact]
@@ -414,7 +409,6 @@ public class SettingsViewModelTests : IDisposable
         // Assert
         Assert.False(vm.IsSuccess);
         Assert.Contains("Access denied to Temp folder", vm.StatusMessage);
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<UnauthorizedAccessException>());
     }
 
     [Fact]
@@ -466,7 +460,6 @@ public class SettingsViewModelTests : IDisposable
         // Assert
         Assert.False(vm.IsSuccess);
         Assert.Contains("Database locked", vm.StatusMessage);
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<Exception>());
     }
 
     [Fact]
@@ -497,7 +490,6 @@ public class SettingsViewModelTests : IDisposable
         // Assert
         Assert.False(vm.IsSuccess);
         Assert.Contains("Failed to open connection", vm.StatusMessage);
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<InvalidOperationException>());
     }
 
     [Fact]
@@ -528,7 +520,6 @@ public class SettingsViewModelTests : IDisposable
         // Assert
         Assert.False(vm.IsSuccess);
         Assert.Contains("Disk write failure", vm.StatusMessage);
-        _loggerMock.Received(1).LogError(Arg.Any<string>(), Arg.Any<Exception>());
     }
 
 

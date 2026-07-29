@@ -207,11 +207,11 @@
                                                 <Button Content="{infra:L toggle_role_btn}" Classes="ActionRole"
                                                         Command="{Binding DataContext.ChangeRoleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
-                                                        IsVisible="{Binding CanEdit}"/>
+                                                        IsVisible="{Binding IsEditable}"/>
                                                 <Button Content="{infra:L delete}" Classes="ActionDelete"
                                                         Command="{Binding DataContext.DeleteUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
-                                                        IsVisible="{Binding CanEdit}"/>
+                                                        IsVisible="{Binding IsEditable}"/>
                                             </StackPanel>
                                             
                                         </Grid>

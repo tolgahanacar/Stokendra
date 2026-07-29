@@ -26,6 +26,9 @@ public interface IServiceRecordRepository
     /// <summary>Deletes the service record with the specified ID.</summary>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 
+    /// <summary>Deletes multiple service records in bulk.</summary>
+    Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
     /// <summary>Gets paged service records matching the specified filters.</summary>
     Task<List<ServiceRecord>> GetPagedAsync(int page, int pageSize, DateTime? startDate = null, DateTime? endDate = null, string? searchTerm = null, CancellationToken cancellationToken = default);
 

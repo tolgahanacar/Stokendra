@@ -16,8 +16,6 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
 
@@ -51,14 +49,11 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         List<StockMovement> selectedMovements,
         IMovementRepository movements,
         IDepartmentRepository departments,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _movements = movements;
         _departments = departments;
         _dialogService = dialogService;
-        _logger = logger;
-
         Title = LocalizationManager.L("bulk_edit_title", selectedMovements.Count);
 
         // Clone the selected movements so edits don't corrupt in-memory active list until saved
@@ -83,7 +78,7 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("BulkEditMovementsViewModel init error", ex);
+            AppLogger.LogError("BulkEditMovementsViewModel init error", ex);
         }
     }
 
@@ -159,7 +154,7 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Bulk edit save error", ex);
+            AppLogger.LogError("Bulk edit save error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
         }
     }

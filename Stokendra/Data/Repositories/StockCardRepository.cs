@@ -211,6 +211,34 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         }
     }
 
+    public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return;
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try 
+        {
+            var hasChildren = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId IN @Ids)",
+                new { Ids = idList },
+                transaction: trans,
+                cancellationToken: cancellationToken));
+            if (hasChildren)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
+
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockCards WHERE Id IN @Ids", new { Ids = idList }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Delete", "StockCards", 0, "Bulk StockCard Delete");
+        } 
+        catch 
+        { 
+            await trans.RollbackAsync(cancellationToken); 
+            throw; 
+        }
+    }
+
     public string GetNextCode()
     {
         using var conn = ConnectionFactory.CreateConnection();

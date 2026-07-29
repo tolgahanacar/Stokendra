@@ -18,8 +18,6 @@ public partial class StockCardsViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private string    _searchText = "";
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
@@ -51,15 +49,12 @@ public partial class StockCardsViewModel : ViewModelBase
         IStockCardRepository stockCards,
         IMovementRepository movements,
         IDepartmentRepository departments,
-        IDialogService dialogService,
-        ILogger logger)
+        IDialogService dialogService)
     {
         _stockCards = stockCards;
         _movements = movements;
         _departments = departments;
         _dialogService = dialogService;
-        _logger = logger;
-        
         SelectedCards.CollectionChanged += (s, e) => {
             IsMultipleSelected = SelectedCards.Count >= 2;
             OnPropertyChanged(nameof(IsCardSelected));
@@ -77,7 +72,7 @@ public partial class StockCardsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Load error", ex);
+            AppLogger.LogError("Load error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
     }
@@ -101,7 +96,7 @@ public partial class StockCardsViewModel : ViewModelBase
         catch (OperationCanceledException) { }
         catch (Exception ex) 
         { 
-            _logger.LogError("StockCards load error", ex);
+            AppLogger.LogError("StockCards load error", ex);
             StatusText = LocalizationManager.L("error"); 
         }
         finally { IsLoading = false; }
@@ -117,13 +112,13 @@ public partial class StockCardsViewModel : ViewModelBase
         var token = _filterCts.Token;
         try
         {
-            await Task.Delay(250, token);
+            await Task.Delay(300, token);
             ApplySearch();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _logger.LogError("Search filter error", ex);
+            AppLogger.LogError("Search filter error", ex);
         }
     }
 
@@ -162,7 +157,7 @@ public partial class StockCardsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Add stock card error", ex);
+                AppLogger.LogError("Add stock card error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -185,7 +180,7 @@ public partial class StockCardsViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Edit stock card error", ex);
+                AppLogger.LogError("Edit stock card error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -206,14 +201,13 @@ public partial class StockCardsViewModel : ViewModelBase
 
             try
             {
-                foreach (var k in SelectedCards.ToList())
-                    await _stockCards.DeleteAsync(k.Id);
+                await _stockCards.DeleteBulkAsync(SelectedCards.Select(c => c.Id).ToList());
                 await LoadAsync();
                 StatusText = LocalizationManager.L("bulk_delete_success", count);
             }
             catch (Exception ex)
             {
-                _logger.LogError("Bulk delete cards error", ex);
+                AppLogger.LogError("Bulk delete cards error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -237,7 +231,7 @@ public partial class StockCardsViewModel : ViewModelBase
             }
             catch (Exception ex) 
             { 
-                _logger.LogError("Delete card error", ex);
+                AppLogger.LogError("Delete card error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -251,7 +245,7 @@ public partial class StockCardsViewModel : ViewModelBase
     {
         var movements = _movements;
         var depts = _departments;
-        var vm = new BulkMovementViewModel(movements, depts, _stockCards, _dialogService, _logger);
+        var vm = new BulkMovementViewModel(movements, depts, _stockCards, _dialogService);
         
         if (await _dialogService.ShowDialogAsync(vm))
         {
@@ -270,73 +264,40 @@ public partial class StockCardsViewModel : ViewModelBase
             StatusText = LocalizationManager.L("loading");
             int count = 0;
             await Task.Run(() => {
-                using var workbook = new ClosedXML.Excel.XLWorkbook(path);
-                var worksheet = workbook.Worksheet(1);
+                var mappings = new Dictionary<string, string[]>
+                {
+                    { "code", new[] { "code", "kod", "kodno", "stok kodu", "stokkodu" } },
+                    { "name", new[] { "name", "stok adı", "stok adi", "ad", "adi" } },
+                    { "category", new[] { "category", "kategori" } },
+                    { "unit", new[] { "unit", "birim" } },
+                    { "minStock", new[] { "minstock", "minstok", "min stok", "minimum stok", "min" } },
+                    { "description", new[] { "description", "açıklama", "aciklama" } }
+                };
                 
-                var firstRow = worksheet.FirstRowUsed();
-                if (firstRow == null) return;
-
-                int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
-                
-                // Dynamically find column indexes (1-based) supporting both languages
-                int colCode = 0, colName = 0, colCategory = 0, colUnit = 0;
-                int colMinStock = 0, colDescription = 0;
-
-                for (int i = 1; i <= colCount; i++)
+                var fallback = new Dictionary<string, int>
                 {
-                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
-                    if (header == "code" || header == "kod" || header == "kodno" || header == "stok kodu" || header == "stokkodu")
-                        colCode = i;
-                    else if (header == "name" || header == "stok adı" || header == "stok adi" || header == "ad" || header == "adi")
-                        colName = i;
-                    else if (header == "category" || header == "kategori")
-                        colCategory = i;
-                    else if (header == "unit" || header == "birim")
-                        colUnit = i;
+                    { "code", 1 }, { "name", 2 }, { "category", 3 },
+                    { "unit", 4 }, { "minStock", 5 }, { "description", 6 }
+                };
 
-                    else if (header == "minstock" || header == "minstok" || header == "min stok" || header == "minimum stok" || header == "min")
-                        colMinStock = i;
-                    else if (header == "description" || header == "açıklama" || header == "aciklama")
-                        colDescription = i;
-                }
-
-                // Fallback to absolute column layout if matching headers are not found
-                if (colCode == 0 && colName == 0)
+                var cardsToImport = ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    colCode = 1;
-                    colName = 2;
-                    colCategory = 3;
-                    colUnit = 4;
-                    colMinStock = 5;
-                    colDescription = 6;
-                }
+                    string code = col["code"] > 0 ? (row.Cell(col["code"]).GetValue<string>() ?? "").Trim() : "";
+                    string name = col["name"] > 0 ? (row.Cell(col["name"]).GetValue<string>() ?? "").Trim() : "";
 
-                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
-                var cardsToImport = new List<StockCard>();
+                    if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(name)) return null;
 
-                foreach (var row in rows)
-                {
-                    string code = colCode > 0 ? (row.Cell(colCode).GetValue<string>() ?? "").Trim() : "";
-                    string name = colName > 0 ? (row.Cell(colName).GetValue<string>() ?? "").Trim() : "";
-
-                    if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(name)) continue;
-
-                    var k = new StockCard
+                    return new StockCard
                     {
                         Code = code,
                         Name = name,
-                        Category = colCategory > 0 ? (row.Cell(colCategory).GetValue<string>() ?? "").Trim() : "",
-                        Unit = colUnit > 0 ? (row.Cell(colUnit).GetValue<string>() ?? "Adet").Trim() : "Adet",
-                        MinStock = colMinStock > 0 ? (row.Cell(colMinStock).TryGetValue<int>(out int valMin) ? valMin : 0) : 0,
+                        Category = col["category"] > 0 ? (row.Cell(col["category"]).GetValue<string>() ?? "").Trim() : "",
+                        Unit = col["unit"] > 0 ? (row.Cell(col["unit"]).GetValue<string>() ?? "Adet").Trim() : "Adet",
+                        MinStock = col["minStock"] > 0 ? (row.Cell(col["minStock"]).TryGetValue<int>(out int valMin) ? valMin : 0) : 0,
                         CardType = "Child",
-                        Description = colDescription > 0 ? (row.Cell(colDescription).GetValue<string>() ?? "").Trim() : ""
+                        Description = col["description"] > 0 ? (row.Cell(col["description"]).GetValue<string>() ?? "").Trim() : ""
                     };
-
-                    if (!string.IsNullOrEmpty(k.Code) && !string.IsNullOrEmpty(k.Name))
-                    {
-                        cardsToImport.Add(k);
-                    }
-                }
+                });
 
                 if (cardsToImport.Count > 0)
                 {
@@ -350,7 +311,7 @@ public partial class StockCardsViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Stock cards import error", ex);
+            AppLogger.LogError("Stock cards import error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
         }
     }
@@ -396,8 +357,7 @@ public partial class StockCardsViewModel : ViewModelBase
             _stockCards, 
             movements, 
             depts, 
-            _dialogService, 
-            _logger);
+            _dialogService);
             
         await _dialogService.ShowDialogAsync(vm);
         await LoadAsync();
@@ -433,7 +393,7 @@ public partial class StockCardsViewModel : ViewModelBase
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Excel export error", ex);
+            AppLogger.LogError("Excel export error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }

@@ -6,5 +6,5 @@ public class User
     public string Username { get; set; } = "";
     public string Role { get; set; } = "user";
     
-    public bool CanEdit => !Username.Equals("admin", System.StringComparison.OrdinalIgnoreCase);
+    public bool IsEditable => !Username.Equals("admin", System.StringComparison.OrdinalIgnoreCase);
 }

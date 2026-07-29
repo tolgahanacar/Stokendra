@@ -14,8 +14,6 @@ public partial class ServicesViewModel : ViewModelBase
 {
     private readonly IServiceRecordRepository _services;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     private System.Threading.CancellationTokenSource? _cts;
     private System.Threading.CancellationTokenSource? _searchCts;
 
@@ -37,15 +35,13 @@ public partial class ServicesViewModel : ViewModelBase
     public bool IsRecordSelected => SelectedRecord != null || SelectedRecords.Count > 0;
     partial void OnSelectedRecordChanged(ServiceRecord? value) => OnPropertyChanged(nameof(IsRecordSelected));
 
-    public ObservableCollection<ServiceRecord> Records { get; } = new();
+    public BulkObservableCollection<ServiceRecord> Records { get; } = new();
     public ObservableCollection<ServiceRecord> SelectedRecords { get; } = new();
 
-    public ServicesViewModel(IServiceRecordRepository services, IDialogService dialogService, ILogger logger)
+    public ServicesViewModel(IServiceRecordRepository services, IDialogService dialogService)
     {
         _services = services;
         _dialogService = dialogService;
-        _logger = logger;
-
         SelectedRecords.CollectionChanged += (s, e) => {
             OnPropertyChanged(nameof(IsRecordSelected));
         };
@@ -61,7 +57,7 @@ public partial class ServicesViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Load error", ex);
+            AppLogger.LogError("Load error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
         }
     }
@@ -90,7 +86,7 @@ public partial class ServicesViewModel : ViewModelBase
             token.ThrowIfCancellationRequested();
 
             Records.Clear();
-            foreach (var r in data) Records.Add(r);
+            Records.AddRange(data);
             StatusText = string.Format(LocalizationManager.L("svc_status_listing"), totalCount, Records.Count, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException)
@@ -99,7 +95,7 @@ public partial class ServicesViewModel : ViewModelBase
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Services load error", ex);
+            AppLogger.LogError("Services load error", ex);
             StatusText = LocalizationManager.L("svc_load_error");
         }
         finally { IsLoading = false; }
@@ -114,7 +110,7 @@ public partial class ServicesViewModel : ViewModelBase
         _searchCts?.Cancel();
         _cts?.Cancel();
         SearchText  = "";
-        StartDate   = new DateTime(2000, 1, 1);
+        StartDate   = new DateTime(2024, 1, 1);
         EndDate     = DateTime.Today;
         CurrentPage = 1;
         _ = LoadAsync();
@@ -156,16 +152,13 @@ public partial class ServicesViewModel : ViewModelBase
 
             try
             {
-                foreach (var record in SelectedRecords.ToList())
-                {
-                    await _services.DeleteAsync(record.Id);
-                }
+                await _services.DeleteBulkAsync(SelectedRecords.Select(r => r.Id).ToList());
                 await LoadAsync();
                 StatusText = LocalizationManager.L("svc_record_deleted");
             }
             catch (Exception ex)
             {
-                _logger.LogError("Bulk delete service error", ex);
+                AppLogger.LogError("Bulk delete service error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message));
             }
         }
@@ -189,7 +182,7 @@ public partial class ServicesViewModel : ViewModelBase
             }
             catch (Exception ex) 
             { 
-                _logger.LogError("Delete service error", ex);
+                AppLogger.LogError("Delete service error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("svc_delete_error"), ex.Message)); 
             }
         }
@@ -209,7 +202,7 @@ public partial class ServicesViewModel : ViewModelBase
             }
             catch (Exception ex)
             {
-                _logger.LogError("Add service error", ex);
+                AppLogger.LogError("Add service error", ex);
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
             }
         }
@@ -220,7 +213,7 @@ public partial class ServicesViewModel : ViewModelBase
     {
         if (SelectedRecords.Count >= 2)
         {
-            var vm = new BulkEditServicesViewModel(SelectedRecords.ToList(), _services, _dialogService, _logger);
+            var vm = new BulkEditServicesViewModel(SelectedRecords.ToList(), _services, _dialogService);
             if (await _dialogService.ShowDialogAsync(vm) == true)
             {
                 await LoadAsync();
@@ -242,7 +235,7 @@ public partial class ServicesViewModel : ViewModelBase
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Edit service error", ex);
+                    AppLogger.LogError("Edit service error", ex);
                     await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
                 }
             }
@@ -277,7 +270,7 @@ public partial class ServicesViewModel : ViewModelBase
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Excel export error", ex);
+            AppLogger.LogError("Excel export error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }
@@ -292,77 +285,48 @@ public partial class ServicesViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("svc_import_reading");
             await Task.Run(async () => {
-                using var workbook = new ClosedXML.Excel.XLWorkbook(path);
-                var worksheet = workbook.Worksheet(1);
-                
-                var firstRow = worksheet.FirstRowUsed();
-                if (firstRow == null) return;
-
-                int colCount = worksheet.LastColumnUsed()?.ColumnNumber() ?? 0;
-
-                // Başlıklara göre sütun indekslerini bul (1-based)
-                int colTarih = 0, colCihaz = 0, colSeri = 0, colFirma = 0, colSorun = 0, colSonuc = 0;
-
-                for (int i = 1; i <= colCount; i++)
+                var mappings = new Dictionary<string, string[]>
                 {
-                    string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
-                    if (header == "bakım tarihi" || header == "bakim tarihi" || header == "tarih" || header == "bakimtarihi" || header == "date" || header == "service date" || header == "service_date")
-                        colTarih = i;
-                    else if (header == "cihaz adı" || header == "cihaz adi" || header == "cihaz" || header == "cihazadi" || header == "device name" || header == "device_name")
-                        colCihaz = i;
-                    else if (header == "seri numarası" || header == "seri numarasi" || header == "seri no" || header == "serino" || header == "serial number" || header == "serial_number")
-                        colSeri = i;
-                    else if (header == "firma" || header == "şirket" || header == "sirket" || header == "company")
-                        colFirma = i;
-                    else if (header == "sorun" || header == "arıza" || header == "ariza" || header == "problem" || header == "issue")
-                        colSorun = i;
-                    else if (header == "sonuç" || header == "sonuc" || header == "durum" || header == "result")
-                        colSonuc = i;
-                }
+                    { "date", new[] { "bakım tarihi", "bakim tarihi", "tarih", "bakimtarihi", "date", "service date", "service_date" } },
+                    { "device", new[] { "cihaz adı", "cihaz adi", "cihaz", "cihazadi", "device name", "device_name" } },
+                    { "serial", new[] { "seri numarası", "seri numarasi", "seri no", "serino", "serial number", "serial_number" } },
+                    { "company", new[] { "firma", "şirket", "sirket", "company" } },
+                    { "issue", new[] { "sorun", "arıza", "ariza", "problem", "issue" } },
+                    { "result", new[] { "sonuç", "sonuc", "durum", "result" } }
+                };
 
-                // Eşleşme yoksa yedek plan (fallback)
-                if (colTarih == 0 && colCihaz == 0)
+                var fallback = new Dictionary<string, int>
                 {
-                    colTarih = 1;
-                    colCihaz = 2;
-                    colSeri = 3;
-                    colFirma = 4;
-                    colSorun = 5;
-                    colSonuc = 6;
-                }
+                    { "date", 1 }, { "device", 2 }, { "serial", 3 },
+                    { "company", 4 }, { "issue", 5 }, { "result", 6 }
+                };
 
-                var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<ClosedXML.Excel.IXLRangeRow>();
-                var toImport = new List<ServiceRecord>();
-                
-                foreach (var row in rows)
+                var toImport = Stokendra.Infrastructure.ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    string cihaz = colCihaz > 0 ? (row.Cell(colCihaz).GetValue<string>() ?? "").Trim() : "";
-                    if (string.IsNullOrEmpty(cihaz)) continue;
+                    string cihaz = col["device"] > 0 ? (row.Cell(col["device"]).GetValue<string>() ?? "").Trim() : "";
+                    if (string.IsNullOrEmpty(cihaz)) return null;
 
                     DateTime tarih = DateTime.Now;
-                    if (colTarih > 0)
+                    if (col["date"] > 0)
                     {
-                        var cellVal = row.Cell(colTarih).GetValue<string>();
-                        if (DateTime.TryParse(cellVal, out var dt))
-                        {
-                            tarih = dt;
-                        }
+                        var cellVal = row.Cell(col["date"]).GetValue<string>();
+                        if (DateTime.TryParse(cellVal, out var dt)) tarih = dt;
                     }
 
-                    string seri = colSeri > 0 ? (row.Cell(colSeri).GetValue<string>() ?? "").Trim() : "";
-                    string firma = colFirma > 0 ? (row.Cell(colFirma).GetValue<string>() ?? "").Trim() : "";
-                    string sorun = colSorun > 0 ? (row.Cell(colSorun).GetValue<string>() ?? "").Trim() : "";
-                    string sonuc = colSonuc > 0 ? (row.Cell(colSonuc).GetValue<string>() ?? "").Trim() : "";
+                    string seri = col["serial"] > 0 ? (row.Cell(col["serial"]).GetValue<string>() ?? "").Trim() : "";
+                    string firma = col["company"] > 0 ? (row.Cell(col["company"]).GetValue<string>() ?? "").Trim() : "";
+                    string sorun = col["issue"] > 0 ? (row.Cell(col["issue"]).GetValue<string>() ?? "").Trim() : "";
+                    string sonuc = col["result"] > 0 ? (row.Cell(col["result"]).GetValue<string>() ?? "").Trim() : "";
 
-                    toImport.Add(new ServiceRecord {
-                        ServiceDate = tarih,
+                    return new ServiceRecord {
                         DeviceName = cihaz,
+                        ServiceDate = tarih,
                         SerialNumber = seri,
                         Company = firma,
                         Issue = sorun,
                         Result = sonuc
-                    });
-                }
+                    };
+                });
                 
                 if (toImport.Count > 0) await _services.AddBulkAsync(toImport);
             });
@@ -382,60 +346,44 @@ public partial class ServicesViewModel : ViewModelBase
         {
             if (Records.Count == 0) return;
             StatusText = LocalizationManager.L("svc_print_preparing");
+            var sbHeaders = new System.Text.StringBuilder();
+            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("maintenance_date")}</th>");
+            sbHeaders.Append($"<th style='width: 23%; text-align: left;'>{LocalizationManager.L("device_name")}</th>");
+            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("serial_number")}</th>");
+            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("company")}</th>");
+            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("problem")}</th>");
+            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("result")}</th>");
             
-            var sb = new System.Text.StringBuilder();
-            sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("svc_print_report_title")}</title>");
-            sb.Append("<style>");
-            sb.Append("@page { size: landscape; margin: 0.5cm; } ");
-            sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
-            sb.Append(".top-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563EB; padding-bottom: 8px; margin-bottom: 15px; } ");
-            sb.Append(".top-header h1 { margin: 0; color: #2563EB; font-size: 20px; font-weight: 800; } ");
-            sb.Append(".date-box { text-align: right; font-size: 11px; color: #4b5563; } ");
-            sb.Append("table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; } ");
-            sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ");
-            sb.Append("th { background: #f1f5f9; font-weight: bold; text-align: center; } ");
-            sb.Append(".num { text-align: center; } ");
-            sb.Append(".footer { margin-top: 20px; font-size: 10px; text-align: right; color: #94a3b8; } ");
-            sb.Append("</style>");
-            sb.Append("<script>window.onload = function() { window.print(); }</script>");
-            sb.Append("</head><body>");
-            
-            sb.Append("<div class='top-header'>");
-            sb.Append($"<h1>{LocalizationManager.L("svc_print_report_header")}</h1>");
-            sb.Append($"<div class='date-box'>{LocalizationManager.L("svc_print_report_date")}<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b></div>");
-            sb.Append("</div>");
-
-            sb.Append("<table><thead><tr>");
-            sb.Append($"<th style='width: 15%;'>{LocalizationManager.L("date")}</th>");
-            sb.Append($"<th style='width: 25%;'>{LocalizationManager.L("device_name")}</th>");
-            sb.Append($"<th style='width: 20%;'>{LocalizationManager.L("serial_number")}</th>");
-            sb.Append($"<th style='width: 20%;'>{LocalizationManager.L("company")}</th>");
-            sb.Append($"<th style='width: 20%;'>{LocalizationManager.L("result")}</th>");
-            sb.Append("</tr></thead><tbody>");
-            
+            var sbBody = new System.Text.StringBuilder();
             foreach (var r in Records)
             {
-                sb.Append("<tr>");
-                sb.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
-                sb.Append($"<td>{r.DeviceName}</td>");
-                sb.Append($"<td>{r.SerialNumber}</td>");
-                sb.Append($"<td>{r.Company}</td>");
-                sb.Append($"<td>{r.Result}</td>");
-                sb.Append("</tr>");
+                sbBody.Append("<tr>");
+                sbBody.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{r.DeviceName}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{r.SerialNumber}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{r.Company}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{r.Issue}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{r.Result}</td>");
+                sbBody.Append("</tr>");
             }
             
-            sb.Append("</tbody></table>");
-            sb.Append($"<div class='footer'>{string.Format(LocalizationManager.L("svc_print_total_records"), Records.Count)}</div>");
-            sb.Append("</body></html>");
+            string html = PrintTemplateBuilder.BuildReportHtml(
+                title: LocalizationManager.L("service_records"),
+                headerTitle: LocalizationManager.L("service_records").ToUpper(),
+                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
+                tableHeadersHtml: sbHeaders.ToString(),
+                tableBodyHtml: sbBody.ToString(),
+                footerHtml: LocalizationManager.L("total_records_page", Records.Count, 1, 1)
+            );
             
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("svc_print_report_title"), sb.ToString());
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("service_records"), html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("svc_print_done");
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Print error", ex);
+            AppLogger.LogError("Print error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }

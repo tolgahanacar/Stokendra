@@ -14,8 +14,6 @@ public partial class NotesViewModel : ViewModelBase
 {
     private readonly INoteRepository _notes;
     private readonly IDialogService _dialogService;
-    private readonly ILogger _logger;
-
     [ObservableProperty] private bool   _isLoading;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private Note?   _selectedNote;
@@ -27,16 +25,15 @@ public partial class NotesViewModel : ViewModelBase
     [ObservableProperty] private bool   _isEditing;
     private int _editingId = 0;
 
-    public ObservableCollection<Note> Notes { get; } = new();
+    public BulkObservableCollection<Note> Notes { get; } = new();
     public ObservableCollection<Note> SelectedNotes { get; } = new();
 
     public bool HasSelection => SelectedNotes.Count > 0 || SelectedNote != null;
 
-    public NotesViewModel(INoteRepository notes, IDialogService dialogService, ILogger logger)
+    public NotesViewModel(INoteRepository notes, IDialogService dialogService)
     {
         _notes = notes;
         _dialogService = dialogService;
-        _logger = logger;
         SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
         _ = LoadAsync();
     }
@@ -48,14 +45,14 @@ public partial class NotesViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var data = await Task.Run(() => _notes.GetAll());
+            var data = await _notes.GetAllAsync();
             Notes.Clear();
-            foreach (var n in data) Notes.Add(n);
+            Notes.AddRange(data);
             StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Notes load error", ex);
+            AppLogger.LogError("Notes load error", ex);
             StatusText = LocalizationManager.L("error"); 
         }
         finally { IsLoading = false; }
@@ -80,7 +77,7 @@ public partial class NotesViewModel : ViewModelBase
 
         if (list.Count >= 2)
         {
-            var vm = new BulkEditNotesViewModel(list, _notes, _dialogService, _logger);
+            var vm = new BulkEditNotesViewModel(list, _notes, _dialogService);
             bool? success = await _dialogService.ShowDialogAsync(vm);
             if (success == true)
             {
@@ -113,21 +110,21 @@ public partial class NotesViewModel : ViewModelBase
             if (_editingId == 0)
             {
                 var n = new Note { Title = EditTitle.Trim(), Content = EditContent.Trim(), CreatedAt = EditCreatedAt.DateTime };
-                await Task.Run(() => _notes.Add(n));
-                StatusText = LocalizationManager.L("save_settings");
+                await _notes.AddAsync(n);
+                StatusText = LocalizationManager.L("note_saved_success");
             }
             else
             {
                 var n = new Note { Id = _editingId, Title = EditTitle.Trim(), Content = EditContent.Trim(), CreatedAt = EditCreatedAt.DateTime };
-                await Task.Run(() => _notes.Update(n));
-                StatusText = LocalizationManager.L("save_settings");
+                await _notes.UpdateAsync(n);
+                StatusText = LocalizationManager.L("note_saved_success");
             }
             IsEditing = false;
             await LoadAsync();
         }
         catch (Exception ex) 
         { 
-            _logger.LogError("Save note error", ex);
+            AppLogger.LogError("Save note error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
         }
     }
@@ -160,7 +157,7 @@ public partial class NotesViewModel : ViewModelBase
 
         try
         {
-            await Task.Run(() => _notes.DeleteBulk(list.Select(x => x.Id).ToList()));
+            await _notes.DeleteBulkAsync(list.Select(x => x.Id).ToList());
             IsEditing = false;
             SelectedNote = null;
             SelectedNotes.Clear();
@@ -169,7 +166,7 @@ public partial class NotesViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Notes delete error", ex);
+            AppLogger.LogError("Notes delete error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message);
         }
     }
@@ -224,7 +221,7 @@ public partial class NotesViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError("Notes Excel export error", ex);
+            AppLogger.LogError("Notes Excel export error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
             await _dialogService.ShowMessageAsync(
                 LocalizationManager.L("error"), 
