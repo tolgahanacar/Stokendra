@@ -17,8 +17,9 @@ public static class PrintTemplateBuilder
         var sb = new StringBuilder();
         sb.Append($"<html><head><meta charset='utf-8'><title>{title}</title>");
         sb.Append("<style>");
-        sb.Append("@page { size: landscape; margin: 0.5cm; } ");
-        sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; color: #1a1a1a; line-height: 1.2; } ");
+        sb.Append("@page { size: portrait; margin: 0.5cm; } ");
+        sb.Append("* { box-sizing: border-box; } ");
+        sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; margin: 0; color: #1a1a1a; line-height: 1.2; } ");
         sb.Append(".top-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2563EB; padding-bottom: 8px; margin-bottom: 15px; } ");
         sb.Append(".top-header h1 { margin: 0; color: #2563EB; font-size: 20px; font-weight: 800; } ");
         sb.Append(".date-box { text-align: right; font-size: 11px; color: #4b5563; } ");

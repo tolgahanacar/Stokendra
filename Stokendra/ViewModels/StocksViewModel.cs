@@ -179,10 +179,10 @@ public partial class StocksViewModel : ViewModelBase
             double grandTotalResult = grandTotalIn - grandTotalOut;
 
             var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("code_no")}</th>");
-            sbHeaders.Append($"<th style='width: 45%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
-            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("entry")}</th>");
-            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("exit")}</th>");
+            sbHeaders.Append($"<th style='width: 18%;'>{LocalizationManager.L("code_no")}</th>");
+            sbHeaders.Append($"<th style='width: 34%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
+            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("entry")}</th>");
+            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("exit")}</th>");
             sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
