@@ -45,8 +45,10 @@
                     IsEnabled="{Binding IsRecordSelected}"
                     IsVisible="{Binding CanEdit}"/>
             <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
-            <Button Content="{infra:L excel}" Classes="Secondary"
+            <Button Content="{infra:L export_excel}" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
+            <Button Content="{infra:L import_excel}" Classes="Secondary"
+                    Command="{Binding ImportCommand}"/>
             <Button Content="{infra:L print}" Classes="Success"
                     Command="{Binding PrintCommand}"/>
         </StackPanel>

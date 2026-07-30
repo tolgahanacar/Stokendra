@@ -43,7 +43,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom" Margin="0,0,0,8">
                     <Button Content="{infra:L report_al}" Classes="Primary" Command="{Binding GenerateReportCommand}"/>
                     <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}"/>
-                    <Button Content="{infra:L excel}" Classes="Secondary" Command="{Binding ExportCommand}"/>
+                    <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportCommand}"/>
                     <Button Content="{infra:L clear_filter}" Classes="Secondary" Command="{Binding ClearFiltersCommand}"/>
                 </StackPanel>
             </WrapPanel>

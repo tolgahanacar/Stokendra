@@ -12,7 +12,7 @@
                      CommandParameter="{Binding #NotesGrid.SelectedItems}"/>
     </UserControl.KeyBindings>
 
-    <Grid ColumnDefinitions="350,*">
+    <Grid ColumnDefinitions="400,*">
 
         <!-- Left: Notes List -->
         <Border Grid.Column="0" Background="#0E1119" BorderBrush="#1E2535" BorderThickness="0,0,1,0">
@@ -48,10 +48,16 @@
                     </StackPanel>
                     
                     <!-- Export Action -->
-                    <Button Content="{infra:L export_excel}" Classes="Secondary"
-                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                            Height="36"
-                            Command="{Binding ExportExcelCommand}"/>
+                    <UniformGrid Columns="2">
+                        <Button Content="{infra:L export_excel}" Classes="Secondary" Margin="0,0,4,0"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Height="36"
+                                Command="{Binding ExportExcelCommand}"/>
+                        <Button Content="{infra:L import_excel}" Classes="Secondary" Margin="4,0,0,0"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                Height="36"
+                                Command="{Binding ImportExcelCommand}"/>
+                    </UniformGrid>
                 </StackPanel>
 
                 <!-- List -->

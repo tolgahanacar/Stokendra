@@ -84,4 +84,30 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
             LogAudit("Delete", "Notes", 0, "Bulk Note Delete");
         } catch { trans.Rollback(); throw; }
     }
+
+    public async Task AddBulkAsync(IEnumerable<Note> notes, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var sql = @"INSERT INTO Notes (Date, Title, Content, CreatedAt, UpdatedAt) 
+                        VALUES (@Date, @Title, @Content, @CreatedAt, @UpdatedAt)";
+            var data = notes.Select(n => new {
+                Date = n.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Title = n.Title,
+                Content = n.Content ?? "",
+                CreatedAt = n.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                UpdatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+            });
+            await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Insert", "Notes", 0, "Bulk Insert");
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
 }

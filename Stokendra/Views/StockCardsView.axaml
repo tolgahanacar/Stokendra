@@ -56,9 +56,6 @@
                     Command="{Binding ImportExcelCommand}"
                     IsVisible="{Binding CanEdit}"/>
             
-            <Button Content="{infra:L sample_file}" Classes="Secondary"
-                    Command="{Binding DownloadSampleCommand}"
-                    IsVisible="{Binding CanEdit}"/>
         </StackPanel>
 
         <!-- Grid -->

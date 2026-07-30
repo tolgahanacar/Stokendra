@@ -232,4 +232,64 @@ public partial class NotesViewModel : ViewModelBase
             IsLoading = false;
         }
     }
+
+    [RelayCommand]
+    public async Task ImportExcelAsync()
+    {
+        string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("svc_excel_select_title"), LocalizationManager.L("svc_excel_filter"));
+        if (string.IsNullOrEmpty(path)) return;
+
+        try
+        {
+            StatusText = LocalizationManager.L("loading");
+            int count = await Task.Run(async () => {
+                var mappings = new System.Collections.Generic.Dictionary<string, string[]>
+                {
+                    { "title", new[] { "başlık", "baslik", "title", "başlik" } },
+                    { "content", new[] { "açıklama", "aciklama", "içerik", "icerik", "description", "content" } },
+                    { "date", new[] { "oluşturulma tarihi", "olusturulma tarihi", "tarih", "date", "created_date_header", "created date" } }
+                };
+
+                var fallback = new System.Collections.Generic.Dictionary<string, int>
+                {
+                    { "title", 2 }, { "content", 3 }, { "date", 4 }
+                };
+
+                var toImport = Stokendra.Infrastructure.ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
+                {
+                    string title = col["title"] > 0 ? (row.Cell(col["title"]).GetValue<string>() ?? "").Trim() : "";
+                    if (string.IsNullOrEmpty(title)) return null;
+
+                    string content = col["content"] > 0 ? (row.Cell(col["content"]).GetValue<string>() ?? "").Trim() : "";
+                    
+                    DateTime date = DateTime.Now;
+                    if (col["date"] > 0)
+                    {
+                        var cellVal = row.Cell(col["date"]).GetValue<string>();
+                        if (DateTime.TryParse(cellVal, out var dt)) date = dt;
+                    }
+
+                    return new Note {
+                        Title = title,
+                        Content = content,
+                        CreatedAt = date,
+                        UpdatedAt = DateTime.Now,
+                        Date = date
+                    };
+                });
+                
+                if (toImport.Count > 0) await _notes.AddBulkAsync(toImport);
+                return toImport.Count;
+            });
+            await LoadAsync();
+            StatusText = LocalizationManager.L("import_success", count);
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("import_success", count));
+        }
+        catch (Exception ex) 
+        { 
+            AppLogger.LogError("Notes Excel import error", ex);
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
+        }
+    }
 }

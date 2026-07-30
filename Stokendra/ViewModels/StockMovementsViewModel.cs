@@ -416,63 +416,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    public async Task ExportSampleAsync()
-    {
-        string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("sample_file"), "stock_movement_sample.xlsx", "Excel File (*.xlsx)|*.xlsx");
-        if (string.IsNullOrEmpty(path)) return;
 
-        try
-        {
-            await Task.Run(() => 
-            {
-                using var workbook = new ClosedXML.Excel.XLWorkbook();
-                var ws = workbook.AddWorksheet("Sample");
-                string[] headers = { 
-                    LocalizationManager.L("code_no"), 
-                    LocalizationManager.L("stock_name") + " (Optional)", 
-                    LocalizationManager.L("delivered_to"), 
-                    LocalizationManager.L("type"), 
-                    LocalizationManager.L("quantity"), 
-                    LocalizationManager.L("department"), 
-                    LocalizationManager.L("date") + " (dd.MM.yyyy)", 
-                    LocalizationManager.L("description") 
-                };
-                for (int i = 0; i < headers.Length; i++)
-                {
-                    ws.Cell(1, i + 1).Value = headers[i];
-                    ws.Cell(1, i + 1).Style.Font.Bold = true;
-                    ws.Cell(1, i + 1).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(30, 37, 52);
-                    ws.Cell(1, i + 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.White;
-                }
-                
-                // Sample Entry row
-                ws.Cell(2, 1).Value = "001";
-                ws.Cell(2, 2).Value = "Sample Item";
-                ws.Cell(2, 3).Value = "John Doe";
-                ws.Cell(2, 4).Value = $"[{LocalizationManager.L("entry_symbol")}] " + LocalizationManager.L("entry");
-                ws.Cell(2, 5).Value = 10;
-                ws.Cell(2, 6).Value = "IT";
-                ws.Cell(2, 7).Value = DateTime.Now.ToString("dd.MM.yyyy");
-                ws.Cell(2, 8).Value = "New purchase";
-
-                // Sample Exit row
-                ws.Cell(3, 1).Value = "001";
-                ws.Cell(3, 2).Value = "Sample Item";
-                ws.Cell(3, 3).Value = "Alice Smith";
-                ws.Cell(3, 4).Value = $"[{LocalizationManager.L("exit_symbol")}] " + LocalizationManager.L("exit");
-                ws.Cell(3, 5).Value = 3;
-                ws.Cell(3, 6).Value = "Accounting";
-                ws.Cell(3, 7).Value = DateTime.Now.ToString("dd.MM.yyyy");
-                ws.Cell(3, 8).Value = "Department request";
-                
-                ws.Columns().AdjustToContents();
-                workbook.SaveAs(path);
-            });
-            StatusText = LocalizationManager.L("sample_file_created", path);
-        }
-        catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message); }
-    }
 
     [RelayCommand]
     public async Task PrintAsync()

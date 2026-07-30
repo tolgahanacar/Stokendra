@@ -317,34 +317,6 @@ public partial class StockCardsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task DownloadSampleAsync()
-    {
-        string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("sample_file"), "stock_card_sample.xlsx", "Excel File (*.xlsx)|*.xlsx");
-        if (string.IsNullOrEmpty(path)) return;
-
-        try
-        {
-            await Task.Run(() => {
-                using var workbook = new ClosedXML.Excel.XLWorkbook();
-                var ws = workbook.Worksheets.Add("StockCards");
-                string[] headers = { "Code", "Name", "Category", "Unit", "MinStock", "Description" };
-                for (int i = 0; i < headers.Length; i++) { ws.Cell(1, i + 1).Value = headers[i]; ws.Cell(1, i + 1).Style.Font.Bold = true; }
-                
-                ws.Cell(2, 1).Value = "100.001";
-                ws.Cell(2, 2).Value = "Sample Product";
-                ws.Cell(2, 3).Value = "Office";
-                ws.Cell(2, 4).Value = "Pcs";
-                ws.Cell(2, 5).Value = 5;
-                
-                ws.Columns().AdjustToContents();
-                workbook.SaveAs(path);
-            });
-            StatusText = LocalizationManager.L("sample_file_created", path);
-        }
-        catch (Exception ex) { await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), ex.Message); }
-    }
-
-    [RelayCommand]
     public async Task ShowDetailAsync()
     {
         if (SelectedCard == null) return;
