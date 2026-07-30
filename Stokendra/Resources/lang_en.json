@@ -96,6 +96,7 @@
     "total_entry": "Total Entry",
     "total_exit": "Total Exit",
     "detail_report": "Stock Card Detail Report",
+    "stock_status_report": "Stock Status Report",
     "report_date": "Report Date: {0}",
     "movements_report": "Stock Movements Report",
     "print_date": "Date: {0}",

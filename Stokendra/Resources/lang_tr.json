@@ -96,6 +96,7 @@
   "total_entry": "Toplam Giriş",
   "total_exit": "Toplam Çıkış",
   "detail_report": "Stok Kartı Detay Raporu",
+  "stock_status_report": "Stok Durum Raporu",
   "report_date": "Rapor Tarihi: {0}",
   "movements_report": "Stok Hareketleri Raporu",
   "print_date": "Tarih: {0}",

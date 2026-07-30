@@ -349,11 +349,11 @@ public partial class ServicesViewModel : ViewModelBase
             StatusText = LocalizationManager.L("svc_print_preparing");
             var sbHeaders = new System.Text.StringBuilder();
             sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("maintenance_date")}</th>");
-            sbHeaders.Append($"<th style='width: 23%; text-align: left;'>{LocalizationManager.L("device_name")}</th>");
-            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("serial_number")}</th>");
+            sbHeaders.Append($"<th style='width: 18%; text-align: left;'>{LocalizationManager.L("device_name")}</th>");
+            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("serial_number")}</th>");
             sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("company")}</th>");
-            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("problem")}</th>");
-            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("result")}</th>");
+            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("problem")}</th>");
+            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("result")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
             foreach (var r in Records)
@@ -369,15 +369,15 @@ public partial class ServicesViewModel : ViewModelBase
             }
             
             string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("service_records"),
-                headerTitle: LocalizationManager.L("service_records").ToUpper(),
+                title: LocalizationManager.L("services"),
+                headerTitle: LocalizationManager.L("services").ToUpper(),
                 dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
                 footerHtml: LocalizationManager.L("total_records_page", Records.Count, 1, 1)
             );
             
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("service_records"), html);
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("services"), html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("svc_print_done");

@@ -370,4 +370,59 @@ public partial class StockCardsViewModel : ViewModelBase
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
     }
+
+    [RelayCommand]
+    public async Task PrintAsync()
+    {
+        if (Cards.Count == 0)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+            return;
+        }
+
+        try
+        {
+            StatusText = LocalizationManager.L("preparing_print");
+            
+            var sbHeaders = new System.Text.StringBuilder();
+            sbHeaders.Append($"<th style='width: 10%;'>{LocalizationManager.L("code_no")}</th>");
+            sbHeaders.Append($"<th style='width: 30%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
+            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("card_type")}</th>");
+            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("category")}</th>");
+            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("current_stock")}</th>");
+            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("min_stock")}</th>");
+            
+            var sbBody = new System.Text.StringBuilder();
+            foreach (var c in Cards)
+            {
+                sbBody.Append("<tr>");
+                sbBody.Append($"<td class='num'>{c.Code}</td>");
+                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{c.Name}</td>");
+                sbBody.Append($"<td class='num'>{c.CardTypeDisplay}</td>");
+                sbBody.Append($"<td class='num'>{c.Category}</td>");
+                sbBody.Append($"<td class='num'>{(c.IsParentCard ? "-" : c.CurrentStock.ToString())}</td>");
+                sbBody.Append($"<td class='num'>{c.MinStock}</td>");
+                sbBody.Append("</tr>");
+            }
+            
+            string html = PrintTemplateBuilder.BuildReportHtml(
+                title: LocalizationManager.L("stock_cards"),
+                headerTitle: LocalizationManager.L("stock_cards").ToUpper(),
+                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
+                tableHeadersHtml: sbHeaders.ToString(),
+                tableBodyHtml: sbBody.ToString(),
+                footerHtml: LocalizationManager.L("total_records_page", Cards.Count, 1, 1)
+            );
+            
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("stock_cards"), html);
+            await _dialogService.ShowDialogAsync(previewVm);
+            
+            StatusText = LocalizationManager.L("printing_finished");
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Cards print error", ex);
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("export_error")}: {ex.Message}");
+        }
+    }
 }

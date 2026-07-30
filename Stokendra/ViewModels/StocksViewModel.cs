@@ -206,15 +206,15 @@ public partial class StocksViewModel : ViewModelBase
             sbBody.Append("</tr>");
             
             string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("detail_report"),
-                headerTitle: LocalizationManager.L("detail_report").ToUpper(),
+                title: LocalizationManager.L("stock_status_report"),
+                headerTitle: LocalizationManager.L("stock_status_report").ToUpper(),
                 dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
                 footerHtml: ""
             );
             
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("detail_report"), html);
+            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("stock_status_report"), html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("printing_finished");

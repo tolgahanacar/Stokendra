@@ -29,7 +29,7 @@ public static class PrintTemplateBuilder
         sb.Append(".summary-label { font-size: 11px; color: #64748b; text-transform: uppercase; } ");
         
         sb.Append("table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; } ");
-        sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } ");
+        sb.Append("th, td { border: 1px solid #666; padding: 6px 4px; word-wrap: break-word; white-space: normal; } ");
         sb.Append("th { background: #f1f5f9; font-weight: bold; text-align: center; text-transform: uppercase; } ");
         sb.Append(".num { text-align: center; } ");
         sb.Append(".bold { font-weight: bold; } ");
