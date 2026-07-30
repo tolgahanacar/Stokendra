@@ -530,5 +530,11 @@
   "preparing_print": "Yazdırma hazırlanıyor...",
   "printing_finished": "Yazdırma tamamlandı.",
   "movement_saved_success": "Stok hareketi başarıyla kaydedildi.",
-  "note_saved_success": "Not başarıyla kaydedildi."
+  "note_saved_success": "Not başarıyla kaydedildi.",
+  "export_fn_stocks": "Stok_Durumu",
+  "export_fn_movements": "Stok_Hareketleri",
+  "export_fn_cards": "Stok_Kartlari",
+  "export_fn_services": "Servis_Kayitlari",
+  "export_fn_reports": "Stok_Tuketim_Raporu",
+  "export_fn_notes": "Notlar"
 }

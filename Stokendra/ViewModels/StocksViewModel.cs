@@ -127,7 +127,9 @@ public partial class StocksViewModel : ViewModelBase
             return;
         }
 
-        var path = await _dialogService.SaveFileAsync(LocalizationManager.L("export_excel"), "Stock_Status_Report.xlsx", "Excel File (*.xlsx)|*.xlsx");
+        string baseName = LocalizationManager.L("export_fn_stocks");
+        string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        var path = await _dialogService.SaveFileAsync(LocalizationManager.L("export_excel"), fileName, "Excel File (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try

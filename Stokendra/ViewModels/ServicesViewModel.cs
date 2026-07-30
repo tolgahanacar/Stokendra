@@ -245,7 +245,8 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        string fileName = $"Servis_Kayitlari_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        string baseName = LocalizationManager.L("export_fn_services");
+        string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
         string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("svc_excel_save_title"), fileName, LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 

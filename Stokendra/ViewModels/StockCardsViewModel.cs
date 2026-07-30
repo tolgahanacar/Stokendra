@@ -338,7 +338,8 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        string fileName = $"Stock_Cards_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        string baseName = LocalizationManager.L("export_fn_cards");
+        string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
         string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("export_excel"), fileName, "Excel File (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 

@@ -163,7 +163,9 @@ public partial class ReportsViewModel : ViewModelBase
             return;
         }
 
-        var path = await _dialogService.SaveFileAsync(LocalizationManager.L("save_report_title"), "Stok_Tuketim_Raporu.xlsx", LocalizationManager.L("svc_excel_filter"));
+        string baseName = LocalizationManager.L("export_fn_reports");
+        string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+        var path = await _dialogService.SaveFileAsync(LocalizationManager.L("save_report_title"), fileName, LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
         try
