@@ -351,7 +351,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                 var mappings = new Dictionary<string, string[]>
                 {
                     { "code", new[] { "stok kodu", "kod", "stokkodu", "kodno", "code" } },
-                    { "recipient", new[] { "teslim edilen", "teslim alan", "personel", "kisi", "kişi", "recipient", "teslim", "alinan", "alınan" } },
+                    { "recipient", new[] { "teslim edilen/alınan", "teslim edilen/alinan", "teslim edilen / alınan", "teslim edilen / alinan", "teslim edilen", "teslim alan", "personel", "kisi", "kişi", "recipient", "teslim", "alinan", "alınan", "delivered to", "delivered_to" } },
                     { "type", new[] { "tür", "tur", "işlem", "islem", "tip", "islem tipi", "type", "giriş", "giris", "çıkış", "cikis" } },
                     { "quantity", new[] { "miktar", "adet", "sayı", "sayi", "quantity" } },
                     { "department", new[] { "departman", "bölüm", "bolum", "department" } },
@@ -361,8 +361,8 @@ public partial class StockMovementsViewModel : ViewModelBase
 
                 var fallback = new Dictionary<string, int>
                 {
-                    { "code", 1 }, { "recipient", 3 }, { "type", 4 },
-                    { "quantity", 5 }, { "department", 6 }, { "date", 7 }, { "description", 8 }
+                    { "date", 1 }, { "code", 2 }, { "type", 4 },
+                    { "quantity", 5 }, { "department", 6 }, { "recipient", 7 }, { "description", 8 }
                 };
 
                 var movementsToImport = ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 

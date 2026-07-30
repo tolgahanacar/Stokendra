@@ -276,8 +276,8 @@ public partial class StockCardsViewModel : ViewModelBase
                 
                 var fallback = new Dictionary<string, int>
                 {
-                    { "code", 1 }, { "name", 2 }, { "category", 3 },
-                    { "unit", 4 }, { "minStock", 5 }, { "description", 6 }
+                    { "code", 1 }, { "name", 2 }, { "category", 5 },
+                    { "minStock", 7 }, { "unit", 8 }
                 };
 
                 var cardsToImport = ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
