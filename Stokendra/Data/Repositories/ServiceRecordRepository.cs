@@ -60,7 +60,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
                 record.DeviceName,
                 SerialNumber = record.SerialNumber ?? "",
                 Company = record.Company ?? "",
-                ServiceDateString = record.ServiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ServiceDateString = record.ServiceDate.Date.Add(DateTime.Now.TimeOfDay).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 Issue = record.Issue ?? "",
                 Result = record.Result ?? ""
             }, 
@@ -85,7 +85,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
                 record.DeviceName,
                 SerialNumber = record.SerialNumber ?? "",
                 Company = record.Company ?? "",
-                ServiceDateString = record.ServiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ServiceDateString = record.ServiceDate.Date.Add(DateTime.Now.TimeOfDay).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 record.Issue,
                 record.Result,
                 record.Id

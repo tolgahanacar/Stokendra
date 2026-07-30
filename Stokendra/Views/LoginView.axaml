@@ -4,7 +4,7 @@
         xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.LoginView"
         Title="{infra:L login_title}"
-        Width="420" Height="520"
+        Width="380" Height="520"
         WindowStartupLocation="CenterScreen"
         CanResize="False"
         Background="#0C0E14" x:CompileBindings="False">
