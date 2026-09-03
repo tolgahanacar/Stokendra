@@ -29,18 +29,7 @@ public sealed class SqliteConnectionFactory : IDbConnectionFactory
         connection.Open();
         
         SqliteHelpers.RegisterCustomFunctions(connection);
-        
-        // Optimize SQLite performance pragmas
-        using var cmd = connection.CreateCommand();
-        cmd.CommandText = @"
-            PRAGMA journal_mode = WAL;
-            PRAGMA synchronous = NORMAL;
-            PRAGMA busy_timeout = 30000;
-            PRAGMA foreign_keys = ON;
-            PRAGMA cache_size = -32000; -- ~32MB
-            PRAGMA temp_store = MEMORY;
-        ";
-        cmd.ExecuteNonQuery();
+        SqliteHelpers.ApplyConnectionPragmas(connection);
         
         return connection;
     }

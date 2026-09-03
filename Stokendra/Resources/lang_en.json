@@ -390,6 +390,7 @@
     "different_material_items": "different items of material",
     "bulk_edit_desc": "Edit selected stock movements bulk or individually",
     "bulk_apply_header": "Bulk Value Assignment (Apply to All Selected)",
+    "bulk_operation_description": "Bulk Operation",
     "apply_btn": "Apply",
     "recipient_watermark": "Person or Department",
     "description_watermark": "Description note",

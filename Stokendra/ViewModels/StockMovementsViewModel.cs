@@ -75,20 +75,9 @@ public partial class StockMovementsViewModel : ViewModelBase
         TypeItems.Add(LocalizationManager.L("exit"));
         TypeItems.Add(LocalizationManager.L("type_empty"));
 
-        SafeInitAsync();
-    }
-
-    private async void SafeInitAsync()
-    {
-        try
-        {
-            await InitAsync();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("Init error", ex);
-            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
-        }
+        AsyncHelper.RunSafe(
+            () => InitAsync(),
+            ex => { AppLogger.LogError("Init error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private async Task InitAsync()

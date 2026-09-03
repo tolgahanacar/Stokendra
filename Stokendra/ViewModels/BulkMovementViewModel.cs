@@ -118,7 +118,7 @@ public partial class BulkMovementViewModel : ViewModelBase
                 Department = SelectedDepartment,
                 Recipient = DeliveredTo,
                 Date = targetDate,
-                Description = "Bulk Operation"
+                Description = LocalizationManager.L("bulk_operation_description")
             }).ToList();
 
             await _movements.AddBulkAsync(movements);

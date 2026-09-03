@@ -46,20 +46,9 @@ public partial class ServicesViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsRecordSelected));
         };
 
-        SafeLoadAsync();
-    }
-
-    private async void SafeLoadAsync()
-    {
-        try
-        {
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("Load error", ex);
-            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
-        }
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]

@@ -390,6 +390,7 @@
   "different_material_items": "farklı kalem malzeme",
   "bulk_edit_desc": "Seçilen stok hareketlerini toplu veya tekil olarak düzenleyin",
   "bulk_apply_header": "Toplu Değer Atama (Tüm Seçililere Uygula)",
+  "bulk_operation_description": "Toplu İşlem",
   "apply_btn": "Uygula",
   "recipient_watermark": "Kişi veya Birim",
   "description_watermark": "Açıklama notu",

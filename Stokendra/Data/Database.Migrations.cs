@@ -108,23 +108,8 @@ public sealed partial class Database
         }
     }
 
-    private static void MigrateToV1(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV2(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV3(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV4(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV5(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV6(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV7(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV8(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV9(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV10(SqliteConnection connection, SqliteTransaction? transaction) { }
-    private static void MigrateToV11(SqliteConnection connection, SqliteTransaction? transaction) { }
-
-    private static void MigrateToV12(SqliteConnection connection, SqliteTransaction? transaction)
-    {
-        // No-op: V12 migration logic is now folded into the much more robust V13 migration
-        // to prevent partial migration errors and foreign key constraint failures.
-    }
+    // V1–V12 migrations were legacy no-ops, now removed.
+    // Migration starts at V13 which handles full Türkçe→English schema conversion.
 
     private static void MigrateToV14(SqliteConnection connection, SqliteTransaction? transaction)
     {

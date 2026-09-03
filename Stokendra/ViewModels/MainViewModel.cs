@@ -61,19 +61,9 @@ public partial class MainViewModel : ViewModelBase
         NavigateToDashboard();
         
         // Günlük yedekleme kontrolü (Arka planda)
-        SafeCheckAutoBackupAsync();
-    }
-
-    private async void SafeCheckAutoBackupAsync()
-    {
-        try
-        {
-            await _backupService.CheckAutoBackupAsync();
-        }
-        catch (System.Exception ex)
-        {
-            AppLogger.LogError("Auto backup check failed.", ex);
-        }
+        AsyncHelper.RunSafe(
+            () => _backupService.CheckAutoBackupAsync(),
+            ex => AppLogger.LogError("Auto backup check failed.", ex));
     }
 
     [RelayCommand] public void NavigateToDashboard()  { CurrentPage = _dashboard;  ActiveMenu = "dashboard";  }

@@ -61,20 +61,9 @@ public partial class StockCardsViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsSingleCardSelected));
         };
         
-        SafeLoadAsync();
-    }
-
-    private async void SafeLoadAsync()
-    {
-        try
-        {
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError("Load error", ex);
-            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
-        }
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private CancellationTokenSource? _loadingCts;

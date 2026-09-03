@@ -30,6 +30,14 @@ public partial class NotesView : UserControl
                     {
                         vm.SelectedNote = vm.SelectedNotes[0];
                     }
+                    else if (vm.SelectedNotes.Count >= 2)
+                    {
+                        // Show the last clicked note in the preview panel
+                        if (e.AddedItems.Count > 0 && e.AddedItems[e.AddedItems.Count - 1] is Note lastClicked)
+                        {
+                            vm.SelectedNote = lastClicked;
+                        }
+                    }
                     else if (vm.SelectedNotes.Count == 0)
                     {
                         vm.SelectedNote = null;

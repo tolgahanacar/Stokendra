@@ -87,19 +87,8 @@ public sealed partial class Database : IDisposable
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
         SqliteHelpers.RegisterCustomFunctions(connection);
-        ApplyConnectionPragmas(connection);
+        SqliteHelpers.ApplyConnectionPragmas(connection);
         return connection;
-    }
-
-    private static void ApplyConnectionPragmas(SqliteConnection connection)
-    {
-        ExecutePragma(connection, "foreign_keys", "ON");
-        ExecutePragma(connection, "busy_timeout", "30000"); // 30 sn
-        ExecutePragma(connection, "synchronous", "NORMAL"); // Uyumlu ve yüksek performans
-        ExecutePragma(connection, "journal_mode", "WAL");
-        ExecutePragma(connection, "temp_store", "MEMORY");
-        ExecutePragma(connection, "cache_size", "-131072"); // 128MB cache size
-        ExecutePragma(connection, "mmap_size", "268435456"); // 256MB memory map
     }
 
     private static void ExecutePragma(SqliteConnection connection, string pragma, string value)
@@ -123,18 +112,7 @@ public sealed partial class Database : IDisposable
         try
         {
             int version = GetSchemaVersion(connection, null);
-            if (version < 1) MigrateToV1(connection, null);
-            if (version < 2) MigrateToV2(connection, null);
-            if (version < 3) MigrateToV3(connection, null);
-            if (version < 4) MigrateToV4(connection, null);
-            if (version < 5) MigrateToV5(connection, null);
-            if (version < 6) MigrateToV6(connection, null);
-            if (version < 7) MigrateToV7(connection, null);
-            if (version < 8) MigrateToV8(connection, null);
-            if (version < 9) MigrateToV9(connection, null);
-            if (version < 10) MigrateToV10(connection, null);
-            if (version < 11) MigrateToV11(connection, null);
-            if (version < 12) MigrateToV12(connection, null);
+            // V1–V12 migrations are no-ops (legacy, already folded into V13)
             if (version < 13) MigrateToV13(connection, null);
             if (version < 14) MigrateToV14(connection, null);
             if (version < 15) MigrateToV15(connection, null);

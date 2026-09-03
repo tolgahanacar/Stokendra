@@ -79,4 +79,23 @@ public static class SqliteHelpers
             return false;
         }
     }
+
+    /// <summary>
+    /// Applies standard SQLite performance pragmas to a connection.
+    /// Centralized to avoid duplication between Database and SqliteConnectionFactory.
+    /// </summary>
+    public static void ApplyConnectionPragmas(SqliteConnection connection)
+    {
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = @"
+            PRAGMA foreign_keys    = ON;
+            PRAGMA busy_timeout    = 30000;
+            PRAGMA synchronous     = NORMAL;
+            PRAGMA journal_mode    = WAL;
+            PRAGMA temp_store      = MEMORY;
+            PRAGMA cache_size      = -131072;
+            PRAGMA mmap_size       = 268435456;
+        ";
+        cmd.ExecuteNonQuery();
+    }
 }
