@@ -14,10 +14,17 @@
         <!-- Header -->
         <Border Grid.Row="0" Background="#0E1119" Padding="0,32,0,24">
             <StackPanel HorizontalAlignment="Center" Spacing="6">
-                <TextBlock Text="STOKENDRA"
-                           FontSize="26" FontWeight="Bold"
-                           Foreground="#38AEFF"
-                           HorizontalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <TextBlock Text="STOKENDRA"
+                               FontSize="26" FontWeight="Bold"
+                               Foreground="#38AEFF"
+                               HorizontalAlignment="Center"/>
+                    <Border Background="#1E293B" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding AppVersion}"
+                                   FontSize="10" FontWeight="Bold"
+                                   Foreground="#60A5FA"/>
+                    </Border>
+                </StackPanel>
                 <TextBlock Text="{infra:L login_subtitle}"
                            FontSize="11"
                            Foreground="#5A6987"

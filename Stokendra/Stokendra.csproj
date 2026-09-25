@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Stokendra</AssemblyName>
     <RootNamespace>Stokendra</RootNamespace>
-    <Version>7.3.7</Version>
+    <Version>7.3.9</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Stokendra.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);NU1701</NoWarn>

@@ -31,6 +31,8 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private string _newPassword = "";
 
+    public string AppVersion => $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "7.3.9"}";
+
     public LoginViewModel(IUserRepository userRepository)
     {
         _userRepository = userRepository;

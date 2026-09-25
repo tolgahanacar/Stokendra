@@ -528,8 +528,13 @@ public class SettingsViewModelTests : IDisposable
     {
         // Arrange
         var vm = CreateViewModel();
-        _updateServiceMock.GetLatestReleaseAsync()
-            .Returns(Task.FromResult(("v9.9.9", "https://github.com/tolgahanacar/Stokendra/releases/tag/v9.9.9")));
+        _updateServiceMock.CheckForUpdateAsync(Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult<UpdateInfo?>(new UpdateInfo
+            {
+                TagName = "v9.9.9",
+                Version = new Version(9, 9, 9),
+                HtmlUrl = "https://github.com/tolgahanacar/Stokendra/releases/tag/v9.9.9"
+            }));
         _dialogServiceMock.ShowConfirmAsync(Arg.Any<string>(), Arg.Any<string>())
             .Returns(Task.FromResult(true));
 
@@ -550,13 +555,15 @@ public class SettingsViewModelTests : IDisposable
     {
         // Arrange
         var vm = CreateViewModel();
-        // Current version is retrieved from Assembly, usually v1.0.0 or v5.0.0 in release, but in tests it's Assembly version (e.g. 1.0.0.0 or similar)
-        // CleanLatest parses clean version. Since current version of test assembly defaults to 1.0.0 (or what is set in AssemblyInfo),
-        // we can set latest release to "v1.0.0" to verify up-to-date message.
-        // Let's set latest to the same as vm.AppVersion
         string currentVer = vm.AppVersion.TrimStart('v', 'V');
-        _updateServiceMock.GetLatestReleaseAsync()
-            .Returns(Task.FromResult(($"v{currentVer}", "https://github.com/releases/")));
+        Version.TryParse(currentVer, out var parsedVersion);
+        _updateServiceMock.CheckForUpdateAsync(Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult<UpdateInfo?>(new UpdateInfo
+            {
+                TagName = $"v{currentVer}",
+                Version = parsedVersion ?? new Version(0, 0, 0),
+                HtmlUrl = "https://github.com/releases/"
+            }));
 
         // Act
         await vm.CheckForUpdatesAsync();
@@ -574,7 +581,7 @@ public class SettingsViewModelTests : IDisposable
     public async Task Test_CheckForUpdates_Exception_DoesNotCrash()
     {
         // Arrange
-        _updateServiceMock.When(x => x.GetLatestReleaseAsync())
+        _updateServiceMock.When(x => x.CheckForUpdateAsync(Arg.Any<System.Threading.CancellationToken>()))
             .Do(x => throw new System.Net.Http.HttpRequestException("No internet connection"));
         var vm = CreateViewModel();
 

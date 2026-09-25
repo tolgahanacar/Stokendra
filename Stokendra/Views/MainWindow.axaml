@@ -23,10 +23,17 @@
                 <!-- Logo -->
                 <Border Grid.Row="0" Padding="20,20,20,12">
                     <StackPanel Spacing="2">
-                        <TextBlock Text="STOKENDRA"
-                                   FontSize="20" FontWeight="Black"
-                                   Foreground="#3B82F6"
-                                   LetterSpacing="1"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="STOKENDRA"
+                                       FontSize="20" FontWeight="Black"
+                                       Foreground="#3B82F6"
+                                       LetterSpacing="1"/>
+                            <Border Background="#1E293B" CornerRadius="4" Padding="5,1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding AppVersion}"
+                                           FontSize="10" FontWeight="Bold"
+                                           Foreground="#60A5FA"/>
+                            </Border>
+                        </StackPanel>
                         <TextBlock Text="{infra:L app_management_panel}"
                                    FontSize="10"
                                    FontWeight="Medium"
@@ -212,9 +219,95 @@
             </Grid>
         </Border>
 
-        <!-- ═══ İÇERİK ═══ -->
-        <ContentControl Grid.Column="1"
-                        Content="{Binding CurrentPage}"/>
+        <!-- ═══ İÇERİK + GÜNCELLEME BANNER ═══ -->
+        <Grid Grid.Column="1" RowDefinitions="Auto,*">
+
+            <!-- ── Güncelleme Banner'ı ── -->
+            <Border Grid.Row="0"
+                    IsVisible="{Binding HasUpdate}"
+                    Background="#0D2847"
+                    BorderBrush="#1E4D8C"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,10">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+
+                    <!-- Sol: İkon + Mesaj -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Background="#1A3F6F" CornerRadius="16" Width="32" Height="32">
+                            <TextBlock Text="🚀" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Orta: Metin + Progress -->
+                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" Margin="10,0">
+
+                        <!-- Güncelleme mesajı (indirme başlamadıysa) -->
+                        <TextBlock Text="{Binding UpdateMessage}"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="#C8DEFF"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding !IsDownloading}"/>
+
+                        <!-- İndirme durumu (indirme başladıysa) -->
+                        <StackPanel IsVisible="{Binding IsDownloading}" Spacing="4">
+                            <TextBlock Text="{Binding DownloadStatusText}"
+                                       FontSize="12" Foreground="#A0C4FF"/>
+                            <ProgressBar Value="{Binding DownloadProgress}"
+                                         Minimum="0" Maximum="100"
+                                         Height="6"
+                                         Foreground="#3B82F6"
+                                         Background="#1A2D50"
+                                         CornerRadius="3"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Sağ: Aksiyonlar -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+
+                        <!-- İndirme başlamadıysa: "İndir ve Kur" + "Sonra" butonları -->
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding !IsDownloading}">
+
+                            <!-- Release notlarını görmek için -->
+                            <Button Content="{infra:L update_release_notes}"
+                                    Command="{Binding OpenReleasePageCommand}"
+                                    FontSize="11" Padding="10,5"
+                                    Background="#1A3F6F" Foreground="#A0C4FF"
+                                    BorderBrush="#2A5F9F" BorderThickness="1"
+                                    CornerRadius="4" Cursor="Hand"/>
+
+                            <!-- İndir ve Kur -->
+                            <Button Content="{infra:L update_download_install}"
+                                    Command="{Binding DownloadAndInstallUpdateCommand}"
+                                    FontSize="11" FontWeight="Bold" Padding="14,5"
+                                    Background="#2563EB" Foreground="White"
+                                    CornerRadius="4" Cursor="Hand"/>
+
+                            <!-- Kapat (X) -->
+                            <Button Content="✕"
+                                    Command="{Binding DismissUpdateCommand}"
+                                    FontSize="12" Padding="6,4"
+                                    Background="Transparent" Foreground="#5A7EB5"
+                                    CornerRadius="4" Cursor="Hand"
+                                    ToolTip.Tip="{infra:L update_dismiss_tooltip}"/>
+                        </StackPanel>
+
+                        <!-- İndirme sırasında: İptal butonu -->
+                        <Button Content="{infra:L update_cancel_download}"
+                                Command="{Binding CancelDownloadCommand}"
+                                IsVisible="{Binding IsDownloading}"
+                                FontSize="11" Padding="10,5"
+                                Background="#3D1A1A" Foreground="#FF7B7B"
+                                BorderBrush="#5C2A2A" BorderThickness="1"
+                                CornerRadius="4" Cursor="Hand"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ── Sayfa İçeriği ── -->
+            <ContentControl Grid.Row="1"
+                            Content="{Binding CurrentPage}"/>
+        </Grid>
 
     </Grid>
 </Window>

@@ -1,4 +1,4 @@
-{
+﻿{
   "app_title": "Stokendra - Stok Takip Programı",
   "app_name": "Stokendra",
   "menu": "MENÜ",
@@ -538,5 +538,15 @@
   "export_fn_cards": "Stok_Kartlari",
   "export_fn_services": "Servis_Kayitlari",
   "export_fn_reports": "Stok_Tuketim_Raporu",
-  "export_fn_notes": "Notlar"
+  "export_fn_notes": "Notlar",
+  "update_banner_msg": "Yeni sürüm {0} mevcut! (Şu anki: {1}) — Tek tıkla güncelleyin.",
+  "update_download_install": "İndir ve Kur",
+  "update_release_notes": "Değişiklikler",
+  "update_dismiss_tooltip": "Sonra hatırlat",
+  "update_cancel_download": "İptal",
+  "update_downloading": "Güncelleme indiriliyor...",
+  "update_download_complete": "İndirme tamamlandı — kurulum başlatılıyor...",
+  "update_download_cancelled": "İndirme iptal edildi.",
+  "update_download_error": "İndirme hatası: {0}",
+  "update_launch_error": "Kurulum başlatılamadı: {0}"
 }

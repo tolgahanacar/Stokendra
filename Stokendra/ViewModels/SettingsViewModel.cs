@@ -392,44 +392,45 @@ public partial class SettingsViewModel : ViewModelBase
 
         try
         {
-            var (latestTag, htmlUrl) = await _updateService.GetLatestReleaseAsync();
-            string cleanLatest = latestTag.TrimStart('v', 'V');
-
-            if (Version.TryParse(cleanLatest, out var latestVersion) && 
-                Version.TryParse(AppVersion.TrimStart('v', 'V'), out var currentVersion))
+            var updateInfo = await _updateService.CheckForUpdateAsync();
+            if (updateInfo == null)
             {
-                if (latestVersion > currentVersion)
+                throw new Exception("GitHub API did not return valid release data.");
+            }
+
+            string currentVersionStr = AppVersion.TrimStart('v', 'V');
+            if (!Version.TryParse(currentVersionStr, out var currentVersion))
+            {
+                throw new FormatException("Version string parsing failed.");
+            }
+
+            if (updateInfo.Version > currentVersion)
+            {
+                StatusMessage = string.Format(LocalizationManager.L("update_available"), updateInfo.TagName, AppVersion);
+                IsSuccess = true;
+
+                bool goToDownload = await _dialogService.ShowConfirmAsync(
+                    LocalizationManager.L("update_title"), 
+                    string.Format(LocalizationManager.L("update_available"), updateInfo.TagName, AppVersion)
+                );
+
+                if (goToDownload)
                 {
-                    StatusMessage = string.Format(LocalizationManager.L("update_available"), latestTag, AppVersion);
-                    IsSuccess = true;
-
-                    bool goToDownload = await _dialogService.ShowConfirmAsync(
-                        LocalizationManager.L("update_title"), 
-                        string.Format(LocalizationManager.L("update_available"), latestTag, AppVersion)
-                    );
-
-                    if (goToDownload)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = htmlUrl,
-                            UseShellExecute = true
-                        });
-                    }
-                }
-                else
-                {
-                    StatusMessage = string.Format(LocalizationManager.L("up_to_date"), AppVersion);
-                    IsSuccess = true;
-                    await _dialogService.ShowMessageAsync(
-                        LocalizationManager.L("info"), 
-                        string.Format(LocalizationManager.L("up_to_date"), AppVersion)
-                    );
+                        FileName = updateInfo.HtmlUrl,
+                        UseShellExecute = true
+                    });
                 }
             }
             else
             {
-                throw new FormatException("Version string parsing failed.");
+                StatusMessage = string.Format(LocalizationManager.L("up_to_date"), AppVersion);
+                IsSuccess = true;
+                await _dialogService.ShowMessageAsync(
+                    LocalizationManager.L("info"), 
+                    string.Format(LocalizationManager.L("up_to_date"), AppVersion)
+                );
             }
         }
         catch (Exception ex)
@@ -443,4 +444,5 @@ public partial class SettingsViewModel : ViewModelBase
             );
         }
     }
+
 }

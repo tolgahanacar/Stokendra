@@ -1,4 +1,4 @@
-{
+﻿{
     "app_title": "Stokendra - Stock Tracking Program",
     "app_name": "Stokendra",
     "menu": "MENU",
@@ -538,5 +538,15 @@
   "export_fn_cards": "Stock_Cards",
   "export_fn_services": "Service_Records",
   "export_fn_reports": "Stock_Consumption_Report",
-  "export_fn_notes": "Notes"
+  "export_fn_notes": "Notes",
+  "update_banner_msg": "New version {0} available! (Current: {1}) — Update with one click.",
+  "update_download_install": "Download & Install",
+  "update_release_notes": "Release Notes",
+  "update_dismiss_tooltip": "Remind me later",
+  "update_cancel_download": "Cancel",
+  "update_downloading": "Downloading update...",
+  "update_download_complete": "Download complete — launching installer...",
+  "update_download_cancelled": "Download cancelled.",
+  "update_download_error": "Download error: {0}",
+  "update_launch_error": "Failed to launch installer: {0}"
 }
