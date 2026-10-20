@@ -30,7 +30,9 @@ public partial class UsersViewModel : ViewModelBase
     {
         _userRepository = userRepository;
         _dialogService = dialogService;
-        _ = LoadUsersAsync();
+        AsyncHelper.RunSafe(
+            () => LoadUsersAsync(),
+            ex => AppLogger.LogError("Users load failed", ex));
     }
 
     [RelayCommand]
@@ -242,6 +244,8 @@ public partial class UsersViewModel : ViewModelBase
     public override void RefreshSession()
     {
         base.RefreshSession();
-        _ = LoadUsersAsync();
+        AsyncHelper.RunSafe(
+            () => LoadUsersAsync(),
+            ex => AppLogger.LogError("Users refresh failed", ex));
     }
 }

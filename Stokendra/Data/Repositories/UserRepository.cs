@@ -144,7 +144,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
             await UpgradeAsync(username, newPassword, conn, cancellationToken);
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { AppLogger.LogError("ResetPasswordAsync failed", ex); return false; }
     }
 
     public async Task<List<Models.User>> GetUsersAsync(CancellationToken cancellationToken = default)
@@ -176,7 +176,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
                 cancellationToken: cancellationToken));
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { AppLogger.LogError("AddUserAsync failed", ex); return false; }
     }
 
     public async Task<bool> DeleteUserAsync(int id, CancellationToken cancellationToken = default)
@@ -190,7 +190,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
                 cancellationToken: cancellationToken));
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { AppLogger.LogError("DeleteUserAsync failed", ex); return false; }
     }
 
     public async Task<bool> UpdateUserRoleAsync(int id, string role, CancellationToken cancellationToken = default)
@@ -204,7 +204,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
                 cancellationToken: cancellationToken));
             return true;
         }
-        catch { return false; }
+        catch (Exception ex) { AppLogger.LogError("UpdateUserRoleAsync failed", ex); return false; }
     }
 
     private static bool FixedTimeEquals(string a, string b)

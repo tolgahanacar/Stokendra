@@ -36,7 +36,9 @@ public partial class StockCardDetailViewModel : ViewModelBase
         _movements = movements;
         _departments = departments;
         _dialogService = dialogService;
-        _ = LoadDataAsync();
+        AsyncHelper.RunSafe(
+            () => LoadDataAsync(),
+            ex => AppLogger.LogError("StockCardDetail load failed", ex));
     }
 
     public async Task LoadDataAsync()

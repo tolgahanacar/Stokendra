@@ -122,7 +122,7 @@ public class UpdateService : IUpdateService
         catch
         {
             // Başarısız indirmede temp dosyayı temizle
-            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception cleanupEx) { AppLogger.LogError("UpdateService: temp file cleanup failed", cleanupEx); }
             throw;
         }
 

@@ -55,7 +55,7 @@ public class ViewLocator : IDataTemplate
                     $"  Root: {inner.GetType().Name}: {inner.Message}\n" +
                     $"  Full: {ex}\n\n");
             }
-            catch { }
+            catch (Exception logEx) { AppLogger.LogError("ViewLocator: failed to write error log", logEx); }
 
             return new TextBlock
             {

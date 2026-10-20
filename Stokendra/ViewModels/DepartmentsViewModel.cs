@@ -22,7 +22,9 @@ public partial class DepartmentsViewModel : ViewModelBase
     {
         _departments = departments;
         _dialogService = dialogService;
-        _ = LoadAsync();
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => AppLogger.LogError("Departments load failed", ex));
     }
 
     public async Task LoadAsync()

@@ -102,7 +102,9 @@ public partial class ServicesViewModel : ViewModelBase
         StartDate   = new DateTime(2024, 1, 1);
         EndDate     = DateTime.Today;
         CurrentPage = 1;
-        _ = LoadAsync();
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => { AppLogger.LogError("Services reload failed", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadAsync(); } }

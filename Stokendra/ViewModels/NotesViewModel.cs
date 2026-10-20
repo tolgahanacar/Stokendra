@@ -35,7 +35,9 @@ public partial class NotesViewModel : ViewModelBase
         _notes = notes;
         _dialogService = dialogService;
         SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
-        _ = LoadAsync();
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => { AppLogger.LogError("Notes load failed", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     partial void OnSelectedNoteChanged(Note? value) => OnPropertyChanged(nameof(HasSelection));

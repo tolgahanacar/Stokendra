@@ -31,9 +31,8 @@ StokTakip.HardTests/obj/
 ehthumbs.db
 Thumbs.db
 
-# Installer
-
-*.iss
+# Installer binaries (use GitHub Releases instead)
+Installer/*.exe
 
 #Logo & Icon
 StokTakip.png

@@ -131,7 +131,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void ClearFilters()
+    public async Task ClearFiltersAsync()
     {
         _searchCts?.Cancel();
         _cts?.Cancel();
@@ -141,7 +141,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         SelectedStockIndex = 0;
         SelectedTypeIndex  = 0;
         CurrentPage        = 1;
-        _ = LoadMovementsAsync();
+        await LoadMovementsAsync();
     }
 
     [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadMovementsAsync(); } }

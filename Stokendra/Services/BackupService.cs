@@ -92,7 +92,7 @@ public class BackupService : IBackupService
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { AppLogger.LogError("CleanOldBackups failed", ex); }
     }
 
     public async Task<string> PerformBackupAsync(string destFolder)

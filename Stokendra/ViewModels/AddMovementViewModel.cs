@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Stokendra.Data.Interfaces;
 using Stokendra.Models;
+using Stokendra.Infrastructure;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -52,7 +53,9 @@ public partial class AddMovementViewModel : ViewModelBase
             Title = LocalizationManager.L("new_movement");
         }
 
-        _ = InitAsync();
+        AsyncHelper.RunSafe(
+            () => InitAsync(),
+            ex => AppLogger.LogError("AddMovement init failed", ex));
     }
 
     private async Task InitAsync()

@@ -44,7 +44,9 @@ public partial class ReportsViewModel : ViewModelBase
         _departments = departments;
         _stockCards = stockCards;
         _dialogService = dialogService;
-        _ = InitializeAsync();
+        AsyncHelper.RunSafe(
+            () => InitializeAsync(),
+            ex => AppLogger.LogError("Reports initialize failed", ex));
     }
 
     private async Task InitializeAsync()
@@ -258,13 +260,13 @@ public partial class ReportsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void ClearFilters()
+    public async Task ClearFiltersAsync()
     {
         StartDate = DateTime.Today.AddDays(-30);
         EndDate = DateTime.Today;
         SelectedDepartment = LocalizationManager.L("all");
         SelectedCategory = LocalizationManager.L("all");
         SelectedUser = LocalizationManager.L("all");
-        _ = GenerateReport();
+        await GenerateReport();
     }
 }

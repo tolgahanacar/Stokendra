@@ -54,7 +54,9 @@ public partial class BulkMovementViewModel : ViewModelBase
         _departments = departments;
         _stockCards = stockCards;
         _dialogService = dialogService;
-        _ = InitializeAsync();
+        AsyncHelper.RunSafe(
+            () => InitializeAsync(),
+            ex => AppLogger.LogError("BulkMovement initialize failed", ex));
     }
 
     private async Task InitializeAsync()

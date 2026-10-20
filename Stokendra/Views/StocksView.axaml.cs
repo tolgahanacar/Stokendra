@@ -16,7 +16,9 @@ public partial class StocksView : UserControl
         base.OnAttachedToVisualTree(e);
         if (DataContext is StocksViewModel vm)
         {
-            _ = vm.LoadAsync();
+            Infrastructure.AsyncHelper.RunSafe(
+                () => vm.LoadAsync(),
+                ex => AppLogger.LogError("StocksView load failed", ex));
         }
     }
 }

@@ -33,7 +33,9 @@ public partial class DashboardViewModel : ViewModelBase
         _reports = reports;
         _movements = movements;
         _stockCards = stockCards;
-        _ = LoadAsync();
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => AppLogger.LogError("Dashboard load failed", ex));
     }
 
     public async Task LoadAsync()
@@ -81,7 +83,9 @@ public partial class DashboardViewModel : ViewModelBase
     public override void RefreshSession()
     {
         base.RefreshSession();
-        _ = LoadAsync();
+        AsyncHelper.RunSafe(
+            () => LoadAsync(),
+            ex => AppLogger.LogError("Dashboard refresh failed", ex));
     }
 
     private static string FormatNumber(double v)

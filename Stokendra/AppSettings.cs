@@ -98,6 +98,26 @@ public class AppSettings
     /// <returns>Kayıt başarılıysa true, hata oluşursa false döner.</returns>
     public async Task<bool> SaveAsync()
     {
-        return await Task.Run(() => Save());
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(DbPath))
+                DbPath = AppPaths.NormalizeDatabasePath(DbPath);
+
+            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
+            string tempFile = AppPaths.SettingsFilePath + ".tmp";
+            await File.WriteAllTextAsync(tempFile, json);
+
+            if (File.Exists(AppPaths.SettingsFilePath))
+                File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+            else
+                File.Move(tempFile, AppPaths.SettingsFilePath);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("AppSettings.SaveAsync error: " + ex);
+            return false;
+        }
     }
 }

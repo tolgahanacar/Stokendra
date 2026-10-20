@@ -41,7 +41,7 @@ public partial class PrintPreviewViewModel : ViewModelBase
                     if (File.Exists(tempPath))
                         File.Delete(tempPath);
                 }
-                catch { }
+                catch (Exception delEx) { AppLogger.LogError("PrintPreview: temp file cleanup failed", delEx); }
             });
             
             CloseAction?.Invoke();

@@ -64,7 +64,9 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
 
         Date = selectedMovements.FirstOrDefault()?.Date.Date ?? DateTime.Today;
 
-        _ = InitAsync();
+        AsyncHelper.RunSafe(
+            () => InitAsync(),
+            ex => AppLogger.LogError("BulkEditMovements init failed", ex));
     }
 
     private async Task InitAsync()
