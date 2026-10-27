@@ -437,8 +437,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
 
     private void ValidateCard(StockCard s, SqliteConnection conn, SqliteTransaction? trans = null)
     {
-        if (string.IsNullOrWhiteSpace(s.Name)) throw new InvalidOperationException("Stock name cannot be empty.");
-        if (string.IsNullOrWhiteSpace(s.Code)) throw new InvalidOperationException("Stock code cannot be empty.");
+        if (string.IsNullOrWhiteSpace(s.Name)) throw new InvalidOperationException(LocalizationManager.L("name_required"));
+        if (string.IsNullOrWhiteSpace(s.Code)) throw new InvalidOperationException(LocalizationManager.L("code_required"));
         
         if (s.MinStock < 0) s.MinStock = 0;
 

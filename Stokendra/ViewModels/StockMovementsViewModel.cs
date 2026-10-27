@@ -296,6 +296,22 @@ public partial class StockMovementsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("loading");
+            int? cardId = SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count ? _allCards[SelectedStockIndex - 1].Id : null;
+            string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
+
+            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate, EndDate.AddDays(1), null, type, null, null);
+            if (recordsToExport.Count == 0)
+            {
+                recordsToExport = Movements.ToList();
+            }
+
+            if (recordsToExport.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                StatusText = "";
+                return;
+            }
+
             await Task.Run(() => 
             {
                 var headers = new[] { 
@@ -308,7 +324,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                     LocalizationManager.L("delivered_to"), 
                     LocalizationManager.L("description") 
                 };
-                ExcelService.ExportToExcel(path, "StockMovements", headers, Movements, h => new object?[]
+                ExcelService.ExportToExcel(path, "StockMovements", headers, recordsToExport, h => new object?[]
                 {
                     h.Date.ToString("dd.MM.yyyy HH:mm"),
                     h.StockCardCode,
@@ -365,16 +381,13 @@ public partial class StockMovementsViewModel : ViewModelBase
                     string typeRaw = col["type"] > 0 ? (row.Cell(col["type"]).GetValue<string>() ?? "").Trim() : "";
                     string type = typeRaw.Contains("[G]") || typeRaw.ToTurkishLower().Contains("giri") || typeRaw.ToTurkishLower().Contains("giris") || typeRaw.ToTurkishLower().Contains("entry") ? "Entry" : "Exit";
 
-                    double qty = col["quantity"] > 0 ? (row.Cell(col["quantity"]).TryGetValue<double>(out double m) ? m : 1.0) : 1.0;
+                    double qty = col["quantity"] > 0 ? ExcelImportHelper.ParseCellDouble(row.Cell(col["quantity"]), 1.0) : 1.0;
                     string department = col["department"] > 0 ? (row.Cell(col["department"]).GetValue<string>() ?? "").Trim() : "";
                     string recipient = col["recipient"] > 0 ? (row.Cell(col["recipient"]).GetValue<string>() ?? "").Trim() : "";
                     
-                    DateTime date = DateTime.Now;
-                    if (col["date"] > 0)
-                    {
-                        var cellVal = row.Cell(col["date"]).GetValue<string>();
-                        if (DateTime.TryParse(cellVal, out var dt)) date = dt;
-                    }
+                    DateTime date = col["date"] > 0 
+                        ? ExcelImportHelper.ParseCellDate(row.Cell(col["date"])) 
+                        : DateTime.Now;
                     
                     string description = col["description"] > 0 ? (row.Cell(col["description"]).GetValue<string>() ?? "").Trim() : "";
 
@@ -413,6 +426,13 @@ public partial class StockMovementsViewModel : ViewModelBase
     {
         try
         {
+            var snapshot = Movements.ToList();
+            if (snapshot.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                return;
+            }
+
             StatusText = LocalizationManager.L("preparing_print");
             var sbHeaders = new System.Text.StringBuilder();
             sbHeaders.Append($"<th style='width: 8%;'>{LocalizationManager.L("code_no")}</th>");
@@ -424,7 +444,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             sbHeaders.Append($"<th style='width: 17%;'>{LocalizationManager.L("date")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
-            foreach (var h in Movements)
+            foreach (var h in snapshot)
             {
                 string clr = h.IsEntry ? "green" : "red";
                 sbBody.Append("<tr>");
@@ -444,7 +464,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                 dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", Movements.Count, 1, 1)
+                footerHtml: LocalizationManager.L("total_records_page", snapshot.Count, 1, 1)
             );
             
             var previewVm = new PrintPreviewViewModel(LocalizationManager.L("movements_report"), html);

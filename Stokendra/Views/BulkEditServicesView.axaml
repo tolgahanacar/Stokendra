@@ -19,7 +19,7 @@
             <StackPanel Spacing="3">
                 <TextBlock Text="{Binding Title}"
                            FontSize="20" FontWeight="Bold" Foreground="#E8EEFF"/>
-                <TextBlock Text="Seçilen servis kayıtlarını toplu veya tekil olarak düzenleyin"
+                <TextBlock Text="{infra:L bulk_edit_services_subtitle}"
                            FontSize="12" Foreground="#64748B"/>
             </StackPanel>
         </Border>

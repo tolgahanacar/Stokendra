@@ -108,7 +108,29 @@
                             </Grid>
                         </Border>
 
-                        <!-- 💾 Backup Guide -->
+                        <!-- 📝 Notes Guide -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="📝" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_user_notes_title}" FontSize="16" FontWeight="Bold" Foreground="#A78BFA"/>
+                                    <TextBlock Text="{infra:L guide_user_notes_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 👥 User Management & Roles Guide -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="👥" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_user_users_title}" FontSize="16" FontWeight="Bold" Foreground="#38BDF8"/>
+                                    <TextBlock Text="{infra:L guide_user_users_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 💾 Backup & DB Health Guide -->
                         <Border Classes="Card">
                             <Grid ColumnDefinitions="48,*">
                                 <TextBlock Grid.Column="0" Text="💾" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
@@ -119,13 +141,24 @@
                             </Grid>
                         </Border>
 
-                        <!-- 📈 Reporting & Import Guide -->
+                        <!-- 📈 Reporting & Analytics Guide -->
                         <Border Classes="Card">
                             <Grid ColumnDefinitions="48,*">
                                 <TextBlock Grid.Column="0" Text="📈" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
                                 <StackPanel Grid.Column="1" Spacing="6">
                                     <TextBlock Text="{infra:L guide_user_reports_title}" FontSize="16" FontWeight="Bold" Foreground="#E67E22"/>
                                     <TextBlock Text="{infra:L guide_user_reports_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- ⚡ Live Auto Updates Guide -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="⚡" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_user_updates_title}" FontSize="16" FontWeight="Bold" Foreground="#10B981"/>
+                                    <TextBlock Text="{infra:L guide_user_updates_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>
                         </Border>
@@ -190,6 +223,17 @@
                                 <StackPanel Grid.Column="1" Spacing="6">
                                     <TextBlock Text="{infra:L guide_dev_db_title}" FontSize="16" FontWeight="Bold" Foreground="#9B59B6"/>
                                     <TextBlock Text="{infra:L guide_dev_db_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- 📊 ExcelImportHelper -->
+                        <Border Classes="Card">
+                            <Grid ColumnDefinitions="48,*">
+                                <TextBlock Grid.Column="0" Text="📊" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <TextBlock Text="{infra:L guide_dev_excel_title}" FontSize="16" FontWeight="Bold" Foreground="#38BDF8"/>
+                                    <TextBlock Text="{infra:L guide_dev_excel_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

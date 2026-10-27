@@ -69,4 +69,67 @@ public static class ExcelImportHelper
 
         return result;
     }
+
+    /// <summary>
+    /// Safely extracts a DateTime from an Excel cell (handles OLE dates, DateTime types, and strings).
+    /// </summary>
+    public static DateTime ParseCellDate(IXLCell cell, DateTime? defaultDate = null)
+    {
+        if (cell.TryGetValue<DateTime>(out var dt))
+            return dt;
+
+        var str = cell.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(str))
+        {
+            if (DateTime.TryParse(str, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.DateTimeStyles.None, out var dtParsed))
+                return dtParsed;
+            if (DateTime.TryParse(str, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dtParsed))
+                return dtParsed;
+        }
+
+        return defaultDate ?? DateTime.Now;
+    }
+
+    /// <summary>
+    /// Safely extracts a double from an Excel cell.
+    /// </summary>
+    public static double ParseCellDouble(IXLCell cell, double defaultValue = 0.0)
+    {
+        if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var val))
+            return val;
+
+        var str = cell.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(str))
+        {
+            str = str.Trim();
+            if (double.TryParse(str.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var iVal))
+                return iVal;
+            if (double.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out var cVal))
+                return cVal;
+        }
+
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Safely extracts an int from an Excel cell.
+    /// </summary>
+    public static int ParseCellInt(IXLCell cell, int defaultValue = 0)
+    {
+        if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var dVal))
+            return (int)Math.Round(dVal);
+
+        var str = cell.GetValue<string>();
+        if (!string.IsNullOrWhiteSpace(str))
+        {
+            str = str.Trim();
+            if (int.TryParse(str, out var parsed))
+                return parsed;
+            if (double.TryParse(str.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dParsed))
+                return (int)Math.Round(dParsed);
+        }
+
+        return defaultValue;
+    }
 }
+

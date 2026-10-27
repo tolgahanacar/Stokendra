@@ -244,6 +244,20 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("svc_excel_saving");
+            var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var allRecords = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
+            if (allRecords.Count == 0)
+            {
+                allRecords = Records.ToList();
+            }
+
+            if (allRecords.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                StatusText = "";
+                return;
+            }
+
             await Task.Run(() => {
                 var headers = new[] { 
                     LocalizationManager.L("date"), 
@@ -253,7 +267,7 @@ public partial class ServicesViewModel : ViewModelBase
                     LocalizationManager.L("problem"), 
                     LocalizationManager.L("result") 
                 };
-                Infrastructure.ExcelService.ExportToExcel(path, LocalizationManager.L("services"), headers, Records, s => new object?[] {
+                Infrastructure.ExcelService.ExportToExcel(path, LocalizationManager.L("services"), headers, allRecords, s => new object?[] {
                     s.ServiceDate.ToString("dd.MM.yyyy"), s.DeviceName, s.SerialNumber, s.Company, s.Issue, s.Result
                 });
             });
@@ -298,12 +312,9 @@ public partial class ServicesViewModel : ViewModelBase
                     string cihaz = col["device"] > 0 ? (row.Cell(col["device"]).GetValue<string>() ?? "").Trim() : "";
                     if (string.IsNullOrEmpty(cihaz)) return null;
 
-                    DateTime tarih = DateTime.Now;
-                    if (col["date"] > 0)
-                    {
-                        var cellVal = row.Cell(col["date"]).GetValue<string>();
-                        if (DateTime.TryParse(cellVal, out var dt)) tarih = dt;
-                    }
+                    DateTime tarih = col["date"] > 0 
+                        ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellDate(row.Cell(col["date"])) 
+                        : DateTime.Now;
 
                     string seri = col["serial"] > 0 ? (row.Cell(col["serial"]).GetValue<string>() ?? "").Trim() : "";
                     string firma = col["company"] > 0 ? (row.Cell(col["company"]).GetValue<string>() ?? "").Trim() : "";
@@ -336,7 +347,19 @@ public partial class ServicesViewModel : ViewModelBase
     {
         try
         {
-            if (Records.Count == 0) return;
+            var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var allRecords = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
+            if (allRecords.Count == 0)
+            {
+                allRecords = Records.ToList();
+            }
+
+            if (allRecords.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                return;
+            }
+
             StatusText = LocalizationManager.L("svc_print_preparing");
             var sbHeaders = new System.Text.StringBuilder();
             sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("maintenance_date")}</th>");
@@ -347,7 +370,7 @@ public partial class ServicesViewModel : ViewModelBase
             sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("result")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
-            foreach (var r in Records)
+            foreach (var r in allRecords)
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
@@ -365,7 +388,7 @@ public partial class ServicesViewModel : ViewModelBase
                 dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", Records.Count, 1, 1)
+                footerHtml: LocalizationManager.L("total_records_page", allRecords.Count, 1, 1)
             );
             
             var previewVm = new PrintPreviewViewModel(LocalizationManager.L("services"), html);

@@ -21,8 +21,7 @@ public partial class GuideViewModel : ViewModelBase
         _settings = settings;
         _database = database;
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        AppVersion = version != null ? $"v{version.Major}.{version.Minor}.{version.Build}" : "v1.0.0";
+        AppVersion = AppInfo.VersionString;
 
         DatabasePath = _database.DatabasePath;
         SettingsPath = AppPaths.SettingsFilePath;

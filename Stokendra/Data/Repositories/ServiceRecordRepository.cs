@@ -45,7 +45,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
 
     public async Task AddAsync(ServiceRecord record, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(record.DeviceName)) throw new ArgumentException("Device name cannot be empty.");
+        if (string.IsNullOrWhiteSpace(record.DeviceName)) throw new ArgumentException(LocalizationManager.L("device_name_required"));
         
         using var conn = ConnectionFactory.CreateConnection();
         var sql = """

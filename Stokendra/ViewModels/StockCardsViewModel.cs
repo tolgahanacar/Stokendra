@@ -282,7 +282,7 @@ public partial class StockCardsViewModel : ViewModelBase
                         Name = name,
                         Category = col["category"] > 0 ? (row.Cell(col["category"]).GetValue<string>() ?? "").Trim() : "",
                         Unit = col["unit"] > 0 ? (row.Cell(col["unit"]).GetValue<string>() ?? "Adet").Trim() : "Adet",
-                        MinStock = col["minStock"] > 0 ? (row.Cell(col["minStock"]).TryGetValue<int>(out int valMin) ? valMin : 0) : 0,
+                        MinStock = col["minStock"] > 0 ? ExcelImportHelper.ParseCellInt(row.Cell(col["minStock"]), 0) : 0,
                         CardType = "Child",
                         Description = col["description"] > 0 ? (row.Cell(col["description"]).GetValue<string>() ?? "").Trim() : ""
                     };
@@ -327,6 +327,13 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
+        var snapshot = Cards.ToList();
+        if (snapshot.Count == 0)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+            return;
+        }
+
         string baseName = LocalizationManager.L("export_fn_cards");
         string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
         string? path = await _dialogService.SaveFileAsync(LocalizationManager.L("export_excel"), fileName, "Excel File (*.xlsx)|*.xlsx");
@@ -346,7 +353,7 @@ public partial class StockCardsViewModel : ViewModelBase
                     LocalizationManager.L("min_stock"), 
                     LocalizationManager.L("unit") 
                 };
-                ExcelService.ExportToExcel(path, "StockCards", headers, Cards, k => new object?[] {
+                ExcelService.ExportToExcel(path, "StockCards", headers, snapshot, k => new object?[] {
                     k.Code, k.Name, k.CardTypeDisplay, k.ParentName, k.Category, k.CurrentStock, k.MinStock, k.Unit
                 });
             });
@@ -363,7 +370,8 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task PrintAsync()
     {
-        if (Cards.Count == 0)
+        var snapshot = Cards.ToList();
+        if (snapshot.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -382,7 +390,7 @@ public partial class StockCardsViewModel : ViewModelBase
             sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("min_stock")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
-            foreach (var c in Cards)
+            foreach (var c in snapshot)
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td class='num'>{c.Code}</td>");
@@ -400,7 +408,7 @@ public partial class StockCardsViewModel : ViewModelBase
                 dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", Cards.Count, 1, 1)
+                footerHtml: LocalizationManager.L("total_records_page", snapshot.Count, 1, 1)
             );
             
             var previewVm = new PrintPreviewViewModel(LocalizationManager.L("stock_cards"), html);

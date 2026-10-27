@@ -90,13 +90,13 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             foreach(var m in list) 
             {
                 if (!balances.TryGetValue(m.StockCardId, out var info))
-                    throw new InvalidOperationException($"Stock card not found: ID {m.StockCardId}");
+                    throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
                 if (info.Type == "Parent")
-                    throw new InvalidOperationException($"'{info.Name}' is a parent card, cannot add movements.");
+                    throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
 
                 if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity)
-                    throw new InvalidOperationException($"Insufficient stock for '{info.Name}'. Available: {info.Balance}, Requested: {m.Quantity}");
+                    throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 conn.Execute("""
                     INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description) 
@@ -140,13 +140,13 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             foreach(var m in list) 
             {
                 if (!balances.TryGetValue(m.StockCardId, out var info))
-                    throw new InvalidOperationException($"Stock card not found: ID {m.StockCardId}");
+                    throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
                 if (info.Type == "Parent")
-                    throw new InvalidOperationException($"'{info.Name}' is a parent card, cannot add movements.");
+                    throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
 
                 if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity)
-                    throw new InvalidOperationException($"Insufficient stock for '{info.Name}'. Available: {info.Balance}, Requested: {m.Quantity}");
+                    throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 await conn.ExecuteAsync(new CommandDefinition("""
                     INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description) 
@@ -548,16 +548,16 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     private void ValidateMovement(StockMovement m, SqliteConnection conn, SqliteTransaction? trans = null)
     {
         if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000) 
-            throw new InvalidOperationException("Invalid quantity value.");
+            throw new InvalidOperationException(LocalizationManager.L("quantity_invalid"));
         
         if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos") 
-            throw new InvalidOperationException("Invalid movement type.");
+            throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
         
-        if (m.Quantity < 0) throw new InvalidOperationException("Quantity cannot be negative.");
-        if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException("Quantity cannot be zero.");
+        if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
+        if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
         
-        if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException("Type field cannot be empty.");
-        if (m.StockCardId <= 0) throw new InvalidOperationException("Invalid stock card ID.");
+        if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException(LocalizationManager.L("type_field_required"));
+        if (m.StockCardId <= 0) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
         var row = conn.QueryFirstOrDefault(
             "SELECT CardType, (SELECT COALESCE(SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END), 0) FROM StockMovements WHERE StockCardId=s.Id) as CurrentStock FROM StockCards s WHERE Id=@Id",
@@ -566,14 +566,14 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         if (row != null)
         {
-            if (row.CardType == "Parent") throw new InvalidOperationException("Cannot add movements to parent cards.");
+            if (row.CardType == "Parent") throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
             if (m.TypeEnum == MovementType.Exit)
             {
                 double current = Convert.ToDouble(row.CurrentStock);
-                if (current < m.Quantity) throw new InvalidOperationException("Insufficient stock.");
+                if (current < m.Quantity) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
             }
         }
-        else throw new InvalidOperationException("Stock card not found.");
+        else throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
     }
 
     private void ValidateDeletion(IEnumerable<int> ids, SqliteConnection conn, SqliteTransaction? trans = null)
@@ -593,7 +593,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 transaction: trans);
 
             double balance = result ?? 0;
-            if (balance < 0) throw new InvalidOperationException("Deletion invalid: would result in negative stock.");
+            if (balance < 0) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
         }
     }
 

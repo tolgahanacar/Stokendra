@@ -185,6 +185,13 @@ public partial class NotesViewModel : ViewModelBase
             
         if (string.IsNullOrEmpty(path)) return;
 
+        var snapshot = Notes.ToList();
+        if (snapshot.Count == 0)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+            return;
+        }
+
         IsLoading = true;
         try
         {
@@ -200,7 +207,7 @@ public partial class NotesViewModel : ViewModelBase
                     path, 
                     LocalizationManager.L("notes"), 
                     headers, 
-                    Notes, 
+                    snapshot, 
                     n => new object?[] { 
                         n.Id, 
                         n.Title, 

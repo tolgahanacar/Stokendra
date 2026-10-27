@@ -34,7 +34,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _activeMenu = "dashboard";
     [ObservableProperty] private string _currentUser = "";
     public string CurrentRole => AppServices.Current.Session?.Role == "admin" ? LocalizationManager.L("role_admin") : LocalizationManager.L("role_user");
-    public string AppVersion => $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "7.3.9"}";
+    public string AppVersion => AppInfo.VersionString;
 
     // ── Güncelleme Banner Durumu ──────────────────────────────────────────
     [ObservableProperty] 
@@ -184,10 +184,8 @@ public partial class MainViewModel : ViewModelBase
             var updateInfo = await _updateService.CheckForUpdateAsync();
             if (updateInfo == null) return;
 
-            string currentVersionStr = System.Reflection.Assembly.GetExecutingAssembly()
-                .GetName().Version?.ToString(3) ?? "0.0.0";
-
-            if (!Version.TryParse(currentVersionStr, out var currentVersion)) return;
+            var currentVersion = AppInfo.Version;
+            string currentVersionStr = AppInfo.RawVersion;
 
             if (updateInfo.Version > currentVersion)
             {
@@ -199,7 +197,7 @@ public partial class MainViewModel : ViewModelBase
                     UpdateMessage = string.Format(
                         LocalizationManager.L("update_banner_msg"),
                         updateInfo.TagName,
-                        $"v{currentVersionStr}");
+                        AppInfo.VersionString);
                     UpdateAvailable = true;
                     UpdateDismissed = false;
                     OnPropertyChanged(nameof(HasUpdate));

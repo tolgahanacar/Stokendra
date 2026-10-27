@@ -458,7 +458,7 @@ public sealed partial class Database
             var table = reader.GetString(0);
             var rowid = reader.GetInt64(1);
             var targetTable = reader.GetString(2);
-            throw new InvalidOperationException($"Foreign key constraint violation in table '{table}' at row {rowid} referencing '{targetTable}'");
+            throw new InvalidOperationException(L("db_fk_violation", table, rowid, targetTable));
         }
     }
 

@@ -61,4 +61,48 @@ public class LocalizationTests
         // Assert
         Assert.Equal("15 kayıt bulundu.", formatted);
     }
+
+    [Fact]
+    public void Test_Both_Languages_Have_Identical_Keys_And_No_Empty_Values()
+    {
+        // Find Resources/lang_tr.json and Resources/lang_en.json
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string trPath = Path.Combine(baseDir, "Resources", "lang_tr.json");
+        string enPath = Path.Combine(baseDir, "Resources", "lang_en.json");
+
+        if (!File.Exists(trPath))
+        {
+            // Fallback to project root if running in dev environment
+            trPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "Stokendra", "Resources", "lang_tr.json"));
+            enPath = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "Stokendra", "Resources", "lang_en.json"));
+        }
+
+        Assert.True(File.Exists(trPath), $"lang_tr.json not found at {trPath}");
+        Assert.True(File.Exists(enPath), $"lang_en.json not found at {enPath}");
+
+        var trDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(trPath))!;
+        var enDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(enPath))!;
+
+        Assert.NotEmpty(trDict);
+        Assert.NotEmpty(enDict);
+
+        var trKeys = new HashSet<string>(trDict.Keys, StringComparer.OrdinalIgnoreCase);
+        var enKeys = new HashSet<string>(enDict.Keys, StringComparer.OrdinalIgnoreCase);
+
+        var missingInEn = trKeys.Except(enKeys).ToList();
+        var missingInTr = enKeys.Except(trKeys).ToList();
+
+        Assert.True(missingInEn.Count == 0, $"Keys in TR but missing in EN: {string.Join(", ", missingInEn)}");
+        Assert.True(missingInTr.Count == 0, $"Keys in EN but missing in TR: {string.Join(", ", missingInTr)}");
+
+        foreach (var (k, v) in trDict)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(v), $"TR key '{k}' has empty or whitespace value.");
+        }
+
+        foreach (var (k, v) in enDict)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(v), $"EN key '{k}' has empty or whitespace value.");
+        }
+    }
 }

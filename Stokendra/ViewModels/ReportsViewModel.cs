@@ -165,6 +165,13 @@ public partial class ReportsViewModel : ViewModelBase
             return;
         }
 
+        var snapshot = ReportRows.ToList();
+        if (snapshot.Count == 0)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+            return;
+        }
+
         string baseName = LocalizationManager.L("export_fn_reports");
         string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
         var path = await _dialogService.SaveFileAsync(LocalizationManager.L("save_report_title"), fileName, LocalizationManager.L("svc_excel_filter"));
@@ -172,24 +179,29 @@ public partial class ReportsViewModel : ViewModelBase
 
         try
         {
-            string[] headers = { 
-                LocalizationManager.L("date"), 
-                LocalizationManager.L("stock_card_header"), 
-                LocalizationManager.L("quantity"), 
-                LocalizationManager.L("delivered_to_header"), 
-                LocalizationManager.L("department"), 
-                LocalizationManager.L("description") 
-            };
-            ExcelService.ExportToExcel(path, "TuketimRaporu", headers, ReportRows, r => new object?[]
+            StatusText = LocalizationManager.L("loading");
+            await Task.Run(() => 
             {
-                r.Date.ToString("dd.MM.yyyy HH:mm"),
-                r.StockCardName,
-                r.Quantity,
-                r.Recipient,
-                r.Department,
-                r.Description
+                string[] headers = { 
+                    LocalizationManager.L("date"), 
+                    LocalizationManager.L("stock_card_header"), 
+                    LocalizationManager.L("quantity"), 
+                    LocalizationManager.L("delivered_to_header"), 
+                    LocalizationManager.L("department"), 
+                    LocalizationManager.L("description") 
+                };
+                ExcelService.ExportToExcel(path, "TuketimRaporu", headers, snapshot, r => new object?[]
+                {
+                    r.Date.ToString("dd.MM.yyyy HH:mm"),
+                    r.StockCardName,
+                    r.Quantity,
+                    r.Recipient,
+                    r.Department,
+                    r.Description
+                });
             });
 
+            StatusText = LocalizationManager.L("export_success", path);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("success"), LocalizationManager.L("report_saved_success"));
         }
         catch (Exception ex)

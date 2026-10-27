@@ -110,7 +110,8 @@ public partial class StocksViewModel : ViewModelBase
     [RelayCommand]
     public async Task Export()
     {
-        if (Stocks.Count == 0)
+        var snapshot = Stocks.ToList();
+        if (snapshot.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -123,24 +124,29 @@ public partial class StocksViewModel : ViewModelBase
 
         try
         {
-            string[] headers = { 
-                LocalizationManager.L("code_no"), 
-                LocalizationManager.L("stock_name"), 
-                LocalizationManager.L("category"), 
-                LocalizationManager.L("current_stock"), 
-                LocalizationManager.L("min_stock"), 
-                LocalizationManager.L("unit") 
-            };
-            ExcelService.ExportToExcel(path, "StockStatus", headers, Stocks, s => new object?[]
+            StatusText = LocalizationManager.L("loading");
+            await Task.Run(() => 
             {
-                s.Code,
-                s.Name,
-                s.Category,
-                s.CurrentStock,
-                s.MinStock,
-                s.Unit
+                string[] headers = { 
+                    LocalizationManager.L("code_no"), 
+                    LocalizationManager.L("stock_name"), 
+                    LocalizationManager.L("category"), 
+                    LocalizationManager.L("current_stock"), 
+                    LocalizationManager.L("min_stock"), 
+                    LocalizationManager.L("unit") 
+                };
+                ExcelService.ExportToExcel(path, "StockStatus", headers, snapshot, s => new object?[]
+                {
+                    s.Code,
+                    s.Name,
+                    s.Category,
+                    s.CurrentStock,
+                    s.MinStock,
+                    s.Unit
+                });
             });
 
+            StatusText = LocalizationManager.L("export_success", path);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("export_success", path));
         }
         catch (Exception ex)
@@ -153,7 +159,8 @@ public partial class StocksViewModel : ViewModelBase
     [RelayCommand]
     public async Task Print()
     {
-        if (Stocks.Count == 0)
+        var snapshot = Stocks.ToList();
+        if (snapshot.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -163,8 +170,8 @@ public partial class StocksViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("preparing_print");
             
-            double grandTotalIn = Stocks.Sum(s => s.TotalEntry);
-            double grandTotalOut = Stocks.Sum(s => s.TotalExit);
+            double grandTotalIn = snapshot.Sum(s => s.TotalEntry);
+            double grandTotalOut = snapshot.Sum(s => s.TotalExit);
             double grandTotalResult = grandTotalIn - grandTotalOut;
 
             var sbHeaders = new System.Text.StringBuilder();
@@ -175,7 +182,7 @@ public partial class StocksViewModel : ViewModelBase
             sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
             
             var sbBody = new System.Text.StringBuilder();
-            foreach (var s in Stocks)
+            foreach (var s in snapshot)
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td class='num'>{s.Code}</td>");

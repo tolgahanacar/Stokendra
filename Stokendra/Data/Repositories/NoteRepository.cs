@@ -27,7 +27,7 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
 
     public async Task AddAsync(Note note, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(note.Title)) throw new InvalidOperationException("Title cannot be empty.");
+        if (string.IsNullOrWhiteSpace(note.Title)) throw new InvalidOperationException(LocalizationManager.L("title_required"));
         // note.CreatedAt is preserved from note if set, otherwise uses its default initialized value.
         note.UpdatedAt = DateTime.Now;
 
