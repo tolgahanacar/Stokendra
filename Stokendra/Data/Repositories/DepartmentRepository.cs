@@ -7,13 +7,14 @@ using System.Threading.Tasks;
 
 namespace Stokendra.Data.Repositories;
 
-public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory) : IDepartmentRepository
+public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
+    : RepositoryBase(connectionFactory), IDepartmentRepository
 {
     public async Task<List<string>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        using var conn = connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         var result = await conn.QueryAsync<string>(new CommandDefinition(
-            "SELECT Name FROM Departments ORDER BY Name", 
+            "SELECT Name FROM Departments ORDER BY Name",
             cancellationToken: cancellationToken));
         return result.ToList();
     }
@@ -21,19 +22,20 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
     public async Task AddAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
-        
-        using var conn = connectionFactory.CreateConnection();
+
+        using var conn = ConnectionFactory.CreateConnection();
         await conn.ExecuteAsync(new CommandDefinition(
-            "INSERT INTO Departments (Name) VALUES (@Name)", 
-            new { Name = name.Trim() }, 
+            "INSERT INTO Departments (Name) VALUES (@Name)",
+            new { Name = name.Trim() },
             cancellationToken: cancellationToken));
+        LogAudit("Insert", "Departments", 0, name.Trim());
     }
 
     public async Task DeleteAsync(string name, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(name)) return;
 
-        using var conn = connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         var inUse = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
             "SELECT EXISTS(SELECT 1 FROM StockMovements WHERE Department = @Name)",
             new { Name = name.Trim() },
@@ -44,16 +46,17 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
         }
 
         await conn.ExecuteAsync(new CommandDefinition(
-            "DELETE FROM Departments WHERE Name = @Name", 
-            new { Name = name.Trim() }, 
+            "DELETE FROM Departments WHERE Name = @Name",
+            new { Name = name.Trim() },
             cancellationToken: cancellationToken));
+        LogAudit("Delete", "Departments", 0, name.Trim());
     }
 
     public async Task UpdateAsync(string oldName, string newName, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(oldName) || string.IsNullOrWhiteSpace(newName)) return;
 
-        using var conn = connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try
         {
@@ -72,6 +75,7 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
                 cancellationToken: cancellationToken));
 
             await trans.CommitAsync(cancellationToken);
+            LogAudit("Update", "Departments", 0, $"{oldName.Trim()} -> {newName.Trim()}");
         }
         catch
         {

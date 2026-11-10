@@ -37,7 +37,7 @@ public partial class MainViewModel : ViewModelBase
     public string AppVersion => AppInfo.VersionString;
 
     // ── Güncelleme Banner Durumu ──────────────────────────────────────────
-    [ObservableProperty] 
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]
     private bool _updateAvailable;
 
@@ -47,7 +47,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private int _downloadProgress;
     [ObservableProperty] private string _downloadStatusText = "";
     [ObservableProperty] private bool _downloadComplete;
-    [ObservableProperty] private bool _updateDismissed;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    private bool _updateDismissed;
 
     /// <summary>Banner'ın görünür olup olmayacağı.</summary>
     public bool HasUpdate => UpdateAvailable && !UpdateDismissed;
@@ -87,7 +89,7 @@ public partial class MainViewModel : ViewModelBase
 
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         NavigateToDashboard();
-        
+
         // Günlük yedekleme kontrolü (Arka planda)
         AsyncHelper.RunSafe(
             () => _backupService.CheckAutoBackupAsync(),
@@ -99,24 +101,24 @@ public partial class MainViewModel : ViewModelBase
             ex => AppLogger.LogError("Silent update check failed.", ex));
     }
 
-    [RelayCommand] public void NavigateToDashboard()  { CurrentPage = _dashboard;  ActiveMenu = "dashboard";  }
-    [RelayCommand] public void NavigateToStockCards()  { CurrentPage = _stockCards; ActiveMenu = "stockcards"; }
-    [RelayCommand] public void NavigateToMovements()   { CurrentPage = _movements;  ActiveMenu = "movements";  }
-    [RelayCommand] public void NavigateToServices()    { CurrentPage = _services;   ActiveMenu = "services";   }
-    [RelayCommand] public void NavigateToNotes()       { CurrentPage = _notes;      ActiveMenu = "notes";      }
+    [RelayCommand] public void NavigateToDashboard()  { CurrentPage = _dashboard;  ActiveMenu = "dashboard";  AsyncHelper.RunSafe(() => _dashboard.LoadAsync(), ex => AppLogger.LogError("Dashboard nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToStockCards()  { CurrentPage = _stockCards; ActiveMenu = "stockcards"; AsyncHelper.RunSafe(() => _stockCards.LoadAsync(), ex => AppLogger.LogError("StockCards nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToMovements()   { CurrentPage = _movements;  ActiveMenu = "movements";  AsyncHelper.RunSafe(() => _movements.LoadMovementsAsync(), ex => AppLogger.LogError("Movements nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToServices()    { CurrentPage = _services;   ActiveMenu = "services";   AsyncHelper.RunSafe(() => _services.LoadAsync(), ex => AppLogger.LogError("Services nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToNotes()       { CurrentPage = _notes;      ActiveMenu = "notes";      AsyncHelper.RunSafe(() => _notes.LoadAsync(), ex => AppLogger.LogError("Notes nav refresh failed", ex)); }
     [RelayCommand] public void NavigateToSettings()    { CurrentPage = _settings;   ActiveMenu = "settings";   }
-    [RelayCommand] public void NavigateToStocks()      { CurrentPage = _stocks;     ActiveMenu = "stocks";     }
-    [RelayCommand] public void NavigateToDepartments() { CurrentPage = _departments; ActiveMenu = "departments"; }
+    [RelayCommand] public void NavigateToStocks()      { CurrentPage = _stocks;     ActiveMenu = "stocks";     AsyncHelper.RunSafe(() => _stocks.LoadAsync(), ex => AppLogger.LogError("Stocks nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToDepartments() { CurrentPage = _departments; ActiveMenu = "departments"; AsyncHelper.RunSafe(() => _departments.LoadAsync(), ex => AppLogger.LogError("Departments nav refresh failed", ex)); }
     [RelayCommand] public void NavigateToReports()     { CurrentPage = _reports;     ActiveMenu = "reports";     }
     [RelayCommand] public void NavigateToGuide()       { CurrentPage = _guide;       ActiveMenu = "guide";       }
-    [RelayCommand] public void NavigateToUsers()       { CurrentPage = _users;       ActiveMenu = "users";       }
+    [RelayCommand] public void NavigateToUsers()       { CurrentPage = _users;       ActiveMenu = "users";       AsyncHelper.RunSafe(() => _users.LoadUsersAsync(), ex => AppLogger.LogError("Users nav refresh failed", ex)); }
 
-    public new void RefreshSession()
+    public override void RefreshSession()
     {
         CurrentUser = AppServices.Current.Session?.Username ?? "admin";
         OnPropertyChanged(nameof(CurrentUser));
         OnPropertyChanged(nameof(CurrentRole));
-        
+
         _dashboard.RefreshSession();
         _stockCards.RefreshSession();
         _movements.RefreshSession();

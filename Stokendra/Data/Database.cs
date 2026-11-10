@@ -144,7 +144,7 @@ public sealed partial class Database : IDisposable
         ValidateDatabase(connection, null);
 
         using var optimize = connection.CreateCommand();
-        optimize.CommandText = "PRAGMA optimize;";
+        optimize.CommandText = "PRAGMA journal_size_limit = 67108864; PRAGMA optimize;";
         optimize.ExecuteNonQuery();
     }
 }

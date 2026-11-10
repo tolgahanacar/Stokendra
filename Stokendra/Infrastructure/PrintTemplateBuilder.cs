@@ -1,10 +1,16 @@
 using System;
+using System.Net;
 using System.Text;
 
 namespace Stokendra.Infrastructure;
 
 public static class PrintTemplateBuilder
 {
+    /// <summary>
+    /// Safely encodes a string for HTML rendering to prevent XSS / HTML injection.
+    /// </summary>
+    public static string Escape(string? input) => WebUtility.HtmlEncode(input ?? "");
+
     public static string BuildReportHtml(
         string title, 
         string headerTitle, 
@@ -15,7 +21,7 @@ public static class PrintTemplateBuilder
         string additionalSummaryHtml = "")
     {
         var sb = new StringBuilder();
-        sb.Append($"<html><head><meta charset='utf-8'><title>{title}</title>");
+        sb.Append($"<html><head><meta charset='utf-8'><title>{Escape(title)}</title>");
         sb.Append("<style>");
         sb.Append("@page { size: portrait; margin: 0.5cm; } ");
         sb.Append("* { box-sizing: border-box; } ");
@@ -47,7 +53,7 @@ public static class PrintTemplateBuilder
         sb.Append("</head><body>");
         
         sb.Append("<div class='top-header'>");
-        sb.Append($"<h1>{headerTitle}</h1>");
+        sb.Append($"<h1>{Escape(headerTitle)}</h1>");
         sb.Append($"<div class='date-box'>{dateInfo}</div>");
         sb.Append("</div>");
 

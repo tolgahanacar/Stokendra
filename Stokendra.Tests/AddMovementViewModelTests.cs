@@ -187,4 +187,31 @@ public class AddMovementViewModelTests
         Assert.Equal(5, vm.Result.Quantity);
         Assert.Empty(vm.ErrorMessage);
     }
+
+    [Fact]
+    public async Task Test_Save_Fails_WhenQuantityIsZeroOrNegative()
+    {
+        // Arrange
+        var cards = new List<StockCard>
+        {
+            new StockCard { Id = 1, Code = "001", Name = "Item 1", CardType = "Child", CurrentStock = 10 }
+        };
+        var depts = new List<string> { "IT" };
+        var vm = await CreateViewModelAsync(cards, depts);
+
+        vm.SelectedCard = vm.AllCards.First();
+        vm.SelectedTypeIndex = 0; // Entry
+        vm.Quantity = 0;
+
+        bool closeCalled = false;
+        vm.CloseAction = (result) => closeCalled = result;
+
+        // Act
+        vm.SaveCommand.Execute(null);
+
+        // Assert
+        Assert.False(closeCalled);
+        Assert.Null(vm.Result);
+        Assert.Equal(LocalizationManager.L("quantity_cannot_be_zero"), vm.ErrorMessage);
+    }
 }

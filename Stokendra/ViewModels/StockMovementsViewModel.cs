@@ -100,7 +100,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            int? cardId = SelectedStockIndex > 0 ? _allCards[SelectedStockIndex - 1].Id : null;
+            int? cardId = (SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count) ? _allCards[SelectedStockIndex - 1].Id : null;
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
             string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
@@ -448,12 +448,12 @@ public partial class StockMovementsViewModel : ViewModelBase
             {
                 string clr = h.IsEntry ? "green" : "red";
                 sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{h.StockCardCode}</td>");
-                sbBody.Append($"<td>{h.StockCardName}</td>");
+                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(h.StockCardCode)}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.StockCardName)}</td>");
                 sbBody.Append($"<td class='num bold {clr}'>{h.Quantity}</td>");
-                sbBody.Append($"<td class='num bold {clr}'>{h.DisplayType}</td>");
-                sbBody.Append($"<td>{h.Department}</td>");
-                sbBody.Append($"<td>{h.Recipient}</td>");
+                sbBody.Append($"<td class='num bold {clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
                 sbBody.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
                 sbBody.Append("</tr>");
             }

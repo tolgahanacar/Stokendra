@@ -110,12 +110,12 @@ public partial class StockCardDetailViewModel : ViewModelBase
             sb.Append("</head><body>");
 
             sb.Append("<div class='header'>");
-            sb.Append($"<h1>{Card.Name}</h1>");
-            sb.Append($"<p>{LocalizationManager.L("code_no")}: <b>{Card.Code}</b> | {LocalizationManager.L("category")}: <b>{Card.Category}</b> | {LocalizationManager.L("date")}: {DateTime.Now:dd.MM.yyyy HH:mm}</p>");
+            sb.Append($"<h1>{PrintTemplateBuilder.Escape(Card.Name)}</h1>");
+            sb.Append($"<p>{LocalizationManager.L("code_no")}: <b>{PrintTemplateBuilder.Escape(Card.Code)}</b> | {LocalizationManager.L("category")}: <b>{PrintTemplateBuilder.Escape(Card.Category)}</b> | {LocalizationManager.L("date")}: {DateTime.Now:dd.MM.yyyy HH:mm}</p>");
             sb.Append("</div>");
 
             sb.Append("<div class='info-grid'>");
-            sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("current_stock")}:</b><br/><span style='font-size: 24px;'>{Card.CurrentStock} {Card.Unit}</span></div>");
+            sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("current_stock")}:</b><br/><span style='font-size: 24px;'>{Card.CurrentStock} {PrintTemplateBuilder.Escape(Card.Unit)}</span></div>");
             sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("last_30_days")}:</b><br/><span class='green'>▲ {LocalizationManager.L("entry")}: {TotalEntryLast30}</span><br/><span class='red'>▼ {LocalizationManager.L("exit")}: {TotalExitLast30}</span></div>");
             sb.Append("</div>");
 
@@ -128,11 +128,11 @@ public partial class StockCardDetailViewModel : ViewModelBase
                 string clr = h.IsEntry ? "green" : "red";
                 sb.Append("<tr>");
                 sb.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
-                sb.Append($"<td class='{clr}'>{h.DisplayType}</td>");
+                sb.Append($"<td class='{clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
                 sb.Append($"<td class='{clr}'>{h.Quantity}</td>");
-                sb.Append($"<td>{h.Department}</td>");
-                sb.Append($"<td>{h.Recipient}</td>");
-                sb.Append($"<td>{h.Description}</td>");
+                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
+                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
+                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Description)}</td>");
                 sb.Append("</tr>");
             }
 

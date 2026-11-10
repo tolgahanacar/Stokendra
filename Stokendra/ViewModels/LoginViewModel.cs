@@ -57,6 +57,7 @@ public partial class LoginViewModel : ViewModelBase
             if (success)
             {
                 AppServices.Current.BeginSession(Username.Trim(), role);
+                Password = "";
                 LoginSuccessful?.Invoke(this, EventArgs.Empty);
             }
             else

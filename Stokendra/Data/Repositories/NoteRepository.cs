@@ -49,6 +49,8 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
 
     public async Task UpdateAsync(Note note, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(note.Title)) throw new ArgumentException(LocalizationManager.L("name_required"));
+
         note.UpdatedAt = DateTime.Now;
         using var conn = ConnectionFactory.CreateConnection();
         var sql = "UPDATE Notes SET Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
@@ -77,12 +79,12 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         if (idList.Count == 0) return;
 
         using var conn = ConnectionFactory.CreateConnection();
-        using var trans = conn.BeginTransaction();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM Notes WHERE Id IN @Ids", new { Ids = idList }, trans, cancellationToken: cancellationToken));
-            trans.Commit();
+            await trans.CommitAsync(cancellationToken);
             LogAudit("Delete", "Notes", 0, "Bulk Note Delete");
-        } catch { trans.Rollback(); throw; }
+        } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 
     public async Task AddBulkAsync(IEnumerable<Note> notes, CancellationToken cancellationToken = default)

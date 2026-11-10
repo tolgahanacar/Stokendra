@@ -62,4 +62,51 @@ public class DatabaseHealthTests : IDisposable
         var count = Convert.ToInt32(cmd.ExecuteScalar());
         Assert.True(count > 0, "Default admin user must be created");
     }
+
+    [Fact]
+    public async Task Test_LastAdmin_CannotBeDeleted()
+    {
+        var factory = new SqliteConnectionFactory(_tempDbPath);
+        var repo = new Stokendra.Data.Repositories.UserRepository(factory);
+
+        var users = await repo.GetUsersAsync();
+        var admin = users.FirstOrDefault(u => u.Role == "admin");
+        Assert.NotNull(admin);
+
+        // Attempting to delete the last admin should fail
+        bool result = await repo.DeleteUserAsync(admin.Id);
+        Assert.False(result, "Deleting the last remaining admin must be prohibited");
+
+        // Verify admin still exists
+        var usersAfter = await repo.GetUsersAsync();
+        Assert.Contains(usersAfter, u => u.Id == admin.Id);
+    }
+
+    [Fact]
+    public async Task Test_ResetPassword_ValidatesPolicy()
+    {
+        var factory = new SqliteConnectionFactory(_tempDbPath);
+        var repo = new Stokendra.Data.Repositories.UserRepository(factory);
+
+        // Weak password (< 4 chars) should fail policy validation
+        bool resultShort = await repo.ResetPasswordAsync("admin", "12");
+        Assert.False(resultShort);
+
+        // Password containing username should fail policy validation
+        bool resultUsername = await repo.ResetPasswordAsync("admin", "admin123");
+        Assert.False(resultUsername);
+
+        // Valid password should succeed
+        bool resultValid = await repo.ResetPasswordAsync("admin", "SecretPass123!");
+        Assert.True(resultValid);
+    }
+
+    [Fact]
+    public void Test_PrintTemplateBuilder_EscapesHtml()
+    {
+        string malicious = "<script>alert('xss')</script>";
+        string escaped = Stokendra.Infrastructure.PrintTemplateBuilder.Escape(malicious);
+        Assert.DoesNotContain("<script>", escaped);
+        Assert.Contains("&lt;script&gt;", escaped);
+    }
 }

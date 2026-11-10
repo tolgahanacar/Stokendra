@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Stokendra.Data.Repositories;
 
-public sealed class MovementRepository(IDbConnectionFactory connectionFactory) 
+public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     : RepositoryBase(connectionFactory), IMovementRepository
 {
     public List<StockMovement> GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category, string? recipient)
@@ -36,43 +36,63 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     public void Add(StockMovement movement)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateMovement(movement, conn);
-        var sql = """
-            INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
-            VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description);
-            SELECT last_insert_rowid();
-            """;
-        movement.Id = conn.ExecuteScalar<int>(sql, new {
-            movement.StockCardId,
-            movement.Type,
-            movement.Quantity,
-            Recipient = movement.Recipient ?? "",
-            Department = movement.Department ?? "",
-            DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-            Description = movement.Description ?? ""
-        });
-        LogAudit("Insert", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        using var trans = conn.BeginTransaction();
+        try
+        {
+            ValidateMovement(movement, conn, trans);
+            var sql = """
+                INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
+                VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description);
+                SELECT last_insert_rowid();
+                """;
+            movement.Id = conn.ExecuteScalar<int>(sql, new {
+                movement.StockCardId,
+                movement.Type,
+                movement.Quantity,
+                Recipient = movement.Recipient ?? "",
+                Department = movement.Department ?? "",
+                DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Description = movement.Description ?? ""
+            }, transaction: trans);
+            trans.Commit();
+            LogAudit("Insert", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
+        }
     }
 
     public async Task AddAsync(StockMovement movement, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateMovement(movement, conn);
-        var sql = """
-            INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
-            VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description);
-            SELECT last_insert_rowid();
-            """;
-        movement.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, new {
-            movement.StockCardId,
-            movement.Type,
-            movement.Quantity,
-            Recipient = movement.Recipient ?? "",
-            Department = movement.Department ?? "",
-            DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-            Description = movement.Description ?? ""
-        }, cancellationToken: cancellationToken));
-        LogAudit("Insert", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            ValidateMovement(movement, conn, (SqliteTransaction)trans);
+            var sql = """
+                INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
+                VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description);
+                SELECT last_insert_rowid();
+                """;
+            movement.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, new {
+                movement.StockCardId,
+                movement.Type,
+                movement.Quantity,
+                Recipient = movement.Recipient ?? "",
+                Department = movement.Department ?? "",
+                DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Description = movement.Description ?? ""
+            }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Insert", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public void AddBulk(IEnumerable<StockMovement> movements)
@@ -82,12 +102,12 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
-        try 
+        try
         {
             var cardIds = list.Select(m => m.StockCardId).Distinct().ToList();
             var balances = GetBalances(conn, trans, cardIds);
 
-            foreach(var m in list) 
+            foreach(var m in list)
             {
                 if (!balances.TryGetValue(m.StockCardId, out var info))
                     throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
@@ -99,9 +119,9 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                     throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 conn.Execute("""
-                    INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description) 
+                    INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
                     VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description)
-                    """, 
+                    """,
                     new {
                         m.StockCardId,
                         m.Type,
@@ -110,18 +130,18 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                         Department = m.Department ?? "",
                         DateString = m.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                         Description = m.Description ?? ""
-                    }, 
+                    },
                     transaction: trans);
 
                 info.Balance += (m.TypeEnum == MovementType.Entry ? m.Quantity : -m.Quantity);
             }
             trans.Commit();
             LogAudit("Insert", "StockMovements", 0, "Bulk Insert");
-        } 
-        catch 
-        { 
-            trans.Rollback(); 
-            throw; 
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
         }
     }
 
@@ -132,12 +152,12 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
-        try 
+        try
         {
             var cardIds = list.Select(m => m.StockCardId).Distinct().ToList();
             var balances = GetBalances(conn, (SqliteTransaction)trans, cardIds);
 
-            foreach(var m in list) 
+            foreach(var m in list)
             {
                 if (!balances.TryGetValue(m.StockCardId, out var info))
                     throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
@@ -149,9 +169,9 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                     throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 await conn.ExecuteAsync(new CommandDefinition("""
-                    INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description) 
+                    INSERT INTO StockMovements (StockCardId, Type, Quantity, Recipient, Department, Date, Description)
                     VALUES (@StockCardId, @Type, @Quantity, @Recipient, @Department, @DateString, @Description)
-                    """, 
+                    """,
                     new {
                         m.StockCardId,
                         m.Type,
@@ -160,19 +180,19 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                         Department = m.Department ?? "",
                         DateString = m.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                         Description = m.Description ?? ""
-                    }, 
-                    transaction: trans, 
+                    },
+                    transaction: trans,
                     cancellationToken: cancellationToken));
 
                 info.Balance += (m.TypeEnum == MovementType.Entry ? m.Quantity : -m.Quantity);
             }
             await trans.CommitAsync(cancellationToken);
             LogAudit("Insert", "StockMovements", 0, "Bulk Insert (Async)");
-        } 
-        catch 
-        { 
-            await trans.RollbackAsync(cancellationToken); 
-            throw; 
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
         }
     }
 
@@ -184,7 +204,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         var sql = """
             SELECT s.Id, s.Name, s.CardType as Type,
-            COALESCE((SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) FROM StockMovements WHERE StockCardId=s.Id), 0) as Balance
+            COALESCE((SELECT SUM(CASE
+                WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity
+                WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity
+                ELSE 0
+            END) FROM StockMovements WHERE StockCardId=s.Id), 0) as Balance
             FROM StockCards s WHERE s.Id IN @Ids
             """;
 
@@ -195,63 +219,103 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     public void Update(StockMovement movement)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateUpdate(movement, conn);
-        var sql = """
-            UPDATE StockMovements SET 
-                StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
-                Department=@Department, Date=@DateString, Description=@Description 
-            WHERE Id=@Id
-            """;
-        conn.Execute(sql, new {
-            movement.StockCardId,
-            movement.Type,
-            movement.Quantity,
-            Recipient = movement.Recipient ?? "",
-            Department = movement.Department ?? "",
-            DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-            Description = movement.Description ?? "",
-            movement.Id
-        });
-        LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        using var trans = conn.BeginTransaction();
+        try
+        {
+            ValidateUpdate(movement, conn, trans);
+            var sql = """
+                UPDATE StockMovements SET
+                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient,
+                    Department=@Department, Date=@DateString, Description=@Description
+                WHERE Id=@Id
+                """;
+            conn.Execute(sql, new {
+                movement.StockCardId,
+                movement.Type,
+                movement.Quantity,
+                Recipient = movement.Recipient ?? "",
+                Department = movement.Department ?? "",
+                DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Description = movement.Description ?? "",
+                movement.Id
+            }, transaction: trans);
+            trans.Commit();
+            LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
+        }
     }
 
     public async Task UpdateAsync(StockMovement movement, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateUpdate(movement, conn);
-        var sql = """
-            UPDATE StockMovements SET 
-                StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
-                Department=@Department, Date=@DateString, Description=@Description 
-            WHERE Id=@Id
-            """;
-        await conn.ExecuteAsync(new CommandDefinition(sql, new {
-            movement.StockCardId,
-            movement.Type,
-            movement.Quantity,
-            Recipient = movement.Recipient ?? "",
-            Department = movement.Department ?? "",
-            DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-            Description = movement.Description ?? "",
-            movement.Id
-        }, cancellationToken: cancellationToken));
-        LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            ValidateUpdate(movement, conn, (SqliteTransaction)trans);
+            var sql = """
+                UPDATE StockMovements SET
+                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient,
+                    Department=@Department, Date=@DateString, Description=@Description
+                WHERE Id=@Id
+                """;
+            await conn.ExecuteAsync(new CommandDefinition(sql, new {
+                movement.StockCardId,
+                movement.Type,
+                movement.Quantity,
+                Recipient = movement.Recipient ?? "",
+                Department = movement.Department ?? "",
+                DateString = movement.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Description = movement.Description ?? "",
+                movement.Id
+            }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Update", "StockMovements", movement.Id, $"{movement.Type}: {movement.Quantity}");
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public void Delete(int id)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateDeletion([id], conn);
-        conn.Execute("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id });
-        LogAudit("Delete", "StockMovements", id, "");
+        using var trans = conn.BeginTransaction();
+        try
+        {
+            ValidateDeletion([id], conn, trans);
+            conn.Execute("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id }, transaction: trans);
+            trans.Commit();
+            LogAudit("Delete", "StockMovements", id, "");
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
+        }
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        ValidateDeletion([id], conn);
-        await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id }, cancellationToken: cancellationToken));
-        LogAudit("Delete", "StockMovements", id, "");
+        using var trans = await conn.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            ValidateDeletion([id], conn, (SqliteTransaction)trans);
+            await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockMovements WHERE Id=@Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
+            await trans.CommitAsync(cancellationToken);
+            LogAudit("Delete", "StockMovements", id, "");
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public void DeleteBulk(IEnumerable<int> ids)
@@ -261,11 +325,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
-        try 
+        try
         {
             var count = conn.ExecuteScalar<int>(
-                "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids", 
-                new { Ids = list }, 
+                "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids",
+                new { Ids = list },
                 transaction: trans);
             if (count != list.Count) throw new InvalidOperationException("Some movements were not found.");
 
@@ -273,11 +337,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
             conn.Execute("DELETE FROM StockMovements WHERE Id IN @Ids", new { Ids = list }, transaction: trans);
             trans.Commit();
-        } 
-        catch 
-        { 
-            trans.Rollback(); 
-            throw; 
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
         }
     }
 
@@ -288,11 +352,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
-        try 
+        try
         {
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
-                "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids", 
-                new { Ids = list }, 
+                "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids",
+                new { Ids = list },
                 transaction: trans,
                 cancellationToken: cancellationToken));
             if (count != list.Count) throw new InvalidOperationException("Some movements were not found.");
@@ -301,11 +365,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockMovements WHERE Id IN @Ids", new { Ids = list }, transaction: trans, cancellationToken: cancellationToken));
             await trans.CommitAsync(cancellationToken);
-        } 
-        catch 
-        { 
-            await trans.RollbackAsync(cancellationToken); 
-            throw; 
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
         }
     }
 
@@ -314,14 +378,14 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         var list = movements.ToList();
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
-        try 
+        try
         {
             ValidateBulkUpdate(list, conn, trans);
 
             var sql = """
-                UPDATE StockMovements SET 
-                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
-                    Department=@Department, Date=@DateString, Description=@Description 
+                UPDATE StockMovements SET
+                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient,
+                    Department=@Department, Date=@DateString, Description=@Description
                 WHERE Id=@Id
                 """;
             var data = list.Select(m => new {
@@ -337,11 +401,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             conn.Execute(sql, data, transaction: trans);
             trans.Commit();
             LogAudit("Update", "StockMovements", 0, "Bulk Update");
-        } 
-        catch 
-        { 
-            trans.Rollback(); 
-            throw; 
+        }
+        catch
+        {
+            trans.Rollback();
+            throw;
         }
     }
 
@@ -350,14 +414,14 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         var list = movements.ToList();
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
-        try 
+        try
         {
             ValidateBulkUpdate(list, conn, (SqliteTransaction)trans);
 
             var sql = """
-                UPDATE StockMovements SET 
-                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient, 
-                    Department=@Department, Date=@DateString, Description=@Description 
+                UPDATE StockMovements SET
+                    StockCardId=@StockCardId, Type=@Type, Quantity=@Quantity, Recipient=@Recipient,
+                    Department=@Department, Date=@DateString, Description=@Description
                 WHERE Id=@Id
                 """;
             var data = list.Select(m => new {
@@ -373,11 +437,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
             await trans.CommitAsync(cancellationToken);
             LogAudit("Update", "StockMovements", 0, "Bulk Update (Async)");
-        } 
-        catch 
-        { 
-            await trans.RollbackAsync(cancellationToken); 
-            throw; 
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken);
+            throw;
         }
     }
 
@@ -388,21 +452,21 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
         foreach (var m in list)
         {
-            if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000) 
+            if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000)
                 throw new InvalidOperationException("Invalid quantity value.");
-            
-            if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos") 
+
+            if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos")
                 throw new InvalidOperationException("Invalid movement type.");
-            
+
             if (m.Quantity < 0) throw new InvalidOperationException("Quantity cannot be negative.");
             if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException("Quantity cannot be zero.");
-            
+
             if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException("Type field cannot be empty.");
             if (m.StockCardId <= 0) throw new InvalidOperationException("Invalid stock card ID.");
 
             var cardType = conn.ExecuteScalar<string>(
-                "SELECT CardType FROM StockCards WHERE Id=@Id", 
-                new { Id = m.StockCardId }, 
+                "SELECT CardType FROM StockCards WHERE Id=@Id",
+                new { Id = m.StockCardId },
                 transaction: trans);
             if (cardType == "Parent")
                 throw new InvalidOperationException("Cannot associate movements with parent cards.");
@@ -434,7 +498,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             if (movementIds.Count > 0)
             {
                 var baseResult = conn.ExecuteScalar<double?>(
-                    "SELECT SUM(CASE WHEN Id IN @Ids THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
+                    "SELECT SUM(CASE WHEN Id IN @Ids THEN 0 ELSE (CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity ELSE 0 END) END) FROM StockMovements WHERE StockCardId=@StockCardId",
                     new { Ids = movementIds, StockCardId = cardId },
                     transaction: trans);
                 baseBalance = baseResult ?? 0;
@@ -442,28 +506,28 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             else
             {
                 var baseResult = conn.ExecuteScalar<double?>(
-                    "SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) FROM StockMovements WHERE StockCardId=@StockCardId",
+                    "SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity ELSE 0 END) FROM StockMovements WHERE StockCardId=@StockCardId",
                     new { StockCardId = cardId },
                     transaction: trans);
                 baseBalance = baseResult ?? 0;
             }
 
             double newImpact = list.Where(m => m.StockCardId == cardId).Sum(m => m.TypeEnum == MovementType.Entry ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0));
-            
+
             if (baseBalance + newImpact < 0)
             {
                 var cardName = conn.ExecuteScalar<string>(
-                    "SELECT Name FROM StockCards WHERE Id=@Id", 
-                    new { Id = cardId }, 
+                    "SELECT Name FROM StockCards WHERE Id=@Id",
+                    new { Id = cardId },
                     transaction: trans) ?? $"ID {cardId}";
                 throw new InvalidOperationException($"Update invalid: would result in negative stock for '{cardName}'.");
             }
         }
     }
 
-    private void ValidateUpdate(StockMovement m, SqliteConnection conn)
+    private void ValidateUpdate(StockMovement m, SqliteConnection conn, SqliteTransaction? trans = null)
     {
-        ValidateBulkUpdate(new[] { m }, conn);
+        ValidateBulkUpdate(new[] { m }, conn, trans);
     }
 
     public async Task<List<(DateTime Date, double Entry, double Exit)>> GetLast7DaysSummaryAsync(CancellationToken cancellationToken = default)
@@ -480,11 +544,11 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             ORDER BY Day
             """;
         var startDateString = DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        
+
         var queryResult = await conn.QueryAsync<(string Day, double Entry, double Exit)>(new CommandDefinition(sql, new { StartDate = startDateString }, cancellationToken: cancellationToken));
-        var data = queryResult.ToDictionary(r => DateTime.Parse(r.Day), r => (r.Entry, r.Exit));
-        
-        for(int i=0; i<7; i++) 
+        var data = queryResult.ToDictionary(r => DateTime.Parse(r.Day, CultureInfo.InvariantCulture), r => (r.Entry, r.Exit));
+
+        for(int i=0; i<7; i++)
         {
             var day = DateTime.Today.AddDays(-6+i);
             if(data.TryGetValue(day, out var vals)) list.Add((day, vals.Entry, vals.Exit));
@@ -502,42 +566,42 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     private string BuildQuery(string baseSelect, int? cardId, DateTime? start, DateTime? end, string? dept, string? type, string? cat, string? search, string? recipient, DynamicParameters @params)
     {
         var sql = baseSelect + " WHERE 1=1";
-        if(cardId.HasValue) 
+        if(cardId.HasValue)
         {
             sql += " AND h.StockCardId=@CardId";
             @params.Add("CardId", cardId.Value);
         }
-        if(start.HasValue) 
+        if(start.HasValue)
         {
             sql += " AND h.Date >= @Start";
             @params.Add("Start", start.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
-        if(end.HasValue) 
+        if(end.HasValue)
         {
             sql += " AND h.Date < @End";
             @params.Add("End", end.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
-        if(!string.IsNullOrEmpty(dept)) 
+        if(!string.IsNullOrEmpty(dept))
         {
             sql += " AND h.Department=@Dept";
             @params.Add("Dept", dept);
         }
-        if(!string.IsNullOrEmpty(type)) 
+        if(!string.IsNullOrEmpty(type))
         {
             sql += " AND h.Type=@Type";
             @params.Add("Type", type);
         }
-        if(!string.IsNullOrEmpty(cat)) 
+        if(!string.IsNullOrEmpty(cat))
         {
             sql += " AND s.Category=@Cat";
             @params.Add("Cat", cat);
         }
-        if(!string.IsNullOrEmpty(recipient)) 
+        if(!string.IsNullOrEmpty(recipient))
         {
             sql += " AND h.Recipient=@Recipient";
             @params.Add("Recipient", recipient);
         }
-        if(!string.IsNullOrEmpty(search)) 
+        if(!string.IsNullOrEmpty(search))
         {
             sql += " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR h.Recipient LIKE @Search OR h.Department LIKE @Search OR h.Description LIKE @Search)";
             @params.Add("Search", $"%{search}%");
@@ -547,20 +611,20 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
     private void ValidateMovement(StockMovement m, SqliteConnection conn, SqliteTransaction? trans = null)
     {
-        if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000) 
+        if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000)
             throw new InvalidOperationException(LocalizationManager.L("quantity_invalid"));
-        
-        if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos") 
+
+        if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos")
             throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
-        
+
         if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
         if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
-        
+
         if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException(LocalizationManager.L("type_field_required"));
         if (m.StockCardId <= 0) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
         var row = conn.QueryFirstOrDefault(
-            "SELECT CardType, (SELECT COALESCE(SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END), 0) FROM StockMovements WHERE StockCardId=s.Id) as CurrentStock FROM StockCards s WHERE Id=@Id",
+            "SELECT CardType, (SELECT COALESCE(SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity ELSE 0 END), 0) FROM StockMovements WHERE StockCardId=s.Id) as CurrentStock FROM StockCards s WHERE Id=@Id",
             new { Id = m.StockCardId },
             transaction: trans);
 
@@ -579,7 +643,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     private void ValidateDeletion(IEnumerable<int> ids, SqliteConnection conn, SqliteTransaction? trans = null)
     {
         var idList = ids.ToList();
-        
+
         var cardIds = conn.Query<int>(
             "SELECT StockCardId FROM StockMovements WHERE Id IN @Ids GROUP BY StockCardId",
             new { Ids = idList },
@@ -588,7 +652,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         foreach (var cardId in cardIds)
         {
             var result = conn.ExecuteScalar<double?>(
-                "SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE -Quantity END) FROM StockMovements WHERE StockCardId=@CardId AND Id NOT IN @Ids",
+                "SELECT SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity ELSE 0 END) FROM StockMovements WHERE StockCardId=@CardId AND Id NOT IN @Ids",
                 new { CardId = cardId, Ids = idList },
                 transaction: trans);
 

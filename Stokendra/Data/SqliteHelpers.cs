@@ -68,6 +68,9 @@ public static class SqliteHelpers
             }
             else
             {
+                if (RegexCache.Count > 500)
+                    RegexCache.Clear();
+
                 regex = RegexCache.GetOrAdd(regexPattern, pat => new Regex(pat, RegexOptions.Singleline));
                 _lastRegexPattern = regexPattern;
                 _lastRegex = regex;

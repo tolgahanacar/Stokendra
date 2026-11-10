@@ -95,6 +95,12 @@ public partial class AddMovementViewModel : ViewModelBase
         if (SelectedCard == null) return;
         
         string tur = SelectedTypeIndex switch { 0 => "Entry", 1 => "Exit", 2 => "Blank", _ => "Entry" };
+
+        if (Quantity <= 0 && tur != "Blank")
+        {
+            ErrorMessage = LocalizationManager.L("quantity_cannot_be_zero");
+            return;
+        }
         
         // Mathematically correct negative stock validation
         double stockWithoutOld = SelectedCard.CurrentStock;

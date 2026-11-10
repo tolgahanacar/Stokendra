@@ -393,10 +393,10 @@ public partial class StockCardsViewModel : ViewModelBase
             foreach (var c in snapshot)
             {
                 sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{c.Code}</td>");
-                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{c.Name}</td>");
-                sbBody.Append($"<td class='num'>{c.CardTypeDisplay}</td>");
-                sbBody.Append($"<td class='num'>{c.Category}</td>");
+                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Code)}</td>");
+                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(c.Name)}</td>");
+                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.CardTypeDisplay)}</td>");
+                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Category)}</td>");
                 sbBody.Append($"<td class='num'>{(c.IsParentCard ? "-" : c.CurrentStock.ToString())}</td>");
                 sbBody.Append($"<td class='num'>{c.MinStock}</td>");
                 sbBody.Append("</tr>");

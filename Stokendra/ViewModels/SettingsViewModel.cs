@@ -99,6 +99,17 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task SaveSettingsAsync()
     {
+        if (string.IsNullOrWhiteSpace(MasterSecurityCode) || MasterSecurityCode.Trim().Length < 4)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("security_code_required"));
+            return;
+        }
+
+        if (LowStockThreshold < 0)
+        {
+            LowStockThreshold = 0;
+        }
+
         var settings = AppServices.Current.Settings;
         settings.CompanyName = CompanyName.Trim();
         settings.AutoBackupPath = AutoBackupPath.Trim();

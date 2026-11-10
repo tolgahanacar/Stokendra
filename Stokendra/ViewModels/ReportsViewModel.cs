@@ -127,10 +127,13 @@ public partial class ReportsViewModel : ViewModelBase
                 total += m.Quantity;
                 uniqueIds.Add(m.StockCardId);
                 
-                if (totalsByCard.ContainsKey(m.StockCardName))
-                    totalsByCard[m.StockCardName] += m.Quantity;
+                string cardKey = !string.IsNullOrWhiteSpace(m.StockCardCode)
+                    ? $"{m.StockCardCode} - {m.StockCardName}"
+                    : m.StockCardName;
+                if (totalsByCard.ContainsKey(cardKey))
+                    totalsByCard[cardKey] += m.Quantity;
                 else
-                    totalsByCard[m.StockCardName] = m.Quantity;
+                    totalsByCard[cardKey] = m.Quantity;
             }
 
             ReportRows = rowsList;
@@ -236,10 +239,10 @@ public partial class ReportsViewModel : ViewModelBase
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td>{r.Date:dd.MM.yyyy HH:mm}</td>");
-                sbBody.Append($"<td>{r.StockCardName}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardName)}</td>");
                 sbBody.Append($"<td>{r.Quantity}</td>");
-                sbBody.Append($"<td>{r.Department}</td>");
-                sbBody.Append($"<td>{r.Recipient}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Department)}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Recipient)}</td>");
                 sbBody.Append("</tr>");
             }
             

@@ -11,7 +11,8 @@ using Stokendra.Data.Interfaces;
 
 namespace Stokendra.Data.Repositories;
 
-public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepository
+public sealed class UserRepository(IDbConnectionFactory connectionFactory)
+    : RepositoryBase(connectionFactory), IUserRepository
 {
     private const int HashSize = 32;
 
@@ -24,7 +25,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
 
     public async Task<(bool success, string role)> VerifyPasswordAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        using var conn = connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         var user = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
             "SELECT PasswordHash, Salt, Role FROM Users WHERE Username = @Username COLLATE NOCASE",
             new { Username = username },
@@ -38,7 +39,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
         string role = user.Role;
 
         bool match = Verify(password, salt, storedHash, out bool upgrade);
-        
+
         if (match && upgrade)
             await UpgradeAsync(username, password, conn, cancellationToken);
 
@@ -55,17 +56,17 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
     {
         if (!await AuthenticateAsync(username, oldPassword, cancellationToken)) return false;
         if (ValidatePasswordPolicy(newPassword, username) != null) return false;
-        
-        using var conn = connectionFactory.CreateConnection();
+
+        using var conn = ConnectionFactory.CreateConnection();
         await UpgradeAsync(username, newPassword, conn, cancellationToken);
         return true;
     }
 
     public string? ValidatePasswordPolicy(string password, string? username = null)
     {
-        if (string.IsNullOrEmpty(password) || password.Length < 4) 
+        if (string.IsNullOrEmpty(password) || password.Length < 4)
             return LocalizationManager.L("password_min_length");
-        if (username != null && password.Contains(username, StringComparison.OrdinalIgnoreCase)) 
+        if (username != null && password.Contains(username, StringComparison.OrdinalIgnoreCase))
             return LocalizationManager.L("password_contains_username");
         return null;
     }
@@ -76,7 +77,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
 
         if (stored.StartsWith("v4:"))
             return FixedTimeEquals(stored, HashV4(password, salt));
-        
+
         if (stored.StartsWith("v3:"))
         {
             bool match = FixedTimeEquals(stored, HashV3(password, salt));
@@ -133,15 +134,18 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
     {
         try
         {
-            using var conn = connectionFactory.CreateConnection();
+            if (ValidatePasswordPolicy(newPassword, username) != null) return false;
+
+            using var conn = ConnectionFactory.CreateConnection();
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
                 new { Username = username },
                 cancellationToken: cancellationToken));
-            
+
             if (count == 0) return false;
 
             await UpgradeAsync(username, newPassword, conn, cancellationToken);
+            LogAudit("Update", "Users", 0, $"Password reset for user: {username}");
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("ResetPasswordAsync failed", ex); return false; }
@@ -149,7 +153,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
 
     public async Task<List<Models.User>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        using var conn = connectionFactory.CreateConnection();
+        using var conn = ConnectionFactory.CreateConnection();
         var result = await conn.QueryAsync<Models.User>(new CommandDefinition(
             "SELECT Id, Username, Role FROM Users ORDER BY Username ASC",
             cancellationToken: cancellationToken));
@@ -160,7 +164,7 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
     {
         try
         {
-            using var conn = connectionFactory.CreateConnection();
+            using var conn = ConnectionFactory.CreateConnection();
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
                 new { Username = username.Trim() },
@@ -169,11 +173,12 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
 
             string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
             string hash = HashV4(password, salt);
-            
+
             await conn.ExecuteAsync(new CommandDefinition(
                 "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES (@Username, @PasswordHash, @Salt, @Role)",
                 new { Username = username.Trim(), PasswordHash = hash, Salt = salt, Role = role.Trim() },
                 cancellationToken: cancellationToken));
+            LogAudit("Insert", "Users", 0, $"Created user: {username.Trim()} ({role.Trim()})");
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("AddUserAsync failed", ex); return false; }
@@ -183,11 +188,28 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
     {
         try
         {
-            using var conn = connectionFactory.CreateConnection();
+            using var conn = ConnectionFactory.CreateConnection();
+
+            var targetUser = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
+                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, cancellationToken: cancellationToken));
+            if (targetUser == null) return false;
+
+            if (targetUser.Role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                var adminCount = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin'", cancellationToken: cancellationToken));
+                if (adminCount <= 1)
+                {
+                    AppLogger.LogError($"Cannot delete user ID {id}: last remaining administrator.");
+                    return false;
+                }
+            }
+
             await conn.ExecuteAsync(new CommandDefinition(
                 "DELETE FROM Users WHERE Id = @Id",
                 new { Id = id },
                 cancellationToken: cancellationToken));
+            LogAudit("Delete", "Users", id, $"Deleted user ID: {id}");
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("DeleteUserAsync failed", ex); return false; }
@@ -197,11 +219,28 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
     {
         try
         {
-            using var conn = connectionFactory.CreateConnection();
+            using var conn = ConnectionFactory.CreateConnection();
+
+            var targetUser = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
+                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, cancellationToken: cancellationToken));
+            if (targetUser == null) return false;
+
+            if (targetUser.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) && !role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            {
+                var adminCount = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin'", cancellationToken: cancellationToken));
+                if (adminCount <= 1)
+                {
+                    AppLogger.LogError($"Cannot demote user ID {id}: last remaining administrator.");
+                    return false;
+                }
+            }
+
             await conn.ExecuteAsync(new CommandDefinition(
                 "UPDATE Users SET Role = @Role WHERE Id = @Id",
                 new { Role = role.Trim(), Id = id },
                 cancellationToken: cancellationToken));
+            LogAudit("Update", "Users", id, $"Updated role for user ID: {id} to {role.Trim()}");
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("UpdateUserRoleAsync failed", ex); return false; }
@@ -212,11 +251,11 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory) : IUs
         if (a == null || b == null) return false;
         byte[] aBytes = Encoding.UTF8.GetBytes(a.Trim());
         byte[] bBytes = Encoding.UTF8.GetBytes(b.Trim());
-        
+
         bool equal = aBytes.Length == bBytes.Length;
         byte[] cmpBytes = equal ? bBytes : aBytes;
         bool result = CryptographicOperations.FixedTimeEquals(aBytes, cmpBytes);
-        
+
         return equal && result;
     }
 }

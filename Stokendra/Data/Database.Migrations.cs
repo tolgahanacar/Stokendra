@@ -121,9 +121,6 @@ public sealed partial class Database
     private static void MigrateToV15(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN UnitPrice;");
-        TryAlter(connection, transaction, "PRAGMA journal_size_limit = 67108864;"); // 64MB limit
-        TryAlter(connection, transaction, "PRAGMA auto_vacuum = INCREMENTAL;");
-        TryAlter(connection, transaction, "PRAGMA vacuum;");
     }
 
     private static void MigrateToV13(SqliteConnection connection, SqliteTransaction? transaction)

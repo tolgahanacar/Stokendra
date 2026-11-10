@@ -26,7 +26,9 @@ public partial class PrintPreviewViewModel : ViewModelBase
     {
         try
         {
-            string tempPath = Path.Combine(Path.GetTempPath(), $"{Title.Replace(" ", "_")}_{DateTime.Now:HHmm}.html");
+            string safeTitle = string.Join("_", Title.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Replace(" ", "_");
+            if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Report";
+            string tempPath = Path.Combine(Path.GetTempPath(), $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
             await File.WriteAllTextAsync(tempPath, Content);
             
             var psi = new System.Diagnostics.ProcessStartInfo { FileName = tempPath, UseShellExecute = true };

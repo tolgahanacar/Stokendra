@@ -374,11 +374,11 @@ public partial class ServicesViewModel : ViewModelBase
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{r.DeviceName}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{r.SerialNumber}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{r.Company}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{r.Issue}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{r.Result}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.DeviceName)}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.SerialNumber)}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Company)}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Issue)}</td>");
+                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Result)}</td>");
                 sbBody.Append("</tr>");
             }
             

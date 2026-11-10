@@ -185,8 +185,8 @@ public partial class StocksViewModel : ViewModelBase
             foreach (var s in snapshot)
             {
                 sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{s.Code}</td>");
-                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{s.Name}</td>");
+                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(s.Code)}</td>");
+                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(s.Name)}</td>");
                 sbBody.Append($"<td class='num'>{s.TotalEntry}</td>");
                 sbBody.Append($"<td class='num'>{s.TotalExit}</td>");
                 sbBody.Append($"<td class='num bold'>{s.CurrentStock}</td>");
