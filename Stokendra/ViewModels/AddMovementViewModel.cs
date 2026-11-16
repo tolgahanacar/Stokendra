@@ -41,7 +41,13 @@ public partial class AddMovementViewModel : ViewModelBase
         if (movement != null)
         {
             Title = LocalizationManager.L("edit_movement");
-            SelectedTypeIndex = movement.Type switch { "Entry" => 0, "Exit" => 1, "Blank" => 2, _ => 0 };
+            SelectedTypeIndex = movement.Type switch
+            {
+                "Entry" or "Giris" or "Giriş" => 0,
+                "Exit" or "Cikis" or "Çıkış"   => 1,
+                "Blank" or "Bos" or "Boş"     => 2,
+                _ => 0
+            };
             Quantity = movement.Quantity;
             DeliveredTo = movement.Recipient;
             Department = movement.Department;
@@ -122,7 +128,7 @@ public partial class AddMovementViewModel : ViewModelBase
                     if (_editingMovement.TypeEnum == MovementType.Entry)
                     {
                         originalCardStockWithoutOld -= _editingMovement.Quantity;
-                        if (originalCardStockWithoutOld < 0)
+                        if (originalCardStockWithoutOld < -1e-9)
                         {
                             ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({originalCard.Name}: {originalCard.CurrentStock})";
                             return;
@@ -133,7 +139,7 @@ public partial class AddMovementViewModel : ViewModelBase
         }
 
         double newImpact = tur switch { "Entry" => Quantity, "Exit" => -Quantity, _ => 0 };
-        if (stockWithoutOld + newImpact < 0)
+        if (stockWithoutOld + newImpact < -1e-9)
         {
             ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({LocalizationManager.L("current_stock")}: {SelectedCard.CurrentStock})";
             return;

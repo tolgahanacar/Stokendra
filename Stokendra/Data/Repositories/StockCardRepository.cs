@@ -18,8 +18,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         WITH StockBalances AS (
             SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
                    u.Name as ParentName,
-                   CAST(COALESCE(SUM(CASE WHEN h.Type = 'Entry' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                   CAST(COALESCE(SUM(CASE WHEN h.Type = 'Exit' THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
+                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
+                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
             FROM StockCards s
             LEFT JOIN StockCards u ON s.ParentId = u.Id
             LEFT JOIN StockMovements h ON h.StockCardId = s.Id
@@ -390,13 +390,13 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             LEFT JOIN (
                 SELECT StockCardId, SUM(Quantity) as TotalEntry
                 FROM StockMovements
-                WHERE Type = 'Entry'
+                WHERE Type IN ('Entry', 'Giris', 'Giriş')
                 GROUP BY StockCardId
             ) entry ON s.Id = entry.StockCardId
             LEFT JOIN (
                 SELECT StockCardId, SUM(Quantity) as TotalExit
                 FROM StockMovements
-                WHERE Type = 'Exit'
+                WHERE Type IN ('Exit', 'Cikis', 'Çıkış')
                 GROUP BY StockCardId
             ) exit ON s.Id = exit.StockCardId
             ORDER BY s.Code ASC

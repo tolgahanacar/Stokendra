@@ -14,6 +14,7 @@ namespace Stokendra.Data.Repositories;
 public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     : RepositoryBase(connectionFactory), IMovementRepository
 {
+    private const double FloatingPointEpsilon = 1e-9;
     public List<StockMovement> GetAll(int? stockCardId, DateTime? startDate, DateTime? endDate, string? department, string? movementType, string? category, string? recipient)
     {
         using var conn = ConnectionFactory.CreateConnection();
@@ -115,7 +116,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 if (info.Type == "Parent")
                     throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
 
-                if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity)
+                if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity - FloatingPointEpsilon)
                     throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 conn.Execute("""
@@ -165,7 +166,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 if (info.Type == "Parent")
                     throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
 
-                if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity)
+                if (m.TypeEnum == MovementType.Exit && info.Balance < m.Quantity - FloatingPointEpsilon)
                     throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
 
                 await conn.ExecuteAsync(new CommandDefinition("""
@@ -321,7 +322,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     public void DeleteBulk(IEnumerable<int> ids)
     {
         var list = ids.ToList();
-        if (list.Count == 0) throw new InvalidOperationException("List cannot be empty.");
+        if (list.Count == 0) throw new InvalidOperationException(LocalizationManager.L("bulk_operation_empty"));
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
@@ -331,7 +332,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 "SELECT COUNT(*) FROM StockMovements WHERE Id IN @Ids",
                 new { Ids = list },
                 transaction: trans);
-            if (count != list.Count) throw new InvalidOperationException("Some movements were not found.");
+            if (count != list.Count) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
             ValidateDeletion(list, conn, trans);
 
@@ -348,7 +349,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
     public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
     {
         var list = ids.ToList();
-        if (list.Count == 0) throw new InvalidOperationException("List cannot be empty.");
+        if (list.Count == 0) throw new InvalidOperationException(LocalizationManager.L("bulk_operation_empty"));
 
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
@@ -359,7 +360,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 new { Ids = list },
                 transaction: trans,
                 cancellationToken: cancellationToken));
-            if (count != list.Count) throw new InvalidOperationException("Some movements were not found.");
+            if (count != list.Count) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
             ValidateDeletion(list, conn, (SqliteTransaction)trans);
 
@@ -453,23 +454,23 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         foreach (var m in list)
         {
             if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000)
-                throw new InvalidOperationException("Invalid quantity value.");
+                throw new InvalidOperationException(LocalizationManager.L("quantity_invalid"));
 
             if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos")
-                throw new InvalidOperationException("Invalid movement type.");
+                throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
 
-            if (m.Quantity < 0) throw new InvalidOperationException("Quantity cannot be negative.");
-            if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException("Quantity cannot be zero.");
+            if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
+            if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
 
-            if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException("Type field cannot be empty.");
-            if (m.StockCardId <= 0) throw new InvalidOperationException("Invalid stock card ID.");
+            if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException(LocalizationManager.L("type_field_required"));
+            if (m.StockCardId <= 0) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
 
             var cardType = conn.ExecuteScalar<string>(
                 "SELECT CardType FROM StockCards WHERE Id=@Id",
                 new { Id = m.StockCardId },
                 transaction: trans);
             if (cardType == "Parent")
-                throw new InvalidOperationException("Cannot associate movements with parent cards.");
+                throw new InvalidOperationException(LocalizationManager.L("movement_only_child_cards"));
         }
 
         var movementIds = list.Where(m => m.Id > 0).Select(m => m.Id).ToList();
@@ -514,13 +515,13 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
 
             double newImpact = list.Where(m => m.StockCardId == cardId).Sum(m => m.TypeEnum == MovementType.Entry ? m.Quantity : (m.TypeEnum == MovementType.Exit ? -m.Quantity : 0));
 
-            if (baseBalance + newImpact < 0)
+            if (baseBalance + newImpact < -FloatingPointEpsilon)
             {
                 var cardName = conn.ExecuteScalar<string>(
                     "SELECT Name FROM StockCards WHERE Id=@Id",
                     new { Id = cardId },
                     transaction: trans) ?? $"ID {cardId}";
-                throw new InvalidOperationException($"Update invalid: would result in negative stock for '{cardName}'.");
+                throw new InvalidOperationException($"{LocalizationManager.L("stock_would_go_negative")} ({cardName})");
             }
         }
     }
@@ -634,7 +635,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             if (m.TypeEnum == MovementType.Exit)
             {
                 double current = Convert.ToDouble(row.CurrentStock);
-                if (current < m.Quantity) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
+                if (current < m.Quantity - FloatingPointEpsilon) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
             }
         }
         else throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
@@ -657,7 +658,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 transaction: trans);
 
             double balance = result ?? 0;
-            if (balance < 0) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
+            if (balance < -FloatingPointEpsilon) throw new InvalidOperationException(LocalizationManager.L("stock_would_go_negative"));
         }
     }
 

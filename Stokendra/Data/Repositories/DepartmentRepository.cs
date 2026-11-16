@@ -37,7 +37,7 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
 
         using var conn = ConnectionFactory.CreateConnection();
         var inUse = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
-            "SELECT EXISTS(SELECT 1 FROM StockMovements WHERE Department = @Name)",
+            "SELECT EXISTS(SELECT 1 FROM StockMovements WHERE Department = @Name COLLATE NOCASE)",
             new { Name = name.Trim() },
             cancellationToken: cancellationToken));
         if (inUse)
@@ -46,7 +46,7 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
         }
 
         await conn.ExecuteAsync(new CommandDefinition(
-            "DELETE FROM Departments WHERE Name = @Name",
+            "DELETE FROM Departments WHERE Name = @Name COLLATE NOCASE",
             new { Name = name.Trim() },
             cancellationToken: cancellationToken));
         LogAudit("Delete", "Departments", 0, name.Trim());
@@ -62,14 +62,14 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
         {
             // 1. Update Departments table
             await conn.ExecuteAsync(new CommandDefinition(
-                "UPDATE Departments SET Name = @NewName WHERE Name = @OldName",
+                "UPDATE Departments SET Name = @NewName WHERE Name = @OldName COLLATE NOCASE",
                 new { NewName = newName.Trim(), OldName = oldName.Trim() },
                 transaction: trans,
                 cancellationToken: cancellationToken));
 
             // 2. Update StockMovements table (Cascade)
             await conn.ExecuteAsync(new CommandDefinition(
-                "UPDATE StockMovements SET Department = @NewName WHERE Department = @OldName",
+                "UPDATE StockMovements SET Department = @NewName WHERE Department = @OldName COLLATE NOCASE",
                 new { NewName = newName.Trim(), OldName = oldName.Trim() },
                 transaction: trans,
                 cancellationToken: cancellationToken));

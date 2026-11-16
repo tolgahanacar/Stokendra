@@ -423,13 +423,14 @@ public sealed partial class Database
     private static void EnsureIndexes(SqliteConnection connection, SqliteTransaction? transaction)
     {
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_StockCardId_Date ON StockMovements(StockCardId, Date DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Covering_Balance ON StockMovements(StockCardId, Type, Quantity)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Department_Date ON StockMovements(Department, Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Notes_Date ON Notes(Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_ParentId ON StockCards(ParentId)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_ServiceRecords_Date_Id ON ServiceRecords(ServiceDate DESC, Id DESC)");
-        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_Code ON StockCards(Code)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_CardType ON StockCards(CardType)");
         TryAlter(connection, transaction, "CREATE UNIQUE INDEX IF NOT EXISTS UX_StockCards_Code ON StockCards(Code COLLATE NOCASE)");
+        TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StockCards_Code");
     }
 
     private static void NormalizeLegacyData(SqliteConnection connection, SqliteTransaction? transaction)
