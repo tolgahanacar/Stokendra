@@ -139,5 +139,14 @@ public static class ExcelImportHelper
 
         return defaultValue;
     }
+
+    /// <summary>
+    /// Safely extracts a string from an Excel cell (handles numeric, boolean, text, formulas without throwing InvalidCastException).
+    /// </summary>
+    public static string ParseCellString(IXLCell? cell, string defaultValue = "")
+    {
+        if (cell == null || cell.IsEmpty()) return defaultValue;
+        return (cell.GetString() ?? defaultValue).Trim();
+    }
 }
 
