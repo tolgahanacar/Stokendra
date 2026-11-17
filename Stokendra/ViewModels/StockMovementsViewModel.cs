@@ -164,6 +164,10 @@ public partial class StockMovementsViewModel : ViewModelBase
         }
         catch (TaskCanceledException) { }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("StockMovements schedule search error", ex);
+        }
     }
 
     [RelayCommand]
@@ -372,24 +376,31 @@ public partial class StockMovementsViewModel : ViewModelBase
 
                 var movementsToImport = ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    string code = col["code"] > 0 ? (row.Cell(col["code"]).GetValue<string>() ?? "").Trim() : "";
+                    string code = col["code"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["code"])) : "";
                     if (string.IsNullOrEmpty(code)) return null;
 
                     var card = _allCards.FirstOrDefault(c => c.Code == code);
                     if (card == null) return null;
 
-                    string typeRaw = col["type"] > 0 ? (row.Cell(col["type"]).GetValue<string>() ?? "").Trim() : "";
-                    string type = typeRaw.Contains("[G]") || typeRaw.ToTurkishLower().Contains("giri") || typeRaw.ToTurkishLower().Contains("giris") || typeRaw.ToTurkishLower().Contains("entry") ? "Entry" : "Exit";
+                    string typeRaw = col["type"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["type"])) : "";
+                    string lowerType = typeRaw.ToTurkishLower();
+                    string type;
+                    if (typeRaw.Contains("[G]") || lowerType.Contains("giri") || lowerType.Contains("giris") || lowerType.Contains("entry"))
+                        type = "Entry";
+                    else if (typeRaw.Contains("[B]") || lowerType.Contains("bo") || lowerType.Contains("blank"))
+                        type = "Blank";
+                    else
+                        type = "Exit";
 
                     double qty = col["quantity"] > 0 ? ExcelImportHelper.ParseCellDouble(row.Cell(col["quantity"]), 1.0) : 1.0;
-                    string department = col["department"] > 0 ? (row.Cell(col["department"]).GetValue<string>() ?? "").Trim() : "";
-                    string recipient = col["recipient"] > 0 ? (row.Cell(col["recipient"]).GetValue<string>() ?? "").Trim() : "";
+                    string department = col["department"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["department"])) : "";
+                    string recipient = col["recipient"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["recipient"])) : "";
                     
                     DateTime date = col["date"] > 0 
                         ? ExcelImportHelper.ParseCellDate(row.Cell(col["date"])) 
                         : DateTime.Now;
                     
-                    string description = col["description"] > 0 ? (row.Cell(col["description"]).GetValue<string>() ?? "").Trim() : "";
+                    string description = col["description"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["description"])) : "";
 
                     return new StockMovement
                     {

@@ -191,4 +191,45 @@ public class MovementRepositoryTests : IDisposable
         Assert.Equal(100, updatedCard.TotalEntry);
         Assert.Equal(30, updatedCard.TotalExit);
     }
+
+    [Fact]
+    public async Task Test_BuildQuery_FiltersWithTurkishMovementTypes()
+    {
+        var card = new StockCard { Code = "MOV008", Name = "Item 8", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        await _movementRepo.AddAsync(new StockMovement { StockCardId = card.Id, Type = "Entry", Quantity = 10, Date = DateTime.Now });
+        await _movementRepo.AddAsync(new StockMovement { StockCardId = card.Id, Type = "Exit", Quantity = 3, Date = DateTime.Now });
+
+        // Query with Turkish "Giriş"
+        var entryResults = await _movementRepo.GetPagedAsync(1, 10, card.Id, movementType: "Giriş");
+        Assert.Single(entryResults);
+        Assert.Equal("Entry", entryResults[0].Type);
+
+        // Query with Turkish "Çıkış"
+        var exitResults = await _movementRepo.GetPagedAsync(1, 10, card.Id, movementType: "Çıkış");
+        Assert.Single(exitResults);
+        Assert.Equal("Exit", exitResults[0].Type);
+    }
+
+    [Fact]
+    public async Task Test_AddBulkAsync_WithBlankMovement_DoesNotDecrementBalance()
+    {
+        var card = new StockCard { Code = "MOV009", Name = "Item 9", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        var movements = new[]
+        {
+            new StockMovement { StockCardId = card.Id, Type = "Entry", Quantity = 10, Date = DateTime.Now },
+            new StockMovement { StockCardId = card.Id, Type = "Blank", Quantity = 0, Date = DateTime.Now },
+            new StockMovement { StockCardId = card.Id, Type = "Exit", Quantity = 10, Date = DateTime.Now }
+        };
+
+        // If Blank deducted balance, the subsequent Exit of 10 would fail with stock_would_go_negative!
+        await _movementRepo.AddBulkAsync(movements);
+
+        var retrieved = await _stockCardRepo.GetByIdAsync(card.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal(0, retrieved.CurrentStock);
+    }
 }

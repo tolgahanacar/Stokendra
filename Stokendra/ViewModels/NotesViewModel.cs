@@ -267,17 +267,14 @@ public partial class NotesViewModel : ViewModelBase
 
                 var toImport = Stokendra.Infrastructure.ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    string title = col["title"] > 0 ? (row.Cell(col["title"]).GetValue<string>() ?? "").Trim() : "";
+                    string title = col["title"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["title"])) : "";
                     if (string.IsNullOrEmpty(title)) return null;
 
-                    string content = col["content"] > 0 ? (row.Cell(col["content"]).GetValue<string>() ?? "").Trim() : "";
+                    string content = col["content"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["content"])) : "";
                     
-                    DateTime date = DateTime.Now;
-                    if (col["date"] > 0)
-                    {
-                        var cellVal = row.Cell(col["date"]).GetValue<string>();
-                        if (DateTime.TryParse(cellVal, out var dt)) date = dt;
-                    }
+                    DateTime date = col["date"] > 0
+                        ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellDate(row.Cell(col["date"]))
+                        : DateTime.Now;
 
                     return new Note {
                         Title = title,

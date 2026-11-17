@@ -182,4 +182,25 @@ public class StockCardRepositoryTests : IDisposable
         Assert.Contains(lowStockCards, c => c.Code == "CHD999");
         Assert.DoesNotContain(lowStockCards, c => c.Code == "PRT999");
     }
+
+    [Fact]
+    public async Task Test_DeleteBulk_ParentAndChildrenTogether_Succeeds()
+    {
+        // Arrange: Create a parent and two children
+        var parent = new StockCard { Code = "PRTBULK", Name = "Parent Bulk", CardType = "Parent" };
+        await _repository.AddAsync(parent);
+
+        var child1 = new StockCard { Code = "CHDBULK1", Name = "Child Bulk 1", CardType = "Child", ParentId = parent.Id };
+        var child2 = new StockCard { Code = "CHDBULK2", Name = "Child Bulk 2", CardType = "Child", ParentId = parent.Id };
+        await _repository.AddAsync(child1);
+        await _repository.AddAsync(child2);
+
+        // Act: Delete both the parent and all its children in one bulk call
+        await _repository.DeleteBulkAsync(new[] { parent.Id, child1.Id, child2.Id });
+
+        // Assert: All three should be successfully deleted
+        Assert.Null(_repository.GetById(parent.Id));
+        Assert.Null(_repository.GetById(child1.Id));
+        Assert.Null(_repository.GetById(child2.Id));
+    }
 }

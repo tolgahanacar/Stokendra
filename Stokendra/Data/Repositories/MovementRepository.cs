@@ -134,7 +134,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                     },
                     transaction: trans);
 
-                info.Balance += (m.TypeEnum == MovementType.Entry ? m.Quantity : -m.Quantity);
+                info.Balance += m.Impact;
             }
             trans.Commit();
             LogAudit("Insert", "StockMovements", 0, "Bulk Insert");
@@ -185,7 +185,7 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                     transaction: trans,
                     cancellationToken: cancellationToken));
 
-                info.Balance += (m.TypeEnum == MovementType.Entry ? m.Quantity : -m.Quantity);
+                info.Balance += m.Impact;
             }
             await trans.CommitAsync(cancellationToken);
             LogAudit("Insert", "StockMovements", 0, "Bulk Insert (Async)");
@@ -456,7 +456,9 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000)
                 throw new InvalidOperationException(LocalizationManager.L("quantity_invalid"));
 
-            if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos")
+            if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && 
+                m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos" &&
+                m.Type != "Giriş" && m.Type != "Çıkış" && m.Type != "Boş")
                 throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
 
             if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
@@ -589,8 +591,17 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         }
         if(!string.IsNullOrEmpty(type))
         {
-            sql += " AND h.Type=@Type";
-            @params.Add("Type", type);
+            if (type is "Entry" or "Giris" or "Giriş")
+                sql += " AND h.Type IN ('Entry', 'Giris', 'Giriş')";
+            else if (type is "Exit" or "Cikis" or "Çıkış")
+                sql += " AND h.Type IN ('Exit', 'Cikis', 'Çıkış')";
+            else if (type is "Blank" or "Bos" or "Boş")
+                sql += " AND h.Type IN ('Blank', 'Bos', 'Boş')";
+            else
+            {
+                sql += " AND h.Type=@Type";
+                @params.Add("Type", type);
+            }
         }
         if(!string.IsNullOrEmpty(cat))
         {
@@ -615,7 +626,9 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         if (double.IsNaN(m.Quantity) || double.IsInfinity(m.Quantity) || m.Quantity > 1_000_000_000)
             throw new InvalidOperationException(LocalizationManager.L("quantity_invalid"));
 
-        if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos")
+        if (m.Type != "Entry" && m.Type != "Exit" && m.Type != "Blank" && 
+            m.Type != "Giris" && m.Type != "Cikis" && m.Type != "Bos" &&
+            m.Type != "Giriş" && m.Type != "Çıkış" && m.Type != "Boş")
             throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
 
         if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));

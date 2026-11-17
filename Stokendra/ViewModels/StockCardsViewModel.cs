@@ -271,8 +271,8 @@ public partial class StockCardsViewModel : ViewModelBase
 
                 var cardsToImport = ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    string code = col["code"] > 0 ? (row.Cell(col["code"]).GetValue<string>() ?? "").Trim() : "";
-                    string name = col["name"] > 0 ? (row.Cell(col["name"]).GetValue<string>() ?? "").Trim() : "";
+                    string code = col["code"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["code"])) : "";
+                    string name = col["name"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["name"])) : "";
 
                     if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(name)) return null;
 
@@ -280,11 +280,11 @@ public partial class StockCardsViewModel : ViewModelBase
                     {
                         Code = code,
                         Name = name,
-                        Category = col["category"] > 0 ? (row.Cell(col["category"]).GetValue<string>() ?? "").Trim() : "",
-                        Unit = col["unit"] > 0 ? (row.Cell(col["unit"]).GetValue<string>() ?? "Adet").Trim() : "Adet",
+                        Category = col["category"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["category"])) : "",
+                        Unit = col["unit"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["unit"]), "Adet") : "Adet",
                         MinStock = col["minStock"] > 0 ? ExcelImportHelper.ParseCellInt(row.Cell(col["minStock"]), 0) : 0,
                         CardType = "Child",
-                        Description = col["description"] > 0 ? (row.Cell(col["description"]).GetValue<string>() ?? "").Trim() : ""
+                        Description = col["description"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["description"])) : ""
                     };
                 });
 

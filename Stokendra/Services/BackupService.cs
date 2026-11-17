@@ -200,7 +200,12 @@ public class BackupService : IBackupService
                 h.StockCardCode,
                 h.StockCardName,
                 h.Recipient,
-                (h.Type == "Entry" || h.Type == "Giris") ? "[G] Giriş" : "[Ç] Çıkış",
+                h.TypeEnum switch
+                {
+                    MovementType.Entry => "[G] Giriş",
+                    MovementType.Exit => "[Ç] Çıkış",
+                    _ => "[B] Boş"
+                },
                 h.Quantity,
                 h.Department,
                 h.Date.ToString("dd.MM.yyyy HH:mm"),

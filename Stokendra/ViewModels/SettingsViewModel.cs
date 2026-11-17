@@ -291,7 +291,8 @@ public partial class SettingsViewModel : ViewModelBase
             string tempZip = await _backupService.ExportAllExcelAsync(Path.GetTempPath());
             
             if (File.Exists(zipPath)) File.Delete(zipPath);
-            File.Move(tempZip, zipPath);
+            File.Copy(tempZip, zipPath, true);
+            try { File.Delete(tempZip); } catch { }
 
             StatusMessage = LocalizationManager.L("full_backup_success");
             IsSuccess = true;

@@ -127,6 +127,10 @@ public partial class ServicesViewModel : ViewModelBase
         }
         catch (TaskCanceledException) { }
         catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Services schedule search error", ex);
+        }
     }
 
     [RelayCommand]
@@ -309,17 +313,17 @@ public partial class ServicesViewModel : ViewModelBase
 
                 var toImport = Stokendra.Infrastructure.ExcelImportHelper.ImportData(path, mappings, fallback, (row, col) => 
                 {
-                    string cihaz = col["device"] > 0 ? (row.Cell(col["device"]).GetValue<string>() ?? "").Trim() : "";
+                    string cihaz = col["device"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["device"])) : "";
                     if (string.IsNullOrEmpty(cihaz)) return null;
 
                     DateTime tarih = col["date"] > 0 
                         ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellDate(row.Cell(col["date"])) 
                         : DateTime.Now;
 
-                    string seri = col["serial"] > 0 ? (row.Cell(col["serial"]).GetValue<string>() ?? "").Trim() : "";
-                    string firma = col["company"] > 0 ? (row.Cell(col["company"]).GetValue<string>() ?? "").Trim() : "";
-                    string sorun = col["issue"] > 0 ? (row.Cell(col["issue"]).GetValue<string>() ?? "").Trim() : "";
-                    string sonuc = col["result"] > 0 ? (row.Cell(col["result"]).GetValue<string>() ?? "").Trim() : "";
+                    string seri = col["serial"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["serial"])) : "";
+                    string firma = col["company"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["company"])) : "";
+                    string sorun = col["issue"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["issue"])) : "";
+                    string sonuc = col["result"] > 0 ? Stokendra.Infrastructure.ExcelImportHelper.ParseCellString(row.Cell(col["result"])) : "";
 
                     return new ServiceRecord {
                         DeviceName = cihaz,

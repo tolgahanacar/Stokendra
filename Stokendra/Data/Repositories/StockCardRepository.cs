@@ -221,7 +221,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         try 
         {
             var hasChildren = await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
-                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId IN @Ids)",
+                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId IN @Ids AND Id NOT IN @Ids)",
                 new { Ids = idList },
                 transaction: trans,
                 cancellationToken: cancellationToken));

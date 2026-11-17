@@ -78,7 +78,15 @@ public static class ExcelImportHelper
         if (cell.TryGetValue<DateTime>(out var dt))
             return dt;
 
-        var str = cell.GetValue<string>();
+        if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var dDate))
+        {
+            if (dDate > 1000 && dDate < 100000)
+            {
+                try { return DateTime.FromOADate(dDate); } catch { }
+            }
+        }
+
+        var str = cell.GetString();
         if (!string.IsNullOrWhiteSpace(str))
         {
             if (DateTime.TryParse(str, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.DateTimeStyles.None, out var dtParsed))
@@ -98,7 +106,7 @@ public static class ExcelImportHelper
         if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var val))
             return val;
 
-        var str = cell.GetValue<string>();
+        var str = cell.GetString();
         if (!string.IsNullOrWhiteSpace(str))
         {
             str = str.Trim();
@@ -119,7 +127,7 @@ public static class ExcelImportHelper
         if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var dVal))
             return (int)Math.Round(dVal);
 
-        var str = cell.GetValue<string>();
+        var str = cell.GetString();
         if (!string.IsNullOrWhiteSpace(str))
         {
             str = str.Trim();

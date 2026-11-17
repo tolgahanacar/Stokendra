@@ -63,4 +63,36 @@ public class ExcelImportHelperTests
         Assert.Equal(42, ExcelImportHelper.ParseCellInt(ws.Cell(1, 2)));
         Assert.Equal(42, ExcelImportHelper.ParseCellInt(ws.Cell(1, 3)));
     }
+
+    [Fact]
+    public void Test_ParseCellDate_FromNumericOleDate()
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Sheet1");
+        // Excel serial date 45678 is 2025-01-21
+        ws.Cell(1, 1).Value = 45678.0;
+
+        var result = ExcelImportHelper.ParseCellDate(ws.Cell(1, 1));
+
+        Assert.Equal(2025, result.Year);
+        Assert.Equal(1, result.Month);
+        Assert.Equal(21, result.Day);
+    }
+
+    [Fact]
+    public void Test_ParseCellString_HandlesNumbersBooleansAndEmpty()
+    {
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Sheet1");
+
+        ws.Cell(1, 1).Value = 12345;
+        ws.Cell(1, 2).Value = true;
+        ws.Cell(1, 3).Value = "  Test Title  ";
+
+        Assert.Equal("12345", ExcelImportHelper.ParseCellString(ws.Cell(1, 1)));
+        Assert.Equal("TRUE", ExcelImportHelper.ParseCellString(ws.Cell(1, 2)).ToUpperInvariant());
+        Assert.Equal("Test Title", ExcelImportHelper.ParseCellString(ws.Cell(1, 3)));
+        Assert.Equal("", ExcelImportHelper.ParseCellString(ws.Cell(1, 4)));
+        Assert.Equal("Default", ExcelImportHelper.ParseCellString(ws.Cell(1, 4), "Default"));
+    }
 }

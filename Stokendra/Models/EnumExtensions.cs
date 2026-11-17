@@ -25,7 +25,7 @@ public static class EnumExtensions
     {
         "Entry" or "Giris" or "Giriş" => MovementType.Entry,
         "Exit" or "Cikis" or "Çıkış" => MovementType.Exit,
-        "Blank" or "Bos" => MovementType.Blank,
+        "Blank" or "Bos" or "Boş" => MovementType.Blank,
         _ => MovementType.Blank
     };
 
