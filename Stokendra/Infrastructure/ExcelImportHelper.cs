@@ -31,7 +31,7 @@ public static class ExcelImportHelper
 
         for (int i = 1; i <= colCount; i++)
         {
-            string header = firstRow.Cell(i).GetValue<string>().Trim().ToTurkishLower();
+            string header = (firstRow.Cell(i).GetString() ?? "").Trim().ToTurkishLower();
             foreach (var kvp in columnMappings)
             {
                 if (colIndices[kvp.Key] == 0 && kvp.Value.Any(v => header == v))

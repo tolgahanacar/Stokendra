@@ -23,12 +23,12 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
         if (start.HasValue)
         {
             sql += " AND ServiceDate >= @Start";
-            @params.Add("Start", start.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            @params.Add("Start", start.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
         if (end.HasValue)
         {
-            sql += " AND ServiceDate <= @End";
-            @params.Add("End", end.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            sql += " AND ServiceDate < @End";
+            @params.Add("End", end.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -139,7 +139,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
                 r.DeviceName,
                 SerialNumber = r.SerialNumber ?? "",
                 Company = r.Company ?? "",
-                ServiceDateString = r.ServiceDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                ServiceDateString = r.ServiceDate.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 Issue = r.Issue ?? "",
                 Result = r.Result ?? ""
             });
@@ -194,12 +194,12 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
         if (start.HasValue)
         {
             conditions.Add("ServiceDate >= @Start");
-            @params.Add("Start", start.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            @params.Add("Start", start.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
         if (end.HasValue)
         {
-            conditions.Add("ServiceDate <= @End");
-            @params.Add("End", end.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            conditions.Add("ServiceDate < @End");
+            @params.Add("End", end.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
         }
         if (!string.IsNullOrWhiteSpace(search))
         {

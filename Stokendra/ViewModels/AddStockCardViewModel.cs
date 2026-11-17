@@ -50,6 +50,11 @@ public partial class AddStockCardViewModel : ViewModelBase
         else
         {
             Title = LocalizationManager.L("new_stock_card");
+            try
+            {
+                Code = _stockCards.GetNextCode();
+            }
+            catch { }
         }
 
         _initTask = InitAsync();

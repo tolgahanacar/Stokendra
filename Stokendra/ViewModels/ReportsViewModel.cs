@@ -119,7 +119,7 @@ public partial class ReportsViewModel : ViewModelBase
             var rowsList = new List<StockMovement>();
             double total = 0;
             var uniqueIds = new HashSet<int>();
-            var totalsByCard = new Dictionary<string, double>();
+            var totalsByCard = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var m in allMovements)
             {

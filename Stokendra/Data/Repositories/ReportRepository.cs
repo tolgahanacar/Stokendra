@@ -49,7 +49,7 @@ public sealed class ReportRepository(IDbConnectionFactory connectionFactory) : I
                 (SELECT COUNT(*) FROM StockBalances WHERE Balance <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END) AS LowStock,
                 (SELECT COUNT(*) FROM StockBalances WHERE Balance <= 0) AS DepletedStock,
                 (SELECT COUNT(*) FROM StockMovements) AS TotalMovements,
-                (SELECT COUNT(*) FROM StockMovements WHERE DATE(Date) = DATE('now')) AS TodayMovements
+                (SELECT COUNT(*) FROM StockMovements WHERE DATE(Date) = DATE('now', 'localtime')) AS TodayMovements
             """;
 
         var record = await conn.QuerySingleOrDefaultAsync<DashboardStatsRecord>(new CommandDefinition(
