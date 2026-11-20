@@ -64,13 +64,13 @@ public partial class ServicesViewModel : ViewModelBase
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             
-            var totalCount = await _services.GetCountAsync(StartDate, EndDate.AddDays(1), term, token);
+            var totalCount = await _services.GetCountAsync(StartDate.Date, EndDate.Date.AddDays(1), term, token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
             
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate, EndDate.AddDays(1), term, token);
+            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate.Date, EndDate.Date.AddDays(1), term, token);
 
             token.ThrowIfCancellationRequested();
 
@@ -249,7 +249,7 @@ public partial class ServicesViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("svc_excel_saving");
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var allRecords = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
+            var allRecords = await _services.GetAllAsync(StartDate.Date, EndDate.Date.AddDays(1), term);
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();
@@ -352,7 +352,7 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var allRecords = await _services.GetAllAsync(StartDate, EndDate.AddDays(1), term);
+            var allRecords = await _services.GetAllAsync(StartDate.Date, EndDate.Date.AddDays(1), term);
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();

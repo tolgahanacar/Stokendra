@@ -44,7 +44,7 @@ public static class SqliteHelpers
 
         string inputLower = input.ToLower(TurkishCulture);
 
-        // Optimize standard %term% matches
+        // 1. Optimize %term% (contains)
         if (patternLower.StartsWith("%") && patternLower.EndsWith("%") && patternLower.Length >= 2)
         {
             string term = patternLower.Substring(1, patternLower.Length - 2);
@@ -54,7 +54,33 @@ public static class SqliteHelpers
             }
         }
 
-        // General SQL LIKE pattern matching via Regex
+        // 2. Optimize term% (starts with)
+        if (!patternLower.StartsWith("%") && patternLower.EndsWith("%") && patternLower.Length >= 2)
+        {
+            string term = patternLower.Substring(0, patternLower.Length - 1);
+            if (!term.Contains("%") && !term.Contains("_"))
+            {
+                return inputLower.StartsWith(term);
+            }
+        }
+
+        // 3. Optimize %term (ends with)
+        if (patternLower.StartsWith("%") && !patternLower.EndsWith("%") && patternLower.Length >= 2)
+        {
+            string term = patternLower.Substring(1);
+            if (!term.Contains("%") && !term.Contains("_"))
+            {
+                return inputLower.EndsWith(term);
+            }
+        }
+
+        // 4. Optimize exact term (no wildcards)
+        if (!patternLower.Contains("%") && !patternLower.Contains("_"))
+        {
+            return inputLower == patternLower;
+        }
+
+        // 5. General SQL LIKE pattern matching via Regex
         string regexPattern = "^" + Regex.Escape(patternLower)
             .Replace("\\%", ".*")
             .Replace("\\_", ".") + "$";

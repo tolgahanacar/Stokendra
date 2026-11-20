@@ -35,25 +35,38 @@ public class BulkObservableCollection<T> : ObservableCollection<T>
 
     /// <summary>
     /// Adds a range of items to the collection and raises a single Reset notification.
+    /// Thread-safe: dispatches to UI thread if called from a background thread.
     /// </summary>
     public void AddRange(IEnumerable<T> range)
     {
         if (range == null) throw new ArgumentNullException(nameof(range));
 
-        _suppressNotification = true;
-        try
+        void PerformAdd()
         {
-            foreach (var item in range)
+            _suppressNotification = true;
+            try
             {
-                Items.Add(item);
+                foreach (var item in range)
+                {
+                    Items.Add(item);
+                }
+            }
+            finally
+            {
+                _suppressNotification = false;
+                OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+                OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }
         }
-        finally
+
+        if (Avalonia.Threading.Dispatcher.UIThread is { } dispatcher && !dispatcher.CheckAccess())
         {
-            _suppressNotification = false;
-            OnPropertyChanged(new PropertyChangedEventArgs("Count"));
-            OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
-            OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            dispatcher.Invoke(PerformAdd);
+        }
+        else
+        {
+            PerformAdd();
         }
     }
 }

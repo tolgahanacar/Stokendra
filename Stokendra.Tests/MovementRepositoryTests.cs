@@ -232,4 +232,43 @@ public class MovementRepositoryTests : IDisposable
         Assert.NotNull(retrieved);
         Assert.Equal(0, retrieved.CurrentStock);
     }
+
+    [Fact]
+    public async Task Test_AddAsync_BlankMovement_ForcesQuantityToZero()
+    {
+        var card = new StockCard { Code = "MOV010", Name = "Item 10", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        var blankMov = new StockMovement
+        {
+            StockCardId = card.Id,
+            Type = "Blank",
+            Quantity = 42.5, // Non-zero quantity passed intentionally
+            Date = DateTime.Now
+        };
+
+        await _movementRepo.AddAsync(blankMov);
+
+        Assert.Equal(0, blankMov.Quantity);
+        var cardAfter = await _stockCardRepo.GetByIdAsync(card.Id);
+        Assert.NotNull(cardAfter);
+        Assert.Equal(0, cardAfter.CurrentStock);
+    }
+
+    [Fact]
+    public async Task Test_AddAsync_NonBlankMovement_WithZeroQuantity_Throws()
+    {
+        var card = new StockCard { Code = "MOV011", Name = "Item 11", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        var entryMov = new StockMovement
+        {
+            StockCardId = card.Id,
+            Type = "Entry",
+            Quantity = 0,
+            Date = DateTime.Now
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _movementRepo.AddAsync(entryMov));
+    }
 }

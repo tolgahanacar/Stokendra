@@ -462,7 +462,14 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
 
             if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
-            if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
+            if (m.TypeEnum == MovementType.Blank)
+            {
+                m.Quantity = 0;
+            }
+            else if (m.Quantity == 0)
+            {
+                throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
+            }
 
             if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException(LocalizationManager.L("type_field_required"));
             if (m.StockCardId <= 0) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));
@@ -632,7 +639,14 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
             throw new InvalidOperationException(LocalizationManager.L("movement_type_invalid"));
 
         if (m.Quantity < 0) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_negative"));
-        if (m.Quantity == 0 && m.TypeEnum != MovementType.Blank) throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
+        if (m.TypeEnum == MovementType.Blank)
+        {
+            m.Quantity = 0;
+        }
+        else if (m.Quantity == 0)
+        {
+            throw new InvalidOperationException(LocalizationManager.L("quantity_cannot_be_zero"));
+        }
 
         if (string.IsNullOrWhiteSpace(m.Type)) throw new InvalidOperationException(LocalizationManager.L("type_field_required"));
         if (m.StockCardId <= 0) throw new InvalidOperationException(LocalizationManager.L("record_not_found"));

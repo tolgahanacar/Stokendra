@@ -64,6 +64,38 @@ public class DatabaseHealthTests : IDisposable
     }
 
     [Fact]
+    public void Test_SqlLike_OptimizedPatterns_MatchTurkishAccurate()
+    {
+        using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_tempDbPath}");
+        conn.Open();
+        SqliteHelpers.RegisterCustomFunctions(conn);
+
+        using var cmd = conn.CreateCommand();
+
+        // 1. Exact match
+        cmd.CommandText = "SELECT LIKE('ELMA', 'elma');";
+        Assert.Equal(1L, cmd.ExecuteScalar());
+
+        // 2. StartsWith (prefix%)
+        cmd.CommandText = "SELECT LIKE('EL%', 'elma');";
+        Assert.Equal(1L, cmd.ExecuteScalar());
+        cmd.CommandText = "SELECT LIKE('ARM%', 'elma');";
+        Assert.Equal(0L, cmd.ExecuteScalar());
+
+        // 3. EndsWith (%suffix)
+        cmd.CommandText = "SELECT LIKE('%MA', 'elma');";
+        Assert.Equal(1L, cmd.ExecuteScalar());
+        cmd.CommandText = "SELECT LIKE('%Z', 'elma');";
+        Assert.Equal(0L, cmd.ExecuteScalar());
+
+        // 4. Contains (%term%) with Turkish dotted/dotless I
+        cmd.CommandText = "SELECT LIKE('%İĞNE%', 'iğne ipliği');";
+        Assert.Equal(1L, cmd.ExecuteScalar());
+        cmd.CommandText = "SELECT LIKE('%IŞIK%', 'ışık kaynağı');";
+        Assert.Equal(1L, cmd.ExecuteScalar());
+    }
+
+    [Fact]
     public async Task Test_LastAdmin_CannotBeDeleted()
     {
         var factory = new SqliteConnectionFactory(_tempDbPath);

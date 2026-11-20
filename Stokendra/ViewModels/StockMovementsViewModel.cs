@@ -104,13 +104,13 @@ public partial class StockMovementsViewModel : ViewModelBase
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
             string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate, endDate: EndDate.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate.Date, endDate: EndDate.Date.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
 
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate, endDate: EndDate.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate.Date, endDate: EndDate.Date.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
 
             token.ThrowIfCancellationRequested();
 
@@ -303,7 +303,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             int? cardId = SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count ? _allCards[SelectedStockIndex - 1].Id : null;
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
 
-            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate, EndDate.AddDays(1), null, type, null, null);
+            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate.Date, EndDate.Date.AddDays(1), null, type, null, null);
             if (recordsToExport.Count == 0)
             {
                 recordsToExport = Movements.ToList();

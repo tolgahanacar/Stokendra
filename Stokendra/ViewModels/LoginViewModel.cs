@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Stokendra.Data.Interfaces;
 using Stokendra.Infrastructure;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Stokendra.ViewModels;
 
@@ -106,8 +108,11 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
 
-        // Master code kontrolü (AppSettings'e eklenecek)
-        if (SecurityCode != AppServices.Current.Settings.MasterSecurityCode)
+        // Master code kontrolü (zamanlama saldırılarına karşı sabit zamanlı karşılaştırma)
+        byte[] inputBytes = Encoding.UTF8.GetBytes(SecurityCode.Trim());
+        byte[] masterBytes = Encoding.UTF8.GetBytes(AppServices.Current.Settings.MasterSecurityCode.Trim());
+        bool match = inputBytes.Length == masterBytes.Length && CryptographicOperations.FixedTimeEquals(inputBytes, masterBytes);
+        if (!match)
         {
             ErrorMessage = LocalizationManager.L("security_code_incorrect");
             return;

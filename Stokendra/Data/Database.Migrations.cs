@@ -435,10 +435,21 @@ public sealed partial class Database
 
     private static void NormalizeLegacyData(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Entry' WHERE Type IN ('Giris', 'Giriş', 'entry')");
-        TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Exit' WHERE Type IN ('Cikis', 'Çıkış', 'exit')");
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Child' WHERE CardType IN ('Alt', 'child')");
-        TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Parent' WHERE CardType IN ('Ust', 'Üst', 'parent')");
+        using var checkMovements = CreateCommand(connection, transaction,
+            "SELECT 1 FROM StockMovements WHERE Type IN ('Giris', 'Giriş', 'entry', 'Cikis', 'Çıkış', 'exit') LIMIT 1;");
+        if (checkMovements.ExecuteScalar() != null)
+        {
+            TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Entry' WHERE Type IN ('Giris', 'Giriş', 'entry')");
+            TryAlter(connection, transaction, "UPDATE StockMovements SET Type='Exit' WHERE Type IN ('Cikis', 'Çıkış', 'exit')");
+        }
+
+        using var checkCards = CreateCommand(connection, transaction,
+            "SELECT 1 FROM StockCards WHERE CardType IN ('Alt', 'child', 'Ust', 'Üst', 'parent') LIMIT 1;");
+        if (checkCards.ExecuteScalar() != null)
+        {
+            TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Child' WHERE CardType IN ('Alt', 'child')");
+            TryAlter(connection, transaction, "UPDATE StockCards SET CardType='Parent' WHERE CardType IN ('Ust', 'Üst', 'parent')");
+        }
     }
 
     private static void ValidateDatabase(SqliteConnection connection, SqliteTransaction? transaction)

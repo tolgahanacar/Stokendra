@@ -99,8 +99,8 @@ public partial class ReportsViewModel : ViewModelBase
                 var batch = await _movements.GetPagedAsync(
                     page, batchSize,
                     stockCardId: null,
-                    startDate: StartDate,
-                    endDate: EndDate.AddDays(1),
+                    startDate: StartDate.Date,
+                    endDate: EndDate.Date.AddDays(1),
                     department: dept,
                     movementType: "Exit",
                     category: cat,

@@ -32,7 +32,11 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
             cancellationToken: cancellationToken));
 
         if (user == null)
+        {
+            // Timing attack mitigation: compute dummy PBKDF2 hash to equalize execution time
+            HashV4(password, "dHVta2FsaWJhc2FsdDEyMzQ1Ng==");
             return (false, "");
+        }
 
         string storedHash = user.PasswordHash.Trim();
         string salt = user.Salt.Trim();
@@ -252,10 +256,12 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
         byte[] aBytes = Encoding.UTF8.GetBytes(a.Trim());
         byte[] bBytes = Encoding.UTF8.GetBytes(b.Trim());
 
-        bool equal = aBytes.Length == bBytes.Length;
-        byte[] cmpBytes = equal ? bBytes : aBytes;
-        bool result = CryptographicOperations.FixedTimeEquals(aBytes, cmpBytes);
+        if (aBytes.Length != bBytes.Length)
+        {
+            CryptographicOperations.FixedTimeEquals(aBytes, aBytes);
+            return false;
+        }
 
-        return equal && result;
+        return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
     }
 }

@@ -28,16 +28,16 @@ public partial class PrintPreviewViewModel : ViewModelBase
         {
             string safeTitle = string.Join("_", Title.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Replace(" ", "_");
             if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Report";
-            string tempPath = Path.Combine(Path.GetTempPath(), $"{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
+            string tempPath = Path.Combine(Path.GetTempPath(), $"Stokendra_{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
             await File.WriteAllTextAsync(tempPath, Content);
             
             var psi = new System.Diagnostics.ProcessStartInfo { FileName = tempPath, UseShellExecute = true };
             System.Diagnostics.Process.Start(psi);
             
-            // Fire-and-forget deletion after a delay
+            // Fire-and-forget deletion after a 2-minute delay (sufficient for cold browser starts, print preview and refresh)
             _ = Task.Run(async () =>
             {
-                await Task.Delay(10000); // 10 seconds is plenty of time for the browser to read the file
+                await Task.Delay(120000);
                 try
                 {
                     if (File.Exists(tempPath))

@@ -120,8 +120,6 @@ public class BackupService : IBackupService
         }
         finally
         {
-            // Veritabanı ve geçici kopyalar üzerindeki kilitleri kaldırmak için SQLite havuzlarını temizle
-            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }

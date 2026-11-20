@@ -125,7 +125,7 @@ public static class AppPaths
                         // Check if the new database is empty (no stock cards)
                         try
                         {
-                            using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={newDb}");
+                            using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={newDb};Pooling=False");
                             conn.Open();
                             using var cmd = conn.CreateCommand();
                             cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('StockCards', 'StokKartlari')";
