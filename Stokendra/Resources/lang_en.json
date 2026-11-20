@@ -1,4 +1,5 @@
 {
+  "file_in_use_error": "The file '{0}' is currently in use by another program (e.g. Microsoft Excel). Please close it and try again.",
   "app_title": "Stokendra - Stock Tracking Program",
   "app_name": "Stokendra",
   "menu": "MENU",

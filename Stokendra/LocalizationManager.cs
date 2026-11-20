@@ -43,10 +43,12 @@ public static class LocalizationManager
             ["entry_symbol"] = "[G]",
             ["exit_symbol"] = "[Ç]",
             ["card_type_parent"] = "Üst",
+            ["file_in_use_error"] = "'{0}' dosyası başka bir program tarafından (örn. Microsoft Excel) kullanılıyor. Lütfen dosyayı kapatıp tekrar deneyin.",
             ["card_type_child"] = "Alt"
         },
         ["en"] = new Dictionary<string, string>
         {
+            ["file_in_use_error"] = "The file '{0}' is currently in use by another program (e.g. Microsoft Excel). Please close it and try again.",
             ["bulk_edit_partial_error"] = "{0} records were updated, but an error occurred:\n{1}",
             ["movement_type_invalid"] = "Invalid movement type.",
             ["movement_not_found"] = "Stock movement not found.",

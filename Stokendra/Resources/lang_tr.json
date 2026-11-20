@@ -1,4 +1,5 @@
 {
+  "file_in_use_error": "'{0}' dosyas\u0131 ba\u015Fka bir program taraf\u0131ndan (\u00F6rn. Microsoft Excel) kullan\u0131l\u0131yor. L\u00FCtfen dosyay\u0131 kapat\u0131p tekrar deneyin.",
   "app_title": "Stokendra - Stok Takip Program\u0131",
   "app_name": "Stokendra",
   "menu": "MEN\u00DC",

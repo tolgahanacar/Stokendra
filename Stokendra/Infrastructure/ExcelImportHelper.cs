@@ -58,12 +58,37 @@ public static class ExcelImportHelper
 
         var rows = worksheet.RangeUsed()?.RowsUsed().Skip(1) ?? Enumerable.Empty<IXLRangeRow>();
         
+        int lastRowNumber = 1;
+        int consecutiveEmptyRows = 0;
+        const int MaxConsecutiveEmpty = 50;
+        const int MaxAllowedImportRows = 50000;
+
         foreach (var row in rows)
         {
+            if (result.Count >= MaxAllowedImportRows)
+                break;
+
+            int currentRowNumber = row.RowNumber();
+            // Circuit breaker 1: if there is a gap of 50+ unassigned/sparse blank rows
+            if (currentRowNumber - lastRowNumber > MaxConsecutiveEmpty)
+                break;
+
+            lastRowNumber = currentRowNumber;
+
             var item = rowParser(row, colIndices);
             if (item != null)
             {
+                consecutiveEmptyRows = 0;
                 result.Add(item);
+            }
+            else
+            {
+                consecutiveEmptyRows++;
+                // Circuit breaker 2: if 50 consecutive rows evaluate to empty/null
+                if (consecutiveEmptyRows >= MaxConsecutiveEmpty)
+                {
+                    break;
+                }
             }
         }
 
@@ -76,13 +101,22 @@ public static class ExcelImportHelper
     public static DateTime ParseCellDate(IXLCell cell, DateTime? defaultDate = null)
     {
         if (cell.TryGetValue<DateTime>(out var dt))
-            return dt;
+        {
+            if (dt.Year >= 1990 && dt.Year <= 2100)
+                return dt;
+        }
 
         if (cell.DataType == XLDataType.Number && cell.TryGetValue<double>(out var dDate))
         {
             if (dDate > 1000 && dDate < 100000)
             {
-                try { return DateTime.FromOADate(dDate); } catch { }
+                try
+                {
+                    var dtOa = DateTime.FromOADate(dDate);
+                    if (dtOa.Year >= 1990 && dtOa.Year <= 2100)
+                        return dtOa;
+                }
+                catch { }
             }
         }
 
@@ -90,9 +124,15 @@ public static class ExcelImportHelper
         if (!string.IsNullOrWhiteSpace(str))
         {
             if (DateTime.TryParse(str, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.DateTimeStyles.None, out var dtParsed))
-                return dtParsed;
+            {
+                if (dtParsed.Year >= 1990 && dtParsed.Year <= 2100)
+                    return dtParsed;
+            }
             if (DateTime.TryParse(str, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out dtParsed))
-                return dtParsed;
+            {
+                if (dtParsed.Year >= 1990 && dtParsed.Year <= 2100)
+                    return dtParsed;
+            }
         }
 
         return defaultDate ?? DateTime.Now;

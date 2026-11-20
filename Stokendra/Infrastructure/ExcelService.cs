@@ -73,6 +73,21 @@ public static class ExcelService
 
         worksheet.Columns().AdjustToContents();
         customizeSheet?.Invoke(worksheet);
-        workbook.SaveAs(filePath);
+
+        try
+        {
+            workbook.SaveAs(filePath);
+        }
+        catch (System.IO.IOException ex) when (IsFileLocked(ex))
+        {
+            throw new InvalidOperationException(LocalizationManager.L("file_in_use_error", System.IO.Path.GetFileName(filePath)), ex);
+        }
+    }
+
+    private static bool IsFileLocked(System.IO.IOException ex)
+    {
+        int errorCode = ex.HResult & 0xFFFF;
+        // 32 = ERROR_SHARING_VIOLATION, 33 = ERROR_LOCK_VIOLATION
+        return errorCode == 32 || errorCode == 33;
     }
 }

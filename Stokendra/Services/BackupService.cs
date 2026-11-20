@@ -52,7 +52,12 @@ public class BackupService : IBackupService
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
 
             var lastBackup = _settings.LastBackupDate;
-            if (lastBackup.HasValue && (DateTime.Now.Date - lastBackup.Value.Date).TotalDays < 3) return;
+            if (lastBackup.HasValue)
+            {
+                var elapsedDays = (DateTime.Now.Date - lastBackup.Value.Date).TotalDays;
+                // If last backup was within the last 3 days and clock has not jumped backward into the past
+                if (elapsedDays >= 0 && elapsedDays < 3) return;
+            }
 
             // Arka planda tam yedeklemeyi başlat (UI'ı kilitlememek için Task.Run kullanıyoruz)
             await Task.Run(async () => 

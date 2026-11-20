@@ -79,9 +79,22 @@ public class AppSettings
             File.WriteAllText(tempFile, json);
 
             if (File.Exists(AppPaths.SettingsFilePath))
-                File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+            {
+                try
+                {
+                    File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+                }
+                catch
+                {
+                    // Fallback for non-NTFS drives (FAT32, exFAT, network shares)
+                    File.Copy(tempFile, AppPaths.SettingsFilePath, true);
+                    try { File.Delete(tempFile); } catch { }
+                }
+            }
             else
+            {
                 File.Move(tempFile, AppPaths.SettingsFilePath);
+            }
 
             return true;
         }
@@ -108,9 +121,22 @@ public class AppSettings
             await File.WriteAllTextAsync(tempFile, json);
 
             if (File.Exists(AppPaths.SettingsFilePath))
-                File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+            {
+                try
+                {
+                    File.Replace(tempFile, AppPaths.SettingsFilePath, null);
+                }
+                catch
+                {
+                    // Fallback for non-NTFS drives (FAT32, exFAT, network shares)
+                    File.Copy(tempFile, AppPaths.SettingsFilePath, true);
+                    try { File.Delete(tempFile); } catch { }
+                }
+            }
             else
+            {
                 File.Move(tempFile, AppPaths.SettingsFilePath);
+            }
 
             return true;
         }
