@@ -107,21 +107,21 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
     private string HashV4(string password, string salt)
     {
         byte[] saltBytes = Convert.FromBase64String(salt);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 600000, HashAlgorithmName.SHA512);
-        return "v4:" + Convert.ToBase64String(pbkdf2.GetBytes(HashSize));
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, 600000, HashAlgorithmName.SHA512, HashSize);
+        return "v4:" + Convert.ToBase64String(hash);
     }
 
     private string HashV3(string password, string salt)
     {
         byte[] saltBytes = Convert.FromBase64String(salt);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 120000, HashAlgorithmName.SHA512);
-        return "v3:" + Convert.ToBase64String(pbkdf2.GetBytes(HashSize));
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, 120000, HashAlgorithmName.SHA512, HashSize);
+        return "v3:" + Convert.ToBase64String(hash);
     }
 
     private string HashV2Legacy(string password, string salt)
     {
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, Encoding.UTF8.GetBytes(salt), 20000, HashAlgorithmName.SHA512);
-        return "v2:" + Convert.ToBase64String(pbkdf2.GetBytes(HashSize));
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, Encoding.UTF8.GetBytes(salt), 20000, HashAlgorithmName.SHA512, HashSize);
+        return "v2:" + Convert.ToBase64String(hash);
     }
 
     private async Task UpgradeAsync(string user, string pass, SqliteConnection conn, CancellationToken cancellationToken = default)

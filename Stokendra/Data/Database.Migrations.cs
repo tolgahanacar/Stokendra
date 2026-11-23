@@ -552,16 +552,14 @@ public sealed partial class Database
     private static string HashPasswordV3(string password, string salt)
     {
         byte[] saltBytes = Convert.FromBase64String(salt);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, PasswordIterationsV3, HashAlgorithmName.SHA512);
-        byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, PasswordIterationsV3, HashAlgorithmName.SHA512, PasswordHashSize);
         return "v3:" + Convert.ToBase64String(hash);
     }
 
     private static string HashPasswordV4(string password, string salt)
     {
         byte[] saltBytes = Convert.FromBase64String(salt);
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, saltBytes, 600000, HashAlgorithmName.SHA512);
-        byte[] hash = pbkdf2.GetBytes(PasswordHashSize);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(password, saltBytes, 600000, HashAlgorithmName.SHA512, PasswordHashSize);
         return "v4:" + Convert.ToBase64String(hash);
     }
 

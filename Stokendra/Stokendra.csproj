@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Stokendra</AssemblyName>
     <RootNamespace>Stokendra</RootNamespace>
-    <Version>7.4.9</Version>
+    <Version>7.5.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <ApplicationIcon>Stokendra.ico</ApplicationIcon>
     <NoWarn>$(NoWarn);NU1701</NoWarn>

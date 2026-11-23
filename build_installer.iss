@@ -11,7 +11,7 @@
 ;          --self-contained true ^
 ;          -p:PublishSingleFile=false ^
 ;          -p:PublishTrimmed=false ^
-;          -o Stokendra\bin\Release\net8.0\win-x64\publish
+;          -o Stokendra\bin\Release\net10.0\win-x64\publish
 ;
 ;   2) Bu dosyayı Inno Setup Compiler ile derleyin:
 ;
@@ -27,7 +27,7 @@
 #define MyAppURL       "https://github.com/tolgahanacar/Stokendra"
 #define MyAppExeName   "Stokendra.exe"
 #define MyAppIcon      "Stokendra\Stokendra.ico"
-#define MyAppPublishDir SourcePath + "\Stokendra\bin\Release\net8.0\win-x64\publish"
+#define MyAppPublishDir SourcePath + "\Stokendra\bin\Release\net10.0\win-x64\publish"
 
 ; Versiyon bilgisini publish edilmiş exe'den otomatik çek (tek kaynak: .csproj)
 #define MyAppFullVer   GetVersionNumbersString(MyAppPublishDir + "\" + MyAppExeName)
