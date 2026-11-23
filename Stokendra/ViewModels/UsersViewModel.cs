@@ -22,6 +22,7 @@ public partial class UsersViewModel : ViewModelBase
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private bool _isSuccess;
     [ObservableProperty] private bool _isLoading;
+    private bool _isLoaded;
 
     public BulkObservableCollection<User> Users { get; } = new();
     public List<string> Roles { get; } = new() { "admin", "user" };
@@ -30,9 +31,26 @@ public partial class UsersViewModel : ViewModelBase
     {
         _userRepository = userRepository;
         _dialogService = dialogService;
+
+        DataEvents.DataChanged += OnDataChanged;
+
         AsyncHelper.RunSafe(
             () => LoadUsersAsync(),
             ex => AppLogger.LogError("Users load failed", ex));
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.Users)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadUsersAsync();
     }
 
     [RelayCommand]
@@ -44,6 +62,7 @@ public partial class UsersViewModel : ViewModelBase
         {
             var list = await _userRepository.GetUsersAsync();
             Users.ReplaceAll(list);
+            _isLoaded = true;
         }
         catch (Exception ex)
         {
@@ -87,6 +106,7 @@ public partial class UsersViewModel : ViewModelBase
                 NewUsername = "";
                 NewPassword = "";
                 NewRole = "user";
+                DataEvents.NotifyChanged(DataDomain.Users);
                 await LoadUsersAsync();
             }
             else
@@ -133,6 +153,7 @@ public partial class UsersViewModel : ViewModelBase
             {
                 StatusMessage = LocalizationManager.L("user_deleted_success");
                 IsSuccess = true;
+                DataEvents.NotifyChanged(DataDomain.Users);
                 await LoadUsersAsync();
             }
             else
@@ -174,6 +195,7 @@ public partial class UsersViewModel : ViewModelBase
         bool ok = await _userRepository.UpdateUserRoleAsync(targetUser.Id, nextRole);
         if (ok)
         {
+            DataEvents.NotifyChanged(DataDomain.Users);
             await LoadUsersAsync();
             StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, nextRole);
             IsSuccess = true;
@@ -243,6 +265,7 @@ public partial class UsersViewModel : ViewModelBase
     public override void RefreshSession()
     {
         base.RefreshSession();
+        _isLoaded = false;
         AsyncHelper.RunSafe(
             () => LoadUsersAsync(),
             ex => AppLogger.LogError("Users refresh failed", ex));

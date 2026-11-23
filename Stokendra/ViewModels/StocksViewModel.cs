@@ -26,6 +26,8 @@ public partial class StocksViewModel : ViewModelBase
 
     public BulkObservableCollection<StockCard> Stocks { get; } = new();
     private List<StockCard> _allStocks = new();
+    private readonly SearchIndex<StockCard> _searchIndex;
+    private bool _isLoaded;
 
     // For Debounce
     private CancellationTokenSource? _filterCts;
@@ -34,9 +36,30 @@ public partial class StocksViewModel : ViewModelBase
     {
         _stockCards = stockCards;
         _dialogService = dialogService;
+
+        _searchIndex = new SearchIndex<StockCard>(
+            k => new[] { k.Code, k.Name, k.Category, k.Description },
+            (k, term) => k.MatchesSearch(term));
+
+        DataEvents.DataChanged += OnDataChanged;
+
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.StockCards || domain == DataDomain.Movements)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadAsync();
     }
 
     private CancellationTokenSource? _loadingCts;
@@ -53,6 +76,8 @@ public partial class StocksViewModel : ViewModelBase
         try
         {
             _allStocks = await _stockCards.GetChildCardsAsync(null, token);
+            _searchIndex.Build(_allStocks);
+            _isLoaded = true;
             ApplyFilter();
         }
         catch (OperationCanceledException) { }
@@ -70,8 +95,7 @@ public partial class StocksViewModel : ViewModelBase
         var token = _filterCts.Token;
         try
         {
-            // 250ms debounce
-            await Task.Delay(300, token);
+            await Task.Delay(25, token);
             ApplyFilter();
         }
         catch (OperationCanceledException) { }
@@ -83,11 +107,7 @@ public partial class StocksViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        var term = SearchText.Trim().ToTurkishLower();
-        var data = string.IsNullOrEmpty(term)
-            ? _allStocks
-            : _allStocks.Where(k => k.MatchesSearch(term)).ToList();
-
+        var data = _searchIndex.Search(SearchText);
         Stocks.ReplaceAll(data);
         
         int lowStockCount = data.Count(k => k.CurrentStock <= k.MinStock && k.CurrentStock > 0);
@@ -216,5 +236,11 @@ public partial class StocksViewModel : ViewModelBase
             AppLogger.LogError("Stocks print error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("export_error")}: {ex.Message}");
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
     }
 }

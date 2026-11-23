@@ -75,9 +75,55 @@ public partial class StockMovementsViewModel : ViewModelBase
         TypeItems.Add(LocalizationManager.L("exit"));
         TypeItems.Add(LocalizationManager.L("type_empty"));
 
+        DataEvents.DataChanged += OnDataChanged;
+
         AsyncHelper.RunSafe(
             () => InitAsync(),
             ex => { AppLogger.LogError("Init error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
+    }
+
+    private bool _isLoaded;
+    private bool _cardsDirty;
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.Movements)
+        {
+            _isLoaded = false;
+        }
+        else if (domain == DataDomain.StockCards)
+        {
+            _cardsDirty = true;
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_cardsDirty)
+        {
+            _cardsDirty = false;
+            await ReloadCardsAsync();
+        }
+        if (_isLoaded) return;
+        await LoadMovementsAsync();
+    }
+
+    private async Task ReloadCardsAsync()
+    {
+        try
+        {
+            _allCards = await _stockCards.GetChildCardsAsync();
+            int previousIndex = SelectedStockIndex;
+            StockItems.Clear();
+            StockItems.Add(LocalizationManager.L("all"));
+            foreach (var k in _allCards) StockItems.Add($"{k.Code} - {k.Name}");
+            SelectedStockIndex = previousIndex < StockItems.Count ? previousIndex : 0;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("ReloadCards error", ex);
+        }
     }
 
     private async Task InitAsync()
@@ -115,6 +161,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             token.ThrowIfCancellationRequested();
 
             Movements.ReplaceAll(data);
+            _isLoaded = true;
             StatusText = LocalizationManager.L("total_movements_page", totalCount, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException) 
@@ -157,7 +204,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         var token = _searchCts.Token;
         try
         {
-            await Task.Delay(300, token);
+            await Task.Delay(120, token);
             CurrentPage = 1;
             await LoadMovementsAsync();
         }
@@ -185,6 +232,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             {
                 var ids = SelectedMovements.Select(m => m.Id).ToList();
                 await _movements.DeleteBulkAsync(ids);
+                DataEvents.NotifyChanged(DataDomain.Movements);
                 await LoadMovementsAsync();
                 StatusText = LocalizationManager.L("bulk_movement_delete_success", count);
             }
@@ -208,6 +256,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             try
             {
                 await _movements.DeleteAsync(itemToDelete.Id);
+                DataEvents.NotifyChanged(DataDomain.Movements);
                 await LoadMovementsAsync();
                 StatusText = LocalizationManager.L("bulk_movement_delete_success", 1);
             }
@@ -231,6 +280,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             try
             {
                 await _movements.AddAsync(vm.Result);
+                DataEvents.NotifyChanged(DataDomain.Movements);
                 await LoadMovementsAsync();
                 StatusText = LocalizationManager.L("movement_saved_success");
             }
@@ -256,6 +306,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                 try
                 {
                     await _movements.UpdateAsync(vm.Result);
+                    DataEvents.NotifyChanged(DataDomain.Movements);
                     await LoadMovementsAsync();
                     StatusText = LocalizationManager.L("movement_saved_success");
                 }
@@ -271,6 +322,7 @@ public partial class StockMovementsViewModel : ViewModelBase
             var vm = new BulkEditMovementsViewModel(SelectedMovements.ToList(), _movements, _departments, _dialogService);
             if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
             {
+                DataEvents.NotifyChanged(DataDomain.Movements);
                 await LoadMovementsAsync();
                 StatusText = LocalizationManager.L("movement_saved_success");
             }
@@ -283,6 +335,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         var vm = new BulkMovementViewModel(_movements, _departments, _stockCards, _dialogService);
         if (await _dialogService.ShowDialogAsync(vm))
         {
+            DataEvents.NotifyChanged(DataDomain.Movements);
             await LoadMovementsAsync();
         }
     }
@@ -483,5 +536,12 @@ public partial class StockMovementsViewModel : ViewModelBase
             StatusText = LocalizationManager.L("printing_finished");
         }
         catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
+        _cardsDirty = true;
     }
 }

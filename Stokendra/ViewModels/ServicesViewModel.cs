@@ -42,6 +42,9 @@ public partial class ServicesViewModel : ViewModelBase
     {
         _services = services;
         _dialogService = dialogService;
+
+        DataEvents.DataChanged += OnDataChanged;
+
         SelectedRecords.CollectionChanged += (s, e) => {
             OnPropertyChanged(nameof(IsRecordSelected));
         };
@@ -49,6 +52,22 @@ public partial class ServicesViewModel : ViewModelBase
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
+    }
+
+    private bool _isLoaded;
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.Services)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadAsync();
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
@@ -75,6 +94,7 @@ public partial class ServicesViewModel : ViewModelBase
             token.ThrowIfCancellationRequested();
 
             Records.ReplaceAll(data);
+            _isLoaded = true;
             StatusText = string.Format(LocalizationManager.L("svc_status_listing"), totalCount, Records.Count, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException)
@@ -120,7 +140,7 @@ public partial class ServicesViewModel : ViewModelBase
         var token = _searchCts.Token;
         try
         {
-            await Task.Delay(300, token);
+            await Task.Delay(120, token);
             CurrentPage = 1;
             await LoadAsync();
         }
@@ -147,6 +167,7 @@ public partial class ServicesViewModel : ViewModelBase
             try
             {
                 await _services.DeleteBulkAsync(SelectedRecords.Select(r => r.Id).ToList());
+                DataEvents.NotifyChanged(DataDomain.Services);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("svc_record_deleted");
             }
@@ -171,6 +192,7 @@ public partial class ServicesViewModel : ViewModelBase
             try
             {
                 await _services.DeleteAsync(itemToDelete.Id);
+                DataEvents.NotifyChanged(DataDomain.Services);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("svc_record_deleted");
             }
@@ -191,6 +213,7 @@ public partial class ServicesViewModel : ViewModelBase
             try
             {
                 await _services.AddAsync(vm.Result);
+                DataEvents.NotifyChanged(DataDomain.Services);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("svc_record_added");
             }
@@ -210,6 +233,7 @@ public partial class ServicesViewModel : ViewModelBase
             var vm = new BulkEditServicesViewModel(SelectedRecords.ToList(), _services, _dialogService);
             if (await _dialogService.ShowDialogAsync(vm) == true)
             {
+                DataEvents.NotifyChanged(DataDomain.Services);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("bulk_edit_success", SelectedRecords.Count);
             }
@@ -224,6 +248,7 @@ public partial class ServicesViewModel : ViewModelBase
                 try
                 {
                     await _services.UpdateAsync(vm.Result);
+                    DataEvents.NotifyChanged(DataDomain.Services);
                     await LoadAsync();
                     StatusText = LocalizationManager.L("svc_record_updated");
                 }
@@ -404,5 +429,11 @@ public partial class ServicesViewModel : ViewModelBase
             AppLogger.LogError("Print error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
     }
 }

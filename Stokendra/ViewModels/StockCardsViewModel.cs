@@ -41,6 +41,8 @@ public partial class StockCardsViewModel : ViewModelBase
     public BulkObservableCollection<StockCard> SelectedCards { get; } = new();
 
     private List<StockCard> _allCards = new();
+    private readonly SearchIndex<StockCard> _searchIndex;
+    private bool _isLoaded;
 
     // For Debounce
     private CancellationTokenSource? _filterCts;
@@ -55,6 +57,13 @@ public partial class StockCardsViewModel : ViewModelBase
         _movements = movements;
         _departments = departments;
         _dialogService = dialogService;
+
+        _searchIndex = new SearchIndex<StockCard>(
+            k => new[] { k.Code, k.Name, k.Category, k.Description },
+            (k, term) => k.MatchesSearch(term));
+
+        DataEvents.DataChanged += OnDataChanged;
+
         SelectedCards.CollectionChanged += (s, e) => {
             IsMultipleSelected = SelectedCards.Count >= 2;
             OnPropertyChanged(nameof(IsCardSelected));
@@ -64,6 +73,20 @@ public partial class StockCardsViewModel : ViewModelBase
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.StockCards)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadAsync();
     }
 
     private CancellationTokenSource? _loadingCts;
@@ -80,6 +103,8 @@ public partial class StockCardsViewModel : ViewModelBase
         try
         {
             _allCards = await _stockCards.GetAllAsync(token);
+            _searchIndex.Build(_allCards);
+            _isLoaded = true;
             ApplySearch();
         }
         catch (OperationCanceledException) { }
@@ -101,7 +126,7 @@ public partial class StockCardsViewModel : ViewModelBase
         var token = _filterCts.Token;
         try
         {
-            await Task.Delay(300, token);
+            await Task.Delay(25, token);
             ApplySearch();
         }
         catch (OperationCanceledException) { }
@@ -113,11 +138,7 @@ public partial class StockCardsViewModel : ViewModelBase
 
     private void ApplySearch()
     {
-        var term = SearchText.Trim().ToTurkishLower();
-        var data = string.IsNullOrEmpty(term)
-            ? _allCards
-            : _allCards.Where(k => k.MatchesSearch(term)).ToList();
-
+        var data = _searchIndex.Search(SearchText);
         Cards.ReplaceAll(data);
         StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
     }
@@ -137,6 +158,7 @@ public partial class StockCardsViewModel : ViewModelBase
             try
             {
                 await _stockCards.AddAsync(vm.Result);
+                DataEvents.NotifyChanged(DataDomain.StockCards);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("card_added_success", vm.Result.Name);
             }
@@ -160,6 +182,7 @@ public partial class StockCardsViewModel : ViewModelBase
             try
             {
                 await _stockCards.UpdateAsync(vm.Result);
+                DataEvents.NotifyChanged(DataDomain.StockCards);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("card_updated_success", vm.Result.Name);
             }
@@ -187,6 +210,7 @@ public partial class StockCardsViewModel : ViewModelBase
             try
             {
                 await _stockCards.DeleteBulkAsync(SelectedCards.Select(c => c.Id).ToList());
+                DataEvents.NotifyChanged(DataDomain.StockCards);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("bulk_delete_success", count);
             }
@@ -211,6 +235,7 @@ public partial class StockCardsViewModel : ViewModelBase
             try
             {
                 await _stockCards.DeleteAsync(cardToDelete.Id);
+                DataEvents.NotifyChanged(DataDomain.StockCards);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("bulk_delete_success", 1);
             }
@@ -234,6 +259,7 @@ public partial class StockCardsViewModel : ViewModelBase
         
         if (await _dialogService.ShowDialogAsync(vm))
         {
+            DataEvents.NotifyChanged(DataDomain.Movements);
             await LoadAsync();
         }
     }
@@ -290,6 +316,7 @@ public partial class StockCardsViewModel : ViewModelBase
                     count = cardsToImport.Count;
                 }
             });
+            DataEvents.NotifyChanged(DataDomain.StockCards);
             await LoadAsync();
             StatusText = LocalizationManager.L("import_success", count);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("import_success", count));
@@ -317,6 +344,7 @@ public partial class StockCardsViewModel : ViewModelBase
             _dialogService);
             
         await _dialogService.ShowDialogAsync(vm);
+        DataEvents.NotifyChanged(DataDomain.StockCards);
         await LoadAsync();
     }
 
@@ -417,5 +445,11 @@ public partial class StockCardsViewModel : ViewModelBase
             AppLogger.LogError("Cards print error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("export_error")}: {ex.Message}");
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
     }
 }

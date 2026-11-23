@@ -15,6 +15,7 @@ public partial class DepartmentsViewModel : ViewModelBase
     [ObservableProperty] private string _newDepartmentName = "";
     [ObservableProperty] private string? _selectedDepartment;
     [ObservableProperty] private bool _isLoading;
+    private bool _isLoaded;
 
     public BulkObservableCollection<string> Departments { get; } = new();
 
@@ -22,9 +23,26 @@ public partial class DepartmentsViewModel : ViewModelBase
     {
         _departments = departments;
         _dialogService = dialogService;
+
+        DataEvents.DataChanged += OnDataChanged;
+
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => AppLogger.LogError("Departments load failed", ex));
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.Departments)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadAsync();
     }
 
     public async Task LoadAsync()
@@ -34,6 +52,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         {
             var list = await _departments.GetAllAsync();
             Departments.ReplaceAll(list);
+            _isLoaded = true;
         }
         catch (Exception ex)
         {
@@ -50,6 +69,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         try
         {
             await _departments.AddAsync(NewDepartmentName);
+            DataEvents.NotifyChanged(DataDomain.Departments);
             await LoadAsync();
             NewDepartmentName = "";
         }
@@ -71,6 +91,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         try
         {
             await _departments.DeleteAsync(targetDept);
+            DataEvents.NotifyChanged(DataDomain.Departments);
             await LoadAsync();
         }
         catch (Exception ex)
@@ -94,6 +115,7 @@ public partial class DepartmentsViewModel : ViewModelBase
             try
             {
                 await _departments.UpdateAsync(targetDept, newName);
+                DataEvents.NotifyChanged(DataDomain.Departments);
                 await LoadAsync();
             }
             catch (Exception ex)
@@ -101,5 +123,11 @@ public partial class DepartmentsViewModel : ViewModelBase
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("dept_update_failed"), ex.Message));
             }
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
     }
 }

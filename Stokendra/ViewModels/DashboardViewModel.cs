@@ -23,6 +23,7 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty] private int _todayMovements;
     [ObservableProperty] private bool _isLoading = true;
     private bool _hasLoadedOnce;
+    private bool _isDirty;
 
     public BulkObservableCollection<LowStockItem> LowStockItems { get; } = new();
 
@@ -34,9 +35,26 @@ public partial class DashboardViewModel : ViewModelBase
         _reports = reports;
         _movements = movements;
         _stockCards = stockCards;
+
+        DataEvents.DataChanged += OnDataChanged;
+
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => AppLogger.LogError("Dashboard load failed", ex));
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.StockCards || domain == DataDomain.Movements)
+        {
+            _isDirty = true;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_hasLoadedOnce && !_isDirty) return;
+        await LoadAsync();
     }
 
     public async Task LoadAsync()
@@ -67,6 +85,7 @@ public partial class DashboardViewModel : ViewModelBase
             }));
 
             _hasLoadedOnce = true;
+            _isDirty = false;
         }
         catch (Exception ex)
         {
@@ -82,6 +101,8 @@ public partial class DashboardViewModel : ViewModelBase
     public override void RefreshSession()
     {
         base.RefreshSession();
+        _hasLoadedOnce = false;
+        _isDirty = true;
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => AppLogger.LogError("Dashboard refresh failed", ex));

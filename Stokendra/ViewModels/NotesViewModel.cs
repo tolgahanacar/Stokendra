@@ -34,10 +34,29 @@ public partial class NotesViewModel : ViewModelBase
     {
         _notes = notes;
         _dialogService = dialogService;
+
+        DataEvents.DataChanged += OnDataChanged;
+
         SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
         AsyncHelper.RunSafe(
             () => LoadAsync(),
             ex => { AppLogger.LogError("Notes load failed", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
+    }
+
+    private bool _isLoaded;
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain == DataDomain.Notes)
+        {
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_isLoaded) return;
+        await LoadAsync();
     }
 
     partial void OnSelectedNoteChanged(Note? value) => OnPropertyChanged(nameof(HasSelection));
@@ -49,6 +68,7 @@ public partial class NotesViewModel : ViewModelBase
         {
             var data = await _notes.GetAllAsync();
             Notes.ReplaceAll(data);
+            _isLoaded = true;
             StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
         }
         catch (Exception ex) 
@@ -82,6 +102,7 @@ public partial class NotesViewModel : ViewModelBase
             bool? success = await _dialogService.ShowDialogAsync(vm);
             if (success == true)
             {
+                DataEvents.NotifyChanged(DataDomain.Notes);
                 await LoadAsync();
                 StatusText = LocalizationManager.L("bulk_edit_success", list.Count);
             }
@@ -121,6 +142,7 @@ public partial class NotesViewModel : ViewModelBase
                 StatusText = LocalizationManager.L("note_saved_success");
             }
             IsEditing = false;
+            DataEvents.NotifyChanged(DataDomain.Notes);
             await LoadAsync();
         }
         catch (Exception ex) 
@@ -162,6 +184,7 @@ public partial class NotesViewModel : ViewModelBase
             IsEditing = false;
             SelectedNote = null;
             SelectedNotes.Clear();
+            DataEvents.NotifyChanged(DataDomain.Notes);
             await LoadAsync();
             StatusText = LocalizationManager.L("bulk_delete_success", list.Count);
         }
@@ -287,6 +310,7 @@ public partial class NotesViewModel : ViewModelBase
                 if (toImport.Count > 0) await _notes.AddBulkAsync(toImport);
                 return toImport.Count;
             });
+            DataEvents.NotifyChanged(DataDomain.Notes);
             await LoadAsync();
             StatusText = LocalizationManager.L("import_success", count);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("import_success", count));
@@ -297,5 +321,11 @@ public partial class NotesViewModel : ViewModelBase
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _isLoaded = false;
     }
 }
