@@ -47,7 +47,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     partial void OnSelectedMovementChanged(StockMovement? value) => OnPropertyChanged(nameof(IsMovementSelected));
 
     public BulkObservableCollection<StockMovement> Movements { get; } = new();
-    public ObservableCollection<StockMovement> SelectedMovements { get; } = new();
+    public BulkObservableCollection<StockMovement> SelectedMovements { get; } = new();
 
     public ObservableCollection<string>       StockItems { get; } = new();
     public ObservableCollection<string>       TypeItems  { get; } = new();

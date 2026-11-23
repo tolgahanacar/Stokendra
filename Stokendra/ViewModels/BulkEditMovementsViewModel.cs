@@ -40,7 +40,7 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         }
     }
 
-    public ObservableCollection<StockMovement> EditingMovements { get; } = new();
+    public BulkObservableCollection<StockMovement> EditingMovements { get; } = new();
     public ObservableCollection<string> AllDepartments { get; } = new();
 
     public List<StockMovement>? Result { get; private set; }
@@ -117,8 +117,7 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         if (updatedCount > 0)
         {
             var temp = EditingMovements.ToList();
-            EditingMovements.Clear();
-            foreach (var m in temp) EditingMovements.Add(m);
+            EditingMovements.ReplaceAll(temp);
         }
     }
 

@@ -26,7 +26,7 @@ public partial class NotesViewModel : ViewModelBase
     private int _editingId = 0;
 
     public BulkObservableCollection<Note> Notes { get; } = new();
-    public ObservableCollection<Note> SelectedNotes { get; } = new();
+    public BulkObservableCollection<Note> SelectedNotes { get; } = new();
 
     public bool HasSelection => SelectedNotes.Count > 0 || SelectedNote != null;
 

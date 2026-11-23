@@ -14,16 +14,9 @@ public partial class StockMovementsView : UserControl
         {
             grid.SelectionChanged += (s, e) =>
             {
-                if (DataContext is StockMovementsViewModel vm)
+                if (DataContext is StockMovementsViewModel vm && grid.SelectedItems != null)
                 {
-                    vm.SelectedMovements.Clear();
-                    if (grid.SelectedItems != null)
-                    {
-                        foreach (var item in grid.SelectedItems)
-                        {
-                            if (item is StockMovement h) vm.SelectedMovements.Add(h);
-                        }
-                    }
+                    vm.SelectedMovements.ReplaceAll(grid.SelectedItems.OfType<StockMovement>());
                 }
             };
         }

@@ -14,16 +14,9 @@ public partial class ServicesView : UserControl
         {
             grid.SelectionChanged += (s, e) =>
             {
-                if (DataContext is ServicesViewModel vm)
+                if (DataContext is ServicesViewModel vm && grid.SelectedItems != null)
                 {
-                    vm.SelectedRecords.Clear();
-                    if (grid.SelectedItems != null)
-                    {
-                        foreach (var item in grid.SelectedItems)
-                        {
-                            if (item is ServiceRecord r) vm.SelectedRecords.Add(r);
-                        }
-                    }
+                    vm.SelectedRecords.ReplaceAll(grid.SelectedItems.OfType<ServiceRecord>());
                 }
             };
         }

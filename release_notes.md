@@ -1,18 +1,19 @@
-## 🚀 Stokendra v7.4.7 — Mimari & Akıcı Sekme Geçişi Performans Güncellemesi
+## 🔬 Stokendra v7.4.8 — Derin Performans & Veritabanı İndeks Güncellemesi
 
-Bu sürüm, çekirdek mimariyi koruyarak sekme geçişlerindeki takılmaları, çift layout çizimlerini ve ekran kırpışmalarını ortadan kaldıran 5 ana performans optimizasyonu içerir.
+Bu sürüm, arama filtreleme algoritmalarında bellek tahsislerini (GC baskısını) sıfıra indiren, DataGrid çoklu seçimlerini atomikleştiren ve SQLite B-Tree indeksleme stratejisini optimize eden derin mimari iyileştirmeler içerir.
 
-### ⚡ Öne Çıkan Geliştirmeler
+### ⚡ Neler Değişti?
 
-- 🎞️ **`TransitioningContentControl` ile Akıcı Geçiş (120ms CrossFade):**
-  - Sayfa geçişleri sert (harsh) anlık sıçramalar yerine donanım hızlandırmalı 120ms CrossFade efektiyle pürüzsüz ve akıcı hale getirildi.
-- ⚡ **`ViewLocator` Derlenmiş IL Fabrika Önbelleği (Compiled Expression Factory):**
-  - Her sekme geçişinde tekrarlanan string manipülasyonları, `Type.GetType` ve yavaş reflection `Activator.CreateInstance` yerine derlenmiş `Func<Control>` delegeleri önbelleğe alındı. Sayfa ve dialog inşaları nanosaniyeler mertebesine indirildi.
-- 🔄 **`BulkObservableCollection.ReplaceAll` ile Sıfır Kırpışma:**
-  - `Cards.Clear()` ve `Cards.AddRange(data)` kombinasyonunun neden olduğu çift Reset olayı yerine atomik `ReplaceAll` getirildi. DataGrid ve ListBox satırları tek bir render döngüsünde titreşimsiz güncellenir.
-- 📊 **`DashboardView` Sıfır Kırpışma Arka Plan Yenilemesi:**
-  - Gösterge paneline her tıklandığında istatistik kartlarının silinip "Yükleniyor..." gösterilmesi engellendi. Mevcut kartlar korunarak SQLite güncellemeleri yerinde (in-place) pürüzsüzce uygulanır.
-- 🛡️ **Aktif Menü Çift Tıklama Koruması:**
-  - Zaten açık olan sekmeye tekrar tıklandığında gereksiz veritabanı sorguları ve UI yenilemeleri engellendi.
-- 🧪 **102/102 Test Başarısı:**
-  - Test paketi %40 hızlanarak 1 dakikada 102/102 testle başarıyla tamamlandı.
+- 🔍 **`StockCard.MatchesSearch` ile Sıfır-Tahsisli Arama:**
+  - Arama kutusuna her harf yazıldığında kart başına 3 adet yeni küçük-harf string nesnesi üretilmesi engellendi. Kartın kod, isim ve kategori bilgileri tek seferde önbelleğe alınarak sonraki tuş vuruşlarında $O(1)$ string tahsisi ile anında arama yapılması sağlandı.
+- ⚡ **DataGrid Çoklu Seçimlerinde Atomik Güncelleme:**
+  - Kartlar, Hareketler, Servisler ve Notlar ekranlarında çoklu seçim yapılırken N defa tetiklenen toolbar ve UI bildirimleri `ReplaceAll` ile tek bir atomik `Reset` olayına indirildi.
+- 📑 **SQLite Yeni B-Tree İndeksleri (`IX_Movements_Date` & `IX_Movements_Type_Qty`):**
+  - Tüm hareketlerin tarih aralığı filtrelemeleri $O(N)$ tam tablo taramasından $O(\log N)$ indeks aralık taramasına dönüştürüldü.
+  - Gösterge Paneli toplam stok hesabı doğrudan indeks üzerinden karşılanacak şekilde zırhlandırıldı.
+- 🎯 **`TodayMovements` İndeks Dostu Sorgu:**
+  - `WHERE DATE(Date) = DATE('now', 'localtime')` ifadesi `WHERE Date >= date('now', 'localtime') AND Date < date('now', 'localtime', '+1 day')` olarak güncellenerek indeks seek kullanımına açıldı.
+- 🚀 **SQLite Bağlantı Havuzu PRAGMA İyileştirmesi:**
+  - `journal_mode = WAL` kontrolü her bağlantı açılışından kaldırılarak yalnızca DB ilklendirmesine alındı; havuzdan bağlantı alma süresi hafifletildi.
+- 🧪 **103/103 Test Başarısı:**
+  - Önbellekli arama eşleştirmesini ve Türkçe karakter duyarlılığını doğrulayan yeni birim testleri eklendi.

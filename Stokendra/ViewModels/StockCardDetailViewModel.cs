@@ -22,7 +22,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
     [ObservableProperty] private double _totalExitLast30;
     [ObservableProperty] private bool _isLoading;
 
-    public ObservableCollection<StockMovement> Movements { get; } = new();
+    public BulkObservableCollection<StockMovement> Movements { get; } = new();
 
     public StockCardDetailViewModel(
         int cardId,
@@ -50,8 +50,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
             if (Card == null) return;
 
             var all = await _movements.GetAllAsync(stockCardId: _cardId);
-            Movements.Clear();
-            foreach (var h in all.OrderByDescending(h => h.Date)) Movements.Add(h);
+            Movements.ReplaceAll(all.OrderByDescending(h => h.Date));
 
             var son30 = all.Where(h => h.Date >= DateTime.Now.AddDays(-30)).ToList();
             TotalEntryLast30 = son30.Where(h => h.IsEntry).Sum(h => h.Quantity);

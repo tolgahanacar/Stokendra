@@ -425,6 +425,8 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_StockCardId_Date ON StockMovements(StockCardId, Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Covering_Balance ON StockMovements(StockCardId, Type, Quantity)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Department_Date ON StockMovements(Department, Date DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Date ON StockMovements(Date DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Type_Qty ON StockMovements(Type, Quantity)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Notes_Date ON Notes(Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_ParentId ON StockCards(ParentId)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_ServiceRecords_Date_Id ON ServiceRecords(ServiceDate DESC, Id DESC)");

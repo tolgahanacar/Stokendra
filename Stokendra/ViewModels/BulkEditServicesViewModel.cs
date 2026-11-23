@@ -42,7 +42,7 @@ public partial class BulkEditServicesViewModel : ViewModelBase
     [ObservableProperty] private bool _isApplyResult;
     [ObservableProperty] private string _resultText = "";
 
-    public ObservableCollection<ServiceRecord> EditingRecords { get; } = new();
+    public BulkObservableCollection<ServiceRecord> EditingRecords { get; } = new();
 
     public Action<bool>? CloseAction { get; set; }
 
@@ -110,8 +110,7 @@ public partial class BulkEditServicesViewModel : ViewModelBase
         if (updatedCount > 0)
         {
             var temp = EditingRecords.ToList();
-            EditingRecords.Clear();
-            foreach (var item in temp) EditingRecords.Add(item);
+            EditingRecords.ReplaceAll(temp);
         }
     }
 

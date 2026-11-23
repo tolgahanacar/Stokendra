@@ -203,4 +203,27 @@ public class StockCardRepositoryTests : IDisposable
         Assert.Null(_repository.GetById(child1.Id));
         Assert.Null(_repository.GetById(child2.Id));
     }
+
+    [Fact]
+    public void Test_StockCard_MatchesSearch_MatchesCodeNameCategory_And_HandlesTurkishCharacters()
+    {
+        // Arrange
+        var card = new StockCard
+        {
+            Code = "İST-01",
+            Name = "İnteraktif Akıllı Işık",
+            Category = "Elektronik"
+        };
+
+        // Act & Assert
+        Assert.True(card.MatchesSearch("ist"));
+        Assert.True(card.MatchesSearch("akıllı"));
+        Assert.True(card.MatchesSearch("elektronik"));
+        Assert.True(card.MatchesSearch("ışık"));
+        Assert.False(card.MatchesSearch("mobilya"));
+
+        // Change property and verify cache invalidation
+        card.Category = "Mobilya";
+        Assert.True(card.MatchesSearch("mobilya"));
+    }
 }

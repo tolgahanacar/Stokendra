@@ -101,6 +101,7 @@ public sealed partial class Database : IDisposable
     private void Initialize()
     {
         using var connection = CreateConnection();
+        SqliteHelpers.EnsureDatabasePragmas(connection);
         
         // Turn foreign keys OFF during schema changes so we can rename/drop tables without constraints triggering
         ExecutePragma(connection, "foreign_keys", "OFF");

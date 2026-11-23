@@ -38,7 +38,7 @@ public partial class StockCardsViewModel : ViewModelBase
     }
 
     public BulkObservableCollection<StockCard> Cards { get; } = new();
-    public ObservableCollection<StockCard> SelectedCards { get; } = new();
+    public BulkObservableCollection<StockCard> SelectedCards { get; } = new();
 
     private List<StockCard> _allCards = new();
 
@@ -116,10 +116,7 @@ public partial class StockCardsViewModel : ViewModelBase
         var term = SearchText.Trim().ToTurkishLower();
         var data = string.IsNullOrEmpty(term)
             ? _allCards
-            : _allCards.Where(k =>
-                k.Name.ToTurkishLower().Contains(term) ||
-                k.Code.ToTurkishLower().Contains(term) ||
-                k.Category.ToTurkishLower().Contains(term)).ToList();
+            : _allCards.Where(k => k.MatchesSearch(term)).ToList();
 
         Cards.ReplaceAll(data);
         StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();

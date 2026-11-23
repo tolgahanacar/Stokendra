@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Stokendra.Infrastructure;
 
 namespace Stokendra.Models;
 
@@ -7,6 +8,22 @@ namespace Stokendra.Models;
 /// </summary>
 public partial class StockCard : ObservableObject
 {
+    private string? _cachedSearchKey;
+
+    partial void OnNameChanged(string value) => _cachedSearchKey = null;
+    partial void OnCodeChanged(string value) => _cachedSearchKey = null;
+    partial void OnCategoryChanged(string value) => _cachedSearchKey = null;
+
+    /// <summary>
+    /// Fast in-memory search match using cached normalized lowercase string.
+    /// Eliminates multiple ToLower allocations per item on every keystroke.
+    /// </summary>
+    public bool MatchesSearch(string termLower)
+    {
+        if (string.IsNullOrEmpty(termLower)) return true;
+        _cachedSearchKey ??= $"{Code} {Name} {Category}".ToTurkishLower();
+        return _cachedSearchKey.Contains(termLower);
+    }
     /// <summary>Primary key.</summary>
     [ObservableProperty]
     private int _id;

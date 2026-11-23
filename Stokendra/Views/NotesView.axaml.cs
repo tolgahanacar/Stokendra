@@ -18,13 +18,13 @@ public partial class NotesView : UserControl
             {
                 if (DataContext is NotesViewModel vm)
                 {
-                    vm.SelectedNotes.Clear();
                     if (listBox.SelectedItems != null)
                     {
-                        foreach (var item in listBox.SelectedItems)
-                        {
-                            if (item is Note n) vm.SelectedNotes.Add(n);
-                        }
+                        vm.SelectedNotes.ReplaceAll(listBox.SelectedItems.OfType<Note>());
+                    }
+                    else
+                    {
+                        vm.SelectedNotes.Clear();
                     }
                     if (vm.SelectedNotes.Count == 1)
                     {

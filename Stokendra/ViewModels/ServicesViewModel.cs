@@ -36,7 +36,7 @@ public partial class ServicesViewModel : ViewModelBase
     partial void OnSelectedRecordChanged(ServiceRecord? value) => OnPropertyChanged(nameof(IsRecordSelected));
 
     public BulkObservableCollection<ServiceRecord> Records { get; } = new();
-    public ObservableCollection<ServiceRecord> SelectedRecords { get; } = new();
+    public BulkObservableCollection<ServiceRecord> SelectedRecords { get; } = new();
 
     public ServicesViewModel(IServiceRecordRepository services, IDialogService dialogService)
     {

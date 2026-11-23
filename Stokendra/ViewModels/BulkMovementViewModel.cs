@@ -40,7 +40,7 @@ public partial class BulkMovementViewModel : ViewModelBase
     partial void OnSearchTextChanged(string value) => UpdateVisibleItems();
 
     public ObservableCollection<string> Departments { get; } = new();
-    public ObservableCollection<BulkMovementItemViewModel> Items { get; } = new();
+    public BulkObservableCollection<BulkMovementItemViewModel> Items { get; } = new();
     
     private List<BulkMovementItemViewModel> _allItemViewModels = new();
 
@@ -86,10 +86,9 @@ public partial class BulkMovementViewModel : ViewModelBase
         var term = SearchText.Trim().ToTurkishLower();
         var filtered = string.IsNullOrWhiteSpace(term) 
             ? _allItemViewModels 
-            : _allItemViewModels.Where(i => i.Card.Name.ToTurkishLower().Contains(term) || i.Card.Code.ToTurkishLower().Contains(term)).ToList();
+            : _allItemViewModels.Where(i => i.Card.MatchesSearch(term)).ToList();
 
-        Items.Clear();
-        foreach (var i in filtered) Items.Add(i);
+        Items.ReplaceAll(filtered);
     }
 
     [RelayCommand]

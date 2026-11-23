@@ -21,19 +21,9 @@ public partial class StockCardsView : UserControl
 
     private void CardsGrid_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (DataContext is StockCardsViewModel vm)
+        if (DataContext is StockCardsViewModel vm && sender is DataGrid grid)
         {
-            vm.SelectedCards.Clear();
-            if (sender is DataGrid grid)
-            {
-                foreach (var item in grid.SelectedItems)
-                {
-                    if (item is StockCard k)
-                    {
-                        vm.SelectedCards.Add(k);
-                    }
-                }
-            }
+            vm.SelectedCards.ReplaceAll(grid.SelectedItems.OfType<StockCard>());
         }
     }
 }

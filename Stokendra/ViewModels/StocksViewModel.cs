@@ -86,10 +86,7 @@ public partial class StocksViewModel : ViewModelBase
         var term = SearchText.Trim().ToTurkishLower();
         var data = string.IsNullOrEmpty(term)
             ? _allStocks
-            : _allStocks.Where(k =>
-                k.Name.ToTurkishLower().Contains(term) ||
-                k.Code.ToTurkishLower().Contains(term) ||
-                k.Category.ToTurkishLower().Contains(term)).ToList();
+            : _allStocks.Where(k => k.MatchesSearch(term)).ToList();
 
         Stocks.ReplaceAll(data);
         

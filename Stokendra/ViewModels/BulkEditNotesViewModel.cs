@@ -28,7 +28,7 @@ public partial class BulkEditNotesViewModel : ViewModelBase
     [ObservableProperty] private bool _isApplyContent;
     [ObservableProperty] private string _contentAppend = "";
 
-    public ObservableCollection<Note> EditingNotes { get; } = new();
+    public BulkObservableCollection<Note> EditingNotes { get; } = new();
 
     public Action<bool>? CloseAction { get; set; }
 
@@ -89,8 +89,7 @@ public partial class BulkEditNotesViewModel : ViewModelBase
         if (updated > 0)
         {
             var temp = EditingNotes.ToList();
-            EditingNotes.Clear();
-            foreach (var item in temp) EditingNotes.Add(item);
+            EditingNotes.ReplaceAll(temp);
         }
     }
 
