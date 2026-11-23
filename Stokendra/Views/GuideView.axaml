@@ -4,19 +4,19 @@
              xmlns:infra="using:Stokendra.Infrastructure"
              x:Class="Stokendra.Views.GuideView"
              Background="#0C0E14"
-             x:DataType="vm:GuideViewModel">
+             x:CompileBindings="False">
 
-    <Grid RowDefinitions="Auto,Auto,*" Margin="28,24,28,24">
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="32,24,32,24">
         
         <!-- Header Section -->
-        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,20">
-            <TextBlock Text="{infra:L guide_title}" FontSize="26" FontWeight="Bold" Foreground="#E8EEFF"/>
-            <TextBlock Text="{infra:L guide_subtitle}" FontSize="13" Foreground="#5A6987"/>
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+            <TextBlock Text="{infra:L guide_title}" FontSize="28" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="{infra:L guide_subtitle}" FontSize="13" Foreground="#94A3B8"/>
         </StackPanel>
 
         <!-- System Metadata Info Card -->
-        <Border Grid.Row="1" Classes="Card" Background="#111827" BorderBrush="#1F2937" Padding="20,14" Margin="0,0,0,20">
-            <StackPanel Orientation="Horizontal" Spacing="40">
+        <Border Grid.Row="1" Classes="Card" Background="#111827" BorderBrush="#1F2937" CornerRadius="10" Padding="18,12" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="36">
                 <StackPanel Spacing="2">
                     <TextBlock Text="{infra:L guide_app_version}" FontSize="10" Foreground="#64748B" FontWeight="Bold"/>
                     <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#38AEFF" FontWeight="Bold"/>
@@ -32,8 +32,28 @@
             </StackPanel>
         </Border>
 
+        <!-- Search Box -->
+        <Border Grid.Row="2" Background="#161B27" CornerRadius="10" Padding="14,10" Margin="0,0,0,16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0"
+                         Text="{Binding SearchText}"
+                         Watermark="{infra:L guide_search_placeholder}"
+                         Background="#0C0E14"
+                         BorderBrush="#252F44"
+                         BorderThickness="1"
+                         CornerRadius="8"
+                         FontSize="13"
+                         Padding="12,8"/>
+                <Button Grid.Column="1"
+                        Content="{infra:L clear_filter}"
+                        Classes="Secondary"
+                        Command="{Binding ClearSearchCommand}"
+                        Margin="10,0,0,0"/>
+            </Grid>
+        </Border>
+
         <!-- Tab Content Switcher -->
-        <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTab}" Background="Transparent" BorderThickness="0" Padding="0">
+        <TabControl Grid.Row="3" SelectedIndex="{Binding SelectedTab}" Background="Transparent" BorderThickness="0" Padding="0">
             <TabControl.Styles>
                 <Style Selector="TabItem">
                     <Setter Property="FontSize" Value="13"/>
@@ -62,107 +82,32 @@
             <!-- 👥 USER GUIDE TAB -->
             <TabItem Header="{infra:L guide_tab_user}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="16" Margin="0,8,0,0">
-                        
-                        <!-- 🚀 Hızlı Başlangıç -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🚀" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_quickstart_title}" FontSize="16" FontWeight="Bold" Foreground="#FFD700"/>
-                                    <TextBlock Text="{infra:L guide_user_quickstart_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
+                    <StackPanel Spacing="0" Margin="0,8,0,0">
+                        <!-- No Results Warning -->
+                        <Border IsVisible="{Binding !HasUserResults}" Classes="Card" Background="#111827" BorderBrush="#1F2937" Padding="24" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                            <TextBlock Text="{infra:L guide_no_results}" FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center"/>
                         </Border>
 
-                        <!-- 📇 Stock Cards Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="📇" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_stockcards_title}" FontSize="16" FontWeight="Bold" Foreground="#38AEFF"/>
-                                    <TextBlock Text="{infra:L guide_user_stockcards_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 🔄 Stock Movements Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🔄" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_movements_title}" FontSize="16" FontWeight="Bold" Foreground="#00DC82"/>
-                                    <TextBlock Text="{infra:L guide_user_movements_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 🛠 Service Records Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🛠" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_services_title}" FontSize="16" FontWeight="Bold" Foreground="#F39C12"/>
-                                    <TextBlock Text="{infra:L guide_user_services_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 📝 Notes Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="📝" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_notes_title}" FontSize="16" FontWeight="Bold" Foreground="#A78BFA"/>
-                                    <TextBlock Text="{infra:L guide_user_notes_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 👥 User Management & Roles Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="👥" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_users_title}" FontSize="16" FontWeight="Bold" Foreground="#38BDF8"/>
-                                    <TextBlock Text="{infra:L guide_user_users_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 💾 Backup & DB Health Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="💾" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_backup_title}" FontSize="16" FontWeight="Bold" Foreground="#9B59B6"/>
-                                    <TextBlock Text="{infra:L guide_user_backup_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 📈 Reporting & Analytics Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="📈" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_reports_title}" FontSize="16" FontWeight="Bold" Foreground="#E67E22"/>
-                                    <TextBlock Text="{infra:L guide_user_reports_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- ⚡ Live Auto Updates Guide -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="⚡" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_user_updates_title}" FontSize="16" FontWeight="Bold" Foreground="#10B981"/>
-                                    <TextBlock Text="{infra:L guide_user_updates_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
+                        <ItemsControl ItemsSource="{Binding FilteredUserCards}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:GuideCardItem">
+                                    <Border Classes="Card" Background="#111827" BorderBrush="#1F2937" CornerRadius="12" Padding="20" Margin="0,0,0,14">
+                                        <Grid ColumnDefinitions="48,*">
+                                            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                            <StackPanel Grid.Column="1" Spacing="8">
+                                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                    <Border Background="{Binding TagBg}" CornerRadius="4" Padding="6,2">
+                                                        <TextBlock Text="{Binding Tag}" FontSize="10" FontWeight="Bold" Foreground="{Binding TagColor}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Content}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap" LineHeight="21"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -170,85 +115,32 @@
             <!-- 💻 DEVELOPER ROADMAP TAB -->
             <TabItem Header="{infra:L guide_tab_dev}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Spacing="16" Margin="0,8,0,0">
-                        
-                        <!-- ⚡ SQLite Performans & Optimizasyonları -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="⚡" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_perf_title}" FontSize="16" FontWeight="Bold" Foreground="#FFD700"/>
-                                    <TextBlock Text="{infra:L guide_dev_perf_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
+                    <StackPanel Spacing="0" Margin="0,8,0,0">
+                        <!-- No Results Warning -->
+                        <Border IsVisible="{Binding !HasDevResults}" Classes="Card" Background="#111827" BorderBrush="#1F2937" Padding="24" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                            <TextBlock Text="{infra:L guide_no_results}" FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center"/>
                         </Border>
 
-                        <!-- 🏗 MVVM Architecture -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🏗" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_mvvm_title}" FontSize="16" FontWeight="Bold" Foreground="#38AEFF"/>
-                                    <TextBlock Text="{infra:L guide_dev_mvvm_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 📂 Folder Structure -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="📂" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_folders_title}" FontSize="16" FontWeight="Bold" Foreground="#00DC82"/>
-                                    <TextBlock Text="{infra:L guide_dev_folders_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 🌐 Localization Engine -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🌐" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_lang_title}" FontSize="16" FontWeight="Bold" Foreground="#F39C12"/>
-                                    <TextBlock Text="{infra:L guide_dev_lang_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 🗄 Database & Migrations -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🗄" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_db_title}" FontSize="16" FontWeight="Bold" Foreground="#9B59B6"/>
-                                    <TextBlock Text="{infra:L guide_dev_db_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 📊 ExcelImportHelper -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="📊" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_excel_title}" FontSize="16" FontWeight="Bold" Foreground="#38BDF8"/>
-                                    <TextBlock Text="{infra:L guide_dev_excel_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <!-- 🚀 Future Roadmap -->
-                        <Border Classes="Card">
-                            <Grid ColumnDefinitions="48,*">
-                                <TextBlock Grid.Column="0" Text="🚀" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,4,0,0"/>
-                                <StackPanel Grid.Column="1" Spacing="6">
-                                    <TextBlock Text="{infra:L guide_dev_roadmap_title}" FontSize="16" FontWeight="Bold" Foreground="#E67E22"/>
-                                    <TextBlock Text="{infra:L guide_dev_roadmap_desc}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
+                        <ItemsControl ItemsSource="{Binding FilteredDevCards}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:GuideCardItem">
+                                    <Border Classes="Card" Background="#111827" BorderBrush="#1F2937" CornerRadius="12" Padding="20" Margin="0,0,0,14">
+                                        <Grid ColumnDefinitions="48,*">
+                                            <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,2,0,0"/>
+                                            <StackPanel Grid.Column="1" Spacing="8">
+                                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                    <Border Background="{Binding TagBg}" CornerRadius="4" Padding="6,2">
+                                                        <TextBlock Text="{Binding Tag}" FontSize="10" FontWeight="Bold" Foreground="{Binding TagColor}"/>
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Content}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap" LineHeight="21"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
