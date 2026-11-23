@@ -227,6 +227,7 @@
   "update_available": "Yeni bir s\u00FCr\u00FCm ({0}) mevcut!\n\u015Eu anki s\u00FCr\u00FCm: {1}\n\n\u0130ndirme sayfas\u0131na gitmek ister misiniz?",
   "update_title": "G\u00FCncelleme Mevcut",
   "up_to_date": "Uygulaman\u0131z g\u00FCncel. (S\u00FCr\u00FCm: {0})",
+  "update_check_failed": "Sunucuya ula\u015F\u0131lamad\u0131 veya g\u00FCncel s\u00FCr\u00FCm bilgisi al\u0131namad\u0131.",
   "update_error": "G\u00FCncelleme kontrol\u00FC s\u0131ras\u0131nda bir hata olu\u015Ftu:\n{0}",
   "company": "Firma",
   "problem": "Sorun",

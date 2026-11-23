@@ -117,8 +117,8 @@ public partial class BulkMovementViewModel : ViewModelBase
                 StockCardId = i.Card.Id,
                 Type = tur,
                 Quantity = i.Quantity!.Value,
-                Department = SelectedDepartment,
-                Recipient = DeliveredTo,
+                Department = SelectedDepartment ?? "",
+                Recipient = DeliveredTo ?? "",
                 Date = targetDate,
                 Description = LocalizationManager.L("bulk_operation_description")
             }).ToList();

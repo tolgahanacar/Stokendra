@@ -26,17 +26,21 @@ public partial class AddMovementViewModel : ViewModelBase
     [ObservableProperty] private string _description = "";
     [ObservableProperty] private string _errorMessage = "";
 
+    private readonly StockCard? _preSelectedCard;
+
     public ObservableCollection<StockCard> AllCards { get; } = new();
     public ObservableCollection<string> AllDepartments { get; } = new();
 
     public AddMovementViewModel(
         IStockCardRepository stockCards,
         IDepartmentRepository departments,
-        StockMovement? movement = null)
+        StockMovement? movement = null,
+        StockCard? preSelectedCard = null)
     {
         _stockCards = stockCards;
         _departments = departments;
         _editingMovement = movement;
+        _preSelectedCard = preSelectedCard;
 
         if (movement != null)
         {
@@ -57,6 +61,10 @@ public partial class AddMovementViewModel : ViewModelBase
         else
         {
             Title = LocalizationManager.L("new_movement");
+            if (preSelectedCard != null)
+            {
+                SelectedCard = preSelectedCard;
+            }
         }
 
         AsyncHelper.RunSafe(
@@ -83,7 +91,15 @@ public partial class AddMovementViewModel : ViewModelBase
             {
                 // Default Values
                 SelectedTypeIndex = 1; // Exit (Çıkış)
-                SelectedCard = AllCards.FirstOrDefault();
+                int? targetCardId = _preSelectedCard?.Id ?? SelectedCard?.Id;
+                if (targetCardId.HasValue)
+                {
+                    SelectedCard = AllCards.FirstOrDefault(c => c.Id == targetCardId.Value) ?? _preSelectedCard ?? AllCards.FirstOrDefault();
+                }
+                else
+                {
+                    SelectedCard = AllCards.FirstOrDefault();
+                }
                 Department = AllDepartments.Count > 0 ? AllDepartments[0] : "";
             }
         }
@@ -151,10 +167,10 @@ public partial class AddMovementViewModel : ViewModelBase
             StockCardId = SelectedCard.Id,
             Type = tur,
             Quantity = Quantity,
-            Recipient = DeliveredTo,
-            Department = Department,
+            Recipient = DeliveredTo ?? "",
+            Department = Department ?? "",
             Date = Date.Date.Add(_editingMovement != null ? _editingMovement.Date.TimeOfDay : DateTime.Now.TimeOfDay),
-            Description = Description,
+            Description = Description ?? "",
             StockCardName = SelectedCard.Name,
             StockCardCode = SelectedCard.Code
         };

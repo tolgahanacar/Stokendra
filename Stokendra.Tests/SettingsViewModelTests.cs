@@ -596,4 +596,24 @@ public class SettingsViewModelTests : IDisposable
             Arg.Any<string>()
         );
     }
+
+    [Fact]
+    public async Task Test_CheckForUpdates_NullRelease_ShowsLocalizedError()
+    {
+        // Arrange
+        _updateServiceMock.CheckForUpdateAsync(Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult<UpdateInfo?>(null));
+        var vm = CreateViewModel();
+
+        // Act
+        await vm.CheckForUpdatesAsync();
+
+        // Assert
+        Assert.False(vm.IsSuccess);
+        Assert.Contains(LocalizationManager.L("update_check_failed"), vm.StatusMessage);
+        await _dialogServiceMock.Received(1).ShowMessageAsync(
+            LocalizationManager.L("error"), 
+            Arg.Is<string>(msg => msg.Contains(LocalizationManager.L("update_check_failed")))
+        );
+    }
 }

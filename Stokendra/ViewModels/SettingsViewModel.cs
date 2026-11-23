@@ -407,7 +407,7 @@ public partial class SettingsViewModel : ViewModelBase
             var updateInfo = await _updateService.CheckForUpdateAsync();
             if (updateInfo == null)
             {
-                throw new Exception("GitHub API did not return valid release data.");
+                throw new Exception(LocalizationManager.L("update_check_failed"));
             }
 
             string currentVersionStr = AppVersion.TrimStart('v', 'V');

@@ -110,28 +110,29 @@ public partial class UsersViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task DeleteUserAsync(User user)
+    public async Task DeleteUserAsync(User? user)
     {
-        if (user == null) return;
-        if (user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        var targetUser = user ?? SelectedUser;
+        if (targetUser == null) return;
+        if (targetUser.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("admin_user_cannot_delete"));
             return;
         }
 
-        if (user.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
+        if (targetUser.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("cannot_delete_self"));
             return;
         }
 
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("delete_user_title"), string.Format(LocalizationManager.L("confirm_delete_user"), user.Username));
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("delete_user_title"), string.Format(LocalizationManager.L("confirm_delete_user"), targetUser.Username));
         if (!confirm) return;
 
         IsLoading = true;
         try
         {
-            bool ok = await _userRepository.DeleteUserAsync(user.Id);
+            bool ok = await _userRepository.DeleteUserAsync(targetUser.Id);
             if (ok)
             {
                 StatusMessage = LocalizationManager.L("user_deleted_success");
@@ -157,27 +158,28 @@ public partial class UsersViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task ChangeRoleAsync(User user)
+    public async Task ChangeRoleAsync(User? user)
     {
-        if (user == null) return;
-        if (user.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
+        var targetUser = user ?? SelectedUser;
+        if (targetUser == null) return;
+        if (targetUser.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("admin_role_cannot_change"));
             return;
         }
 
-        if (user.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
+        if (targetUser.Username.Equals(AppServices.Current.Session?.Username, StringComparison.OrdinalIgnoreCase))
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("cannot_change_own_role"));
             return;
         }
 
-        string nextRole = user.Role == "admin" ? "user" : "admin";
-        bool ok = await _userRepository.UpdateUserRoleAsync(user.Id, nextRole);
+        string nextRole = targetUser.Role == "admin" ? "user" : "admin";
+        bool ok = await _userRepository.UpdateUserRoleAsync(targetUser.Id, nextRole);
         if (ok)
         {
             await LoadUsersAsync();
-            StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), user.Username, nextRole);
+            StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, nextRole);
             IsSuccess = true;
         }
         else
@@ -188,11 +190,12 @@ public partial class UsersViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task ResetPasswordAsync(User user)
+    public async Task ResetPasswordAsync(User? user)
     {
-        if (user == null) return;
+        var targetUser = user ?? SelectedUser;
+        if (targetUser == null) return;
 
-        var vm = new PromptViewModel(LocalizationManager.L("change_password"), $"{user.Username} {LocalizationManager.L("new_password").ToTurkishLower()}:")
+        var vm = new PromptViewModel(LocalizationManager.L("change_password"), $"{targetUser.Username} {LocalizationManager.L("new_password").ToTurkishLower()}:")
         {
             PasswordChar = '●',
             Watermark = LocalizationManager.L("new_password")
@@ -207,7 +210,7 @@ public partial class UsersViewModel : ViewModelBase
                 return;
             }
 
-            var policyError = _userRepository.ValidatePasswordPolicy(newPassword, user.Username);
+            var policyError = _userRepository.ValidatePasswordPolicy(newPassword, targetUser.Username);
             if (policyError != null)
             {
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), policyError);
@@ -217,11 +220,11 @@ public partial class UsersViewModel : ViewModelBase
             IsLoading = true;
             try
             {
-                bool ok = await _userRepository.ResetPasswordAsync(user.Username, newPassword);
+                bool ok = await _userRepository.ResetPasswordAsync(targetUser.Username, newPassword);
                 if (ok)
                 {
                     await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("password_changed"));
-                    StatusMessage = $"{user.Username} - {LocalizationManager.L("password_changed")}";
+                    StatusMessage = $"{targetUser.Username} - {LocalizationManager.L("password_changed")}";
                     IsSuccess = true;
                 }
                 else

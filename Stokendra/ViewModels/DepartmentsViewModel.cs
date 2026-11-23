@@ -61,16 +61,17 @@ public partial class DepartmentsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task Delete(string dept)
+    public async Task Delete(string? dept)
     {
-        if (string.IsNullOrWhiteSpace(dept)) return;
+        string targetDept = string.IsNullOrWhiteSpace(dept) ? SelectedDepartment ?? "" : dept;
+        if (string.IsNullOrWhiteSpace(targetDept)) return;
 
-        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("dept_delete_confirm_title"), string.Format(LocalizationManager.L("dept_delete_confirm_msg"), dept));
+        bool confirm = await _dialogService.ShowConfirmAsync(LocalizationManager.L("dept_delete_confirm_title"), string.Format(LocalizationManager.L("dept_delete_confirm_msg"), targetDept));
         if (!confirm) return;
 
         try
         {
-            await _departments.DeleteAsync(dept);
+            await _departments.DeleteAsync(targetDept);
             await LoadAsync();
         }
         catch (Exception ex)
@@ -80,19 +81,20 @@ public partial class DepartmentsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public async Task Edit(string oldName)
+    public async Task Edit(string? oldName)
     {
-        if (string.IsNullOrWhiteSpace(oldName)) return;
+        string targetDept = string.IsNullOrWhiteSpace(oldName) ? SelectedDepartment ?? "" : oldName;
+        if (string.IsNullOrWhiteSpace(targetDept)) return;
 
-        var vm = new PromptViewModel(LocalizationManager.L("edit_dept_title"), string.Format(LocalizationManager.L("edit_dept_prompt"), oldName), oldName);
+        var vm = new PromptViewModel(LocalizationManager.L("edit_dept_title"), string.Format(LocalizationManager.L("edit_dept_prompt"), targetDept), targetDept);
         if (await _dialogService.ShowDialogAsync(vm))
         {
             var newName = vm.InputText?.Trim();
-            if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
+            if (string.IsNullOrWhiteSpace(newName) || newName == targetDept) return;
 
             try
             {
-                await _departments.UpdateAsync(oldName, newName);
+                await _departments.UpdateAsync(targetDept, newName);
                 await LoadAsync();
             }
             catch (Exception ex)

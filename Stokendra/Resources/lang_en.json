@@ -230,6 +230,7 @@
   "update_available": "A new version ({0}) is available!\nCurrent version: {1}\n\nWould you like to go to the download page?",
   "update_title": "Update Available",
   "up_to_date": "Your application is up to date. (Version: {0})",
+  "update_check_failed": "Could not connect to update server or retrieve release info.",
   "update_error": "An error occurred while checking for updates:\n{0}",
   "reports_subtitle": "Detailed consumption analysis and charts",
   "select_user": "Select User/Receiver",

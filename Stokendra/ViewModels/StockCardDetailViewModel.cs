@@ -68,7 +68,7 @@ public partial class StockCardDetailViewModel : ViewModelBase
     public async Task AddMovementAsync()
     {
         if (Card == null) return;
-        var vm = new AddMovementViewModel(_stockCards, _departments);
+        var vm = new AddMovementViewModel(_stockCards, _departments, preSelectedCard: Card);
         vm.SelectedCard = Card; // Auto-select the current card
         
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)

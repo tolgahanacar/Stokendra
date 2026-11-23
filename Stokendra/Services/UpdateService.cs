@@ -24,57 +24,65 @@ public class UpdateService : IUpdateService
 
     public async Task<UpdateInfo?> CheckForUpdateAsync(CancellationToken ct = default)
     {
-        var response = await _client.GetAsync(ApiUrl, ct);
-        if (!response.IsSuccessStatusCode)
-            return null;
-
-        var json = await response.Content.ReadAsStringAsync(ct);
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-
-        string tagName = root.GetProperty("tag_name").GetString() ?? "v0.0.0";
-        string htmlUrl = root.GetProperty("html_url").GetString() ?? "";
-        string body = root.TryGetProperty("body", out var bodyProp) ? (bodyProp.GetString() ?? "") : "";
-        DateTime publishedAt = root.TryGetProperty("published_at", out var pubProp) 
-            ? (DateTime.TryParse(pubProp.GetString(), out var dt) ? dt : DateTime.MinValue) 
-            : DateTime.MinValue;
-
-        string cleanTag = tagName.TrimStart('v', 'V');
-        if (!Version.TryParse(cleanTag, out var version))
-            return null;
-
-        // Asset'lerden installer (.exe) dosyasını bul
-        string? installerUrl = null;
-        string? installerFileName = null;
-        long installerSize = 0;
-
-        if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+        try
         {
-            foreach (var asset in assets.EnumerateArray())
+            var response = await _client.GetAsync(ApiUrl, ct);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            string tagName = root.GetProperty("tag_name").GetString() ?? "v0.0.0";
+            string htmlUrl = root.GetProperty("html_url").GetString() ?? "";
+            string body = root.TryGetProperty("body", out var bodyProp) ? (bodyProp.GetString() ?? "") : "";
+            DateTime publishedAt = root.TryGetProperty("published_at", out var pubProp) 
+                ? (DateTime.TryParse(pubProp.GetString(), out var dt) ? dt : DateTime.MinValue) 
+                : DateTime.MinValue;
+
+            string cleanTag = tagName.TrimStart('v', 'V');
+            if (!Version.TryParse(cleanTag, out var version))
+                return null;
+
+            // Asset'lerden installer (.exe) dosyasını bul
+            string? installerUrl = null;
+            string? installerFileName = null;
+            long installerSize = 0;
+
+            if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
             {
-                string? name = asset.GetProperty("name").GetString();
-                if (name != null && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) 
-                    && name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
+                foreach (var asset in assets.EnumerateArray())
                 {
-                    installerUrl = asset.GetProperty("browser_download_url").GetString();
-                    installerFileName = name;
-                    installerSize = asset.TryGetProperty("size", out var sizeProp) ? sizeProp.GetInt64() : 0;
-                    break;
+                    string? name = asset.GetProperty("name").GetString();
+                    if (name != null && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) 
+                        && name.Contains("Setup", StringComparison.OrdinalIgnoreCase))
+                    {
+                        installerUrl = asset.GetProperty("browser_download_url").GetString();
+                        installerFileName = name;
+                        installerSize = asset.TryGetProperty("size", out var sizeProp) ? sizeProp.GetInt64() : 0;
+                        break;
+                    }
                 }
             }
-        }
 
-        return new UpdateInfo
+            return new UpdateInfo
+            {
+                TagName = tagName,
+                Version = version,
+                HtmlUrl = htmlUrl,
+                InstallerDownloadUrl = installerUrl,
+                InstallerFileName = installerFileName,
+                InstallerSize = installerSize,
+                ReleaseNotes = body,
+                PublishedAt = publishedAt
+            };
+        }
+        catch (Exception ex)
         {
-            TagName = tagName,
-            Version = version,
-            HtmlUrl = htmlUrl,
-            InstallerDownloadUrl = installerUrl,
-            InstallerFileName = installerFileName,
-            InstallerSize = installerSize,
-            ReleaseNotes = body,
-            PublishedAt = publishedAt
-        };
+            AppLogger.LogError("UpdateService.CheckForUpdateAsync failed", ex);
+            return null;
+        }
     }
 
     public async Task DownloadInstallerAsync(string downloadUrl, string destinationPath, IProgress<int>? progress = null, CancellationToken ct = default)
@@ -127,8 +135,6 @@ public class UpdateService : IUpdateService
         }
 
         // Başarılı indirme: temp → asıl dosya
-        if (File.Exists(destinationPath))
-            File.Delete(destinationPath);
-        File.Move(tempPath, destinationPath);
+        File.Move(tempPath, destinationPath, overwrite: true);
     }
 }

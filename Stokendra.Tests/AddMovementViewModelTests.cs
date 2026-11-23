@@ -214,4 +214,49 @@ public class AddMovementViewModelTests
         Assert.Null(vm.Result);
         Assert.Equal(LocalizationManager.L("quantity_cannot_be_zero"), vm.ErrorMessage);
     }
+
+    [Fact]
+    public async Task Test_PreSelectedCard_IsPreserved_AfterInitAsync()
+    {
+        // Arrange
+        var card1 = new StockCard { Id = 1, Code = "001", Name = "Mouse", CardType = "Child", CurrentStock = 10 };
+        var card2 = new StockCard { Id = 2, Code = "002", Name = "Keyboard", CardType = "Child", CurrentStock = 5 };
+        var cards = new List<StockCard> { card1, card2 };
+        var depts = new List<string> { "IT", "HR" };
+
+        _stockCardsMock.GetChildCardsAsync().Returns(Task.FromResult(cards));
+        _departmentsMock.GetAllAsync().Returns(Task.FromResult(depts));
+
+        // Act - pass preSelectedCard: card2
+        var vm = new AddMovementViewModel(_stockCardsMock, _departmentsMock, preSelectedCard: card2);
+        await Task.Delay(50); // wait for InitAsync
+
+        // Assert - card2 should remain selected, NOT defaulted to card1
+        Assert.NotNull(vm.SelectedCard);
+        Assert.Equal(2, vm.SelectedCard.Id);
+        Assert.Equal("Keyboard", vm.SelectedCard.Name);
+    }
+
+    [Fact]
+    public async Task Test_SelectedCard_SetImmediately_IsPreserved_AfterInitAsync()
+    {
+        // Arrange
+        var card1 = new StockCard { Id = 1, Code = "001", Name = "Mouse", CardType = "Child", CurrentStock = 10 };
+        var card2 = new StockCard { Id = 2, Code = "002", Name = "Keyboard", CardType = "Child", CurrentStock = 5 };
+        var cards = new List<StockCard> { card1, card2 };
+        var depts = new List<string> { "IT" };
+
+        _stockCardsMock.GetChildCardsAsync().Returns(Task.FromResult(cards));
+        _departmentsMock.GetAllAsync().Returns(Task.FromResult(depts));
+
+        // Act - create vm and immediately assign SelectedCard = card2
+        var vm = new AddMovementViewModel(_stockCardsMock, _departmentsMock);
+        vm.SelectedCard = card2;
+        await Task.Delay(50); // wait for InitAsync
+
+        // Assert - card2 must NOT be overwritten by FirstOrDefault (card1)
+        Assert.NotNull(vm.SelectedCard);
+        Assert.Equal(2, vm.SelectedCard.Id);
+        Assert.Equal("Keyboard", vm.SelectedCard.Name);
+    }
 }
