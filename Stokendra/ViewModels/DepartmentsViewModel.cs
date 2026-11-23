@@ -16,7 +16,7 @@ public partial class DepartmentsViewModel : ViewModelBase
     [ObservableProperty] private string? _selectedDepartment;
     [ObservableProperty] private bool _isLoading;
 
-    public ObservableCollection<string> Departments { get; } = new();
+    public BulkObservableCollection<string> Departments { get; } = new();
 
     public DepartmentsViewModel(IDepartmentRepository departments, IDialogService dialogService)
     {
@@ -33,8 +33,7 @@ public partial class DepartmentsViewModel : ViewModelBase
         try
         {
             var list = await _departments.GetAllAsync();
-            Departments.Clear();
-            foreach (var d in list) Departments.Add(d);
+            Departments.ReplaceAll(list);
         }
         catch (Exception ex)
         {

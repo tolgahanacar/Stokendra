@@ -69,4 +69,43 @@ public class BulkObservableCollection<T> : ObservableCollection<T>
             PerformAdd();
         }
     }
+
+    /// <summary>
+    /// Replaces all items in the collection atomically, firing only a single Reset notification.
+    /// Eliminates the UI flicker caused by separate Clear() and AddRange() calls.
+    /// Thread-safe: dispatches to UI thread if called from a background thread.
+    /// </summary>
+    public void ReplaceAll(IEnumerable<T> items)
+    {
+        if (items == null) throw new ArgumentNullException(nameof(items));
+
+        void PerformReplace()
+        {
+            _suppressNotification = true;
+            try
+            {
+                Items.Clear();
+                foreach (var item in items)
+                {
+                    Items.Add(item);
+                }
+            }
+            finally
+            {
+                _suppressNotification = false;
+                OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+                OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
+                OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            }
+        }
+
+        if (Avalonia.Threading.Dispatcher.UIThread is { } dispatcher && !dispatcher.CheckAccess())
+        {
+            dispatcher.Invoke(PerformReplace);
+        }
+        else
+        {
+            PerformReplace();
+        }
+    }
 }

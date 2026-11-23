@@ -91,8 +91,7 @@ public partial class StocksViewModel : ViewModelBase
                 k.Code.ToTurkishLower().Contains(term) ||
                 k.Category.ToTurkishLower().Contains(term)).ToList();
 
-        Stocks.Clear();
-        Stocks.AddRange(data);
+        Stocks.ReplaceAll(data);
         
         int lowStockCount = data.Count(k => k.CurrentStock <= k.MinStock && k.CurrentStock > 0);
         int depletedCount = data.Count(k => k.CurrentStock <= 0);

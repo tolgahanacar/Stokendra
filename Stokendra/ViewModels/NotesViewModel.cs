@@ -48,8 +48,7 @@ public partial class NotesViewModel : ViewModelBase
         try
         {
             var data = await _notes.GetAllAsync();
-            Notes.Clear();
-            Notes.AddRange(data);
+            Notes.ReplaceAll(data);
             StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
         }
         catch (Exception ex) 

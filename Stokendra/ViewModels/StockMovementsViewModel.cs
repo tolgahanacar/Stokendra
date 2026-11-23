@@ -114,8 +114,7 @@ public partial class StockMovementsViewModel : ViewModelBase
 
             token.ThrowIfCancellationRequested();
 
-            Movements.Clear();
-            Movements.AddRange(data);
+            Movements.ReplaceAll(data);
             StatusText = LocalizationManager.L("total_movements_page", totalCount, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException) 

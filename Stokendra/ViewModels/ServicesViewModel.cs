@@ -74,8 +74,7 @@ public partial class ServicesViewModel : ViewModelBase
 
             token.ThrowIfCancellationRequested();
 
-            Records.Clear();
-            Records.AddRange(data);
+            Records.ReplaceAll(data);
             StatusText = string.Format(LocalizationManager.L("svc_status_listing"), totalCount, Records.Count, CurrentPage, TotalPages);
         }
         catch (OperationCanceledException)

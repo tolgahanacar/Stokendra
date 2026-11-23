@@ -23,7 +23,7 @@ public partial class UsersViewModel : ViewModelBase
     [ObservableProperty] private bool _isSuccess;
     [ObservableProperty] private bool _isLoading;
 
-    public ObservableCollection<User> Users { get; } = new();
+    public BulkObservableCollection<User> Users { get; } = new();
     public List<string> Roles { get; } = new() { "admin", "user" };
 
     public UsersViewModel(IUserRepository userRepository, IDialogService dialogService)
@@ -42,12 +42,8 @@ public partial class UsersViewModel : ViewModelBase
         StatusMessage = "";
         try
         {
-            Users.Clear();
             var list = await _userRepository.GetUsersAsync();
-            foreach (var user in list)
-            {
-                Users.Add(user);
-            }
+            Users.ReplaceAll(list);
         }
         catch (Exception ex)
         {

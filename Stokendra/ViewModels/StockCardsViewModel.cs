@@ -121,8 +121,7 @@ public partial class StockCardsViewModel : ViewModelBase
                 k.Code.ToTurkishLower().Contains(term) ||
                 k.Category.ToTurkishLower().Contains(term)).ToList();
 
-        Cards.Clear();
-        Cards.AddRange(data);
+        Cards.ReplaceAll(data);
         StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
     }
 

@@ -1,16 +1,18 @@
-## 🌟 Stokendra v7.4.6 — Mimari & Asenkron Yarış Durumu Zırhlandırmaları
+## 🚀 Stokendra v7.4.7 — Mimari & Akıcı Sekme Geçişi Performans Güncellemesi
 
-Bu sürüm, kullanıcı arayüzü asenkron işlemleri, komut tetiklemeleri ve güncelleme servisi üzerinde derinlemesine tespit edilen uç durumları ve yarış durumlarını (race conditions) çözümler.
+Bu sürüm, çekirdek mimariyi koruyarak sekme geçişlerindeki takılmaları, çift layout çizimlerini ve ekran kırpışmalarını ortadan kaldıran 5 ana performans optimizasyonu içerir.
 
-### 🛡️ Neler Değişti?
+### ⚡ Öne Çıkan Geliştirmeler
 
-- 🏎️ **`AddMovementViewModel` Asenkron Yarış Durumu (Race Condition) Giderildi:**
-  - Kart Detay ekranından "Hareketi Ekle" tıklandığında, asenkron `InitAsync()` arka planda tamamlandığında seçili kartın ezilerek ilk karta dönmesi engellendi. `preSelectedCard` mekanizması ile kullanıcının seçtiği kart referansı eksiksiz korunur.
-- 🛡️ **`DepartmentsViewModel` Parametresiz Tetikleme Desteği:**
-  - Departman silme ve düzenleme komutları menü/kısayol üzerinden parametresiz tetiklendiğinde listedeki seçili departman üzerinden güvenli fallback ile çalışması sağlandı.
-- 👥 **`UsersViewModel` Seçili Kullanıcı Fallback Koruması:**
-  - Kullanıcı silme, rol değiştirme ve şifre sıfırlama komutları parametresiz tetiklemelerde `SelectedUser` üzerinden hatasız çalıştırılır hale getirildi.
-- 🌐 **`UpdateService` Ağ Hata Yalıtımı ve Yerelleştirme:**
-  - Güncelleme kontrolü sırasında internet veya DNS kopukluğu durumlarında oluşan istisnalar izole edildi, ayarlar ekranında yerelleştirilmiş hata mesajı gösterimi sağlandı. Kurulum dosyası indirme sonrası taşıma işlemi `File.Move(..., overwrite: true)` ile atomik hale getirildi.
-- 🧪 **99/99 Test Başarısı:**
-  - Önceden seçili kartın korunması ve güncelleme hata durumlarını doğrulayan 3 yeni birim testi eklendi.
+- 🎞️ **`TransitioningContentControl` ile Akıcı Geçiş (120ms CrossFade):**
+  - Sayfa geçişleri sert (harsh) anlık sıçramalar yerine donanım hızlandırmalı 120ms CrossFade efektiyle pürüzsüz ve akıcı hale getirildi.
+- ⚡ **`ViewLocator` Derlenmiş IL Fabrika Önbelleği (Compiled Expression Factory):**
+  - Her sekme geçişinde tekrarlanan string manipülasyonları, `Type.GetType` ve yavaş reflection `Activator.CreateInstance` yerine derlenmiş `Func<Control>` delegeleri önbelleğe alındı. Sayfa ve dialog inşaları nanosaniyeler mertebesine indirildi.
+- 🔄 **`BulkObservableCollection.ReplaceAll` ile Sıfır Kırpışma:**
+  - `Cards.Clear()` ve `Cards.AddRange(data)` kombinasyonunun neden olduğu çift Reset olayı yerine atomik `ReplaceAll` getirildi. DataGrid ve ListBox satırları tek bir render döngüsünde titreşimsiz güncellenir.
+- 📊 **`DashboardView` Sıfır Kırpışma Arka Plan Yenilemesi:**
+  - Gösterge paneline her tıklandığında istatistik kartlarının silinip "Yükleniyor..." gösterilmesi engellendi. Mevcut kartlar korunarak SQLite güncellemeleri yerinde (in-place) pürüzsüzce uygulanır.
+- 🛡️ **Aktif Menü Çift Tıklama Koruması:**
+  - Zaten açık olan sekmeye tekrar tıklandığında gereksiz veritabanı sorguları ve UI yenilemeleri engellendi.
+- 🧪 **102/102 Test Başarısı:**
+  - Test paketi %40 hızlanarak 1 dakikada 102/102 testle başarıyla tamamlandı.

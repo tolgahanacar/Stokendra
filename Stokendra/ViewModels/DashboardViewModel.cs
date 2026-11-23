@@ -22,8 +22,9 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty] private int _totalMovements;
     [ObservableProperty] private int _todayMovements;
     [ObservableProperty] private bool _isLoading = true;
+    private bool _hasLoadedOnce;
 
-    public ObservableCollection<LowStockItem> LowStockItems { get; } = new();
+    public BulkObservableCollection<LowStockItem> LowStockItems { get; } = new();
 
     public DashboardViewModel(
         IReportRepository reports,
@@ -41,7 +42,7 @@ public partial class DashboardViewModel : ViewModelBase
     public async Task LoadAsync()
     {
         if (!await _loadLock.WaitAsync(0)) return;
-        IsLoading = true;
+        if (!_hasLoadedOnce) IsLoading = true;
         try
         {
             int lowStockThreshold = AppServices.Current.Settings.LowStockThreshold;
@@ -55,19 +56,17 @@ public partial class DashboardViewModel : ViewModelBase
 
             // Get top 20 low stock items directly from DB
             var cards = await _stockCards.GetLowStockCardsAsync(20, lowStockThreshold);
-            LowStockItems.Clear();
-            foreach (var k in cards)
+            LowStockItems.ReplaceAll(cards.Select(k => new LowStockItem
             {
-                LowStockItems.Add(new LowStockItem
-                {
-                    Name       = k.Name,
-                    Code       = k.Code,
-                    Current    = FormatNumber(k.CurrentStock),
-                    MinStock   = k.MinStock.ToString(),
-                    Status     = k.CurrentStock <= 0 ? LocalizationManager.L("depleted") : LocalizationManager.L("low"),
-                    IsDepleted = k.CurrentStock <= 0
-                });
-            }
+                Name       = k.Name,
+                Code       = k.Code,
+                Current    = FormatNumber(k.CurrentStock),
+                MinStock   = k.MinStock.ToString(),
+                Status     = k.CurrentStock <= 0 ? LocalizationManager.L("depleted") : LocalizationManager.L("low"),
+                IsDepleted = k.CurrentStock <= 0
+            }));
+
+            _hasLoadedOnce = true;
         }
         catch (Exception ex)
         {
