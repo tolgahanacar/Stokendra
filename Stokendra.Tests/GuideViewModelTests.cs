@@ -14,6 +14,7 @@ public class GuideViewModelTests : IClassFixture<TestSandbox>, IDisposable
 
     public GuideViewModelTests()
     {
+        LocalizationManager.Initialize("tr");
         _tempDbPath = Path.Combine(Path.GetTempPath(), $"GuideTest_{Guid.NewGuid():N}.db");
         _settings = new AppSettings();
         _database = new Database(_tempDbPath);

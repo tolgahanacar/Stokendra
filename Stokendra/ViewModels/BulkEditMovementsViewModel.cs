@@ -75,6 +75,15 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         {
             var depts = await _departments.GetAllAsync();
             foreach (var d in depts) AllDepartments.Add(d);
+
+            // Ensure any existing movement's department is present in AllDepartments so ComboBox binds cleanly
+            foreach (var m in EditingMovements)
+            {
+                if (!string.IsNullOrWhiteSpace(m.Department) && !AllDepartments.Contains(m.Department))
+                {
+                    AllDepartments.Add(m.Department);
+                }
+            }
             
             SelectedDepartment = depts.FirstOrDefault() ?? "";
         }
@@ -88,37 +97,31 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
     private void ApplyBulk()
     {
         ErrorMessage = "";
-        int updatedCount = 0;
 
         foreach (var m in EditingMovements)
         {
             if (IsApplyDepartment && !string.IsNullOrEmpty(SelectedDepartment))
             {
                 m.Department = SelectedDepartment;
-                updatedCount++;
             }
             if (IsApplyRecipient)
             {
                 m.Recipient = Recipient ?? "";
-                updatedCount++;
             }
             if (IsApplyDescription)
             {
                 m.Description = Description ?? "";
-                updatedCount++;
             }
             if (IsApplyDate && Date.HasValue)
             {
                 // Preserve the original time part of the movement date, only update the date part
                 m.Date = Date.Value.Date.Add(m.Date.TimeOfDay);
-                updatedCount++;
             }
         }
-        if (updatedCount > 0)
-        {
-            var temp = EditingMovements.ToList();
-            EditingMovements.ReplaceAll(temp);
-        }
+        // NOTE: We intentionally DO NOT call EditingMovements.ReplaceAll(temp) here.
+        // StockMovement inherits from ObservableObject and raises PropertyChanged for each edited property.
+        // The DataGrid cells update in place instantly. Calling ReplaceAll resets the collection,
+        // causing Avalonia DataGrid to recycle all row containers, which detached ComboBoxes and wiped their selection.
     }
 
     [RelayCommand]
@@ -127,6 +130,9 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         ErrorMessage = "";
         try
         {
+            // If user checked any bulk fields, apply them before validating and saving
+            ApplyBulk();
+
             // Validate all inputs locally first
             foreach (var m in EditingMovements)
             {

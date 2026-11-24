@@ -46,9 +46,23 @@ public partial class StockMovement : ObservableObject
     [ObservableProperty]
     private string _recipient = string.Empty;
 
-    /// <summary>Department name.</summary>
-    [ObservableProperty]
     private string _department = string.Empty;
+
+    /// <summary>Department name.</summary>
+    public string Department
+    {
+        get => _department;
+        set
+        {
+            // Avalonia DataGrid ComboBox detachment / recycling protection:
+            // When ComboBox unbinds or recycles its container, Avalonia pushes null or empty string to SelectedItem.
+            // Never overwrite an existing valid department with null or whitespace.
+            if (string.IsNullOrWhiteSpace(value) && !string.IsNullOrWhiteSpace(_department))
+                return;
+
+            SetProperty(ref _department, value ?? string.Empty);
+        }
+    }
 
     /// <summary>Movement date and time.</summary>
     [ObservableProperty]
