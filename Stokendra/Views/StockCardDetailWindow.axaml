@@ -23,10 +23,16 @@
                                    Foreground="#3B82F6" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Card.Category}"
                                    Foreground="#94A3B8"/>
-                        <TextBlock Text="{Binding Card.ParentName, StringFormat='Parent Card: {0}'}"
-                                   Foreground="#64748B"
-                                   IsVisible="{Binding Card.ParentName,
-                                       Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding Card.ParentName,
+                                        Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Text="{infra:L parent_card}"
+                                       Foreground="#64748B"/>
+                            <TextBlock Text=":"
+                                       Foreground="#64748B" Margin="0,0,2,0"/>
+                            <TextBlock Text="{Binding Card.ParentName}"
+                                       Foreground="#94A3B8"/>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1"
