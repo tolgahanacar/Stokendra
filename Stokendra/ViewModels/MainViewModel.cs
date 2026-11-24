@@ -27,6 +27,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly ReportsViewModel        _reports;
     private readonly GuideViewModel          _guide;
     private readonly UsersViewModel          _users;
+    private readonly FeedbackViewModel       _feedback;
     private readonly IBackupService          _backupService;
     private readonly IUpdateService          _updateService;
 
@@ -70,6 +71,7 @@ public partial class MainViewModel : ViewModelBase
         ReportsViewModel        reports,
         GuideViewModel          guide,
         UsersViewModel          users,
+        FeedbackViewModel       feedback,
         IBackupService          backupService,
         IUpdateService          updateService)
     {
@@ -84,6 +86,7 @@ public partial class MainViewModel : ViewModelBase
         _reports     = reports;
         _guide       = guide;
         _users       = users;
+        _feedback    = feedback;
         _backupService = backupService;
         _updateService = updateService;
 
@@ -112,6 +115,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand] public void NavigateToReports()     { if (CurrentPage == _reports) return; CurrentPage = _reports;     ActiveMenu = "reports";     }
     [RelayCommand] public void NavigateToGuide()       { if (CurrentPage == _guide) return; CurrentPage = _guide;       ActiveMenu = "guide";       }
     [RelayCommand] public void NavigateToUsers()       { if (CurrentPage == _users) return; CurrentPage = _users;       ActiveMenu = "users";       AsyncHelper.RunSafe(() => _users.EnsureLoadedAsync(), ex => AppLogger.LogError("Users nav refresh failed", ex)); }
+    [RelayCommand] public void NavigateToFeedback()    { if (CurrentPage == _feedback) return; CurrentPage = _feedback; ActiveMenu = "feedback";    _feedback.RefreshDiagnostics(); }
 
     public override void RefreshSession()
     {
@@ -130,6 +134,7 @@ public partial class MainViewModel : ViewModelBase
         _reports.RefreshSession();
         _guide.RefreshSession();
         _users.RefreshSession();
+        _feedback.RefreshSession();
 
         NavigateToDashboard();
     }

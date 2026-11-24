@@ -1,0 +1,27 @@
+================================================================================
+STOKENDRA END-USER LICENSE AGREEMENT (EULA)
+Copyright (c) 2024-2026 Tolgahan Acar. All rights reserved.
+================================================================================
+
+Please read the following terms and conditions carefully before proceeding with installation.
+By proceeding with the installation, you agree to be bound by all terms of this agreement.
+
+1. PERMISSION FOR FREE USE:
+This software ("Stokendra") is provided free of charge for individual and internal business use to manage inventory and stock tracking. You may use this software for commercial or personal operational processes at no cost.
+
+2. PROHIBITION OF UNAUTHORIZED DEVELOPMENT & REDISTRIBUTION:
+Without the prior express written permission of the copyright holder (Tolgahan Acar):
+- Modifying the software's source code or compiled binaries,
+- Extending, decompiling, or developing upon the software,
+- Forking or creating derivative works,
+- Repackaging, leasing, selling, sublicensing, or redistributing the software or its installers to third parties
+IS STRICTLY PROHIBITED.
+
+3. DISCLAIMER OF LIABILITY & USER RESPONSIBILITY:
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER "AS IS" WITHOUT ANY WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+IN NO EVENT SHALL THE DEVELOPER OR COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING LOSS OF DATA, CORRUPTION OF DATABASE, OPERATIONAL DOWNTIME, SECURITY INCIDENTS, LOSS OF PROFITS, OR BUSINESS INTERRUPTION) ARISING OUT OF THE USE OR INABILITY TO USE THIS SOFTWARE.
+
+ALL RISKS AND RESPONSIBILITIES REGARDING DATA INTEGRITY, BACKUP, AND USAGE REST SOLELY WITH THE USER.
+
+If you do not agree to these terms, select "I do not accept the agreement" and exit the setup.

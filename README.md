@@ -1,48 +1,49 @@
 # Stokendra
 
-> **Modern, Hızlı ve Güvenilir Masaüstü Stok & Malzeme Takip Programı**
+*Read this in other languages: [🇬🇧 English](README.md) | [🇹🇷 Türkçe](README.tr.md)*
 
-Stokendra; işletmeler, kurumlar ve bireysel kullanıcılar için stok kartları, malzeme giriş-çıkış hareketleri, departman bazlı sarfiyat raporları ve teknik servis kayıtlarını tek çatı altında toplayan modern bir masaüstü uygulamasıdır.
+> **Modern, Fast & Reliable Inventory & Stock Management Desktop Application**
 
----
-
-## 🚀 Öne Çıkan Özellikler
-
-- **📦 Stok Kartı Yönetimi:** Hiyerarşik (Üst Kart / Alt Kart) yapı, ürün kodları, kategoriler, görsel yükleme ve kritik stok seviyesi uyarıları.
-- **🔄 Stok Hareketleri:** Hızlı malzeme girişi, çıkışı ve devir işlemleri; departman ve teslim alan personel takibi; toplu düzenleme imkânı.
-- **📊 Gelişmiş Raporlama:** 
-  - Belirli bir birimin (ör. Sicil Müdürlüğü) veya personelin belirli bir üründen (ör. Toner) ne kadar tükettiğini filtreleme.
-  - Dinamik tüketim grafikleri.
-  - Excel (.xlsx) dışa aktarımı ve profesyonel HTML yazdırma/çıktı alma desteği.
-- **🛠️ Servis & Bakım Kayıtları:** Cihaz seri numaraları, arıza durumları, işlem detayları ve servis geçmişi takibi.
-- **📝 Hızlı Notlar:** Günlük operasyonel notlar ve görev takibi.
-- **👥 Kullanıcı Yetkilendirme:** Yönetici, Depo Sorumlusu ve Rapor Görüntüleyici rolleri ile güvenli oturum yönetimi.
-- **💾 Veri Güvenliği & Yedekleme:** SQLite WAL mimarisi, tek tıkla veritabanı yedekleme ve geri yükleme.
-- **⚡ Taşınabilir ve Hızlı:** .NET 10 LTS ve Avalonia UI tabanlıdır. Bilgisayarınızda .NET yüklü olmasa bile çalışır (Self-contained).
+Stokendra is a professional desktop application designed for enterprises, institutions, and individuals to manage stock cards, goods movements, department-level consumption reports, and hardware service records under a unified, high-performance interface.
 
 ---
 
-## 📥 Kurulum
+## 🚀 Key Features
 
-1. En güncel kurulum dosyasını [GitHub Releases](https://github.com/tolgahanacar/Stokendra/releases/latest) sayfasından indirin (`Stokendra_Setup_v...exe`).
-2. İndirilen kurulum sihirbazını çalıştırarak kurulumu saniyeler içinde tamamlayın.
-3. Masaüstündeki **Stokendra** kısayoluna tıklayarak kullanmaya başlayın.
-
-> **Not:** Windows 10 veya üzeri 64-bit (x64) işletim sistemi gereklidir.
-
----
-
-## ⚖️ Lisans & Kullanım Koşulları
-
-- Stokendra **ücretsiz** bir yazılımdır.
-- Bu yazılımın kaynak kodları veya kurulum paketleri; geliştiricisi (**Tolgahan Acar**) haricinde izinsiz olarak **geliştirilemez, değiştirilemez, çatallanamaz (fork), yeniden paketlenemez, satılamaz veya üçüncü şahıslara dağıtılamaz**.
-- Programın kullanımından ve programda yaşanılabilecek olası aksaklık veya veri kaybı durumlarından tamamen **kullanıcı sorumludur**. 
-- Detaylı yasal şartlar ve sorumluluk reddi için [LICENSE.md](LICENSE.md) ve [SECURITY.md](SECURITY.md) dosyalarını inceleyiniz.
+- **📦 Stock Card Management:** Hierarchical (Parent/Child) relationships, codes, categories, picture uploads, and critical minimum stock alerts.
+- **🔄 Stock Movements:** Fast entry, issue, and handover tracking; department and recipient personnel auditing; bulk inline editing.
+- **📊 Advanced Reporting:** 
+  - Filter consumption by specific stock item, department, or personnel.
+  - Interactive consumption graphs.
+  - One-click Excel (.xlsx) export and formatted HTML printing.
+- **🛠️ Service & Maintenance Records:** Device serial tracking, warranty statuses, repair logs, and history.
+- **📝 Operational Notes:** Quick memo system and task tracking.
+- **👥 Multi-User RBAC:** Admin, Warehouse Officer, and Report Viewer roles.
+- **💾 Data Security & Backup:** SQLite WAL architecture with integrated one-click database backup and restore.
+- **⚡ Fast & Portable:** Powered by .NET 10 LTS and Avalonia UI. 100% Self-contained (no .NET runtime installation required).
 
 ---
 
-## 👨‍💻 Geliştirici
+## 📥 Installation
 
-- **Geliştirici:** Tolgahan Acar
-- **Proje Bağlantısı:** [https://github.com/tolgahanacar/Stokendra](https://github.com/tolgahanacar/Stokendra)
-- **Hata Bildirimi:** [GitHub Issues](https://github.com/tolgahanacar/Stokendra/issues)
+1. Download the latest installer from [GitHub Releases](https://github.com/tolgahanacar/Stokendra/releases/latest) (`Stokendra_Setup_v...exe`).
+2. Run the setup wizard (supports both English and Turkish).
+3. Launch **Stokendra** from your desktop.
+
+> **Requirements:** Windows 10 or later (64-bit x64).
+
+---
+
+## ⚖️ License & Terms of Use
+
+- Stokendra is **free** for internal and personal use.
+- The source code, compiled binaries, and setup installers cannot be modified, forked, repackaged, or redistributed without explicit written authorization from the author (**Tolgahan Acar**).
+- Usage is entirely at the user's own risk. For legal terms and liability disclaimers, see [LICENSE.md](LICENSE.md) and [SECURITY.md](SECURITY.md).
+
+---
+
+## 👨‍💻 Author
+
+- **Developer:** Tolgahan Acar
+- **GitHub:** [https://github.com/tolgahanacar/Stokendra](https://github.com/tolgahanacar/Stokendra)
+- **Issues & Suggestions:** [GitHub Issues](https://github.com/tolgahanacar/Stokendra/issues)

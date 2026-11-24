@@ -55,6 +55,47 @@ public static class AppLogger
     }
 
     /// <summary>
+    /// Günlük dosyasından son belirtilen satır sayısını okur.
+    /// </summary>
+    public static string GetRecentLogs(int maxLines = 50)
+    {
+        lock (_lock)
+        {
+            try
+            {
+                string logPath = ErrorLogPath;
+                if (!File.Exists(logPath))
+                    return "Kayıtlı hata günlüğü bulunmuyor.";
+
+                var lines = File.ReadAllLines(logPath);
+                if (lines.Length == 0)
+                    return "Hata günlüğü boş.";
+
+                int take = Math.Min(lines.Length, maxLines);
+                return string.Join(Environment.NewLine, lines.Skip(lines.Length - take));
+            }
+            catch (Exception ex)
+            {
+                return $"Log okuma hatası: {ex.Message}";
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tanılama ve hata bildirimi için sistem özet bilgilerini üretir.
+    /// </summary>
+    public static string GetSystemDiagnosticSummary()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Uygulama: Stokendra v{AppInfo.VersionString}");
+        sb.AppendLine($"İşletim Sistemi: {Environment.OSVersion.VersionString} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
+        sb.AppendLine($".NET Çalışma Zamanı: {Environment.Version}");
+        sb.AppendLine($"Makine Adı: {Environment.MachineName}");
+        sb.AppendLine($"Tarih/Saat: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Log dosyası belirtilen boyutu aşarsa tarih damgalı arşiv dosyasına taşır.
     /// </summary>
     private static void RotateIfNeeded(string logPath)

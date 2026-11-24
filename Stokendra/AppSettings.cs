@@ -31,6 +31,15 @@ public class AppSettings
     /// <summary>Son başarılı yedekleme tarihi.</summary>
     public DateTime? LastBackupDate { get; set; }
 
+    /// <summary>Geri bildirim ve hata raporlarının iletileceği e-posta adresi.</summary>
+    public string FeedbackEmail { get; set; } = "tolgahanacar.dev@gmail.com";
+
+    /// <summary>Özel bildirim webhook adresi (opsiyonel).</summary>
+    public string FeedbackWebhookUrl { get; set; } = "";
+
+    /// <summary>Web3Forms form erişim anahtarı (opsiyonel).</summary>
+    public string Web3FormsAccessKey { get; set; } = "";
+
     static AppSettings()
     {
         _ = AppPaths.ApplicationDataDirectory;

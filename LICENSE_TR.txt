@@ -1,0 +1,27 @@
+================================================================================
+STOKENDRA KULLANIM LİSANS SÖZLEŞMESİ (EULA)
+Telif Hakkı (c) 2024-2026 Tolgahan Acar. Tüm hakları saklıdır.
+================================================================================
+
+Lütfen kurulum işlemine devam etmeden önce aşağıdaki koşulları dikkatlice okuyunuz.
+Kuruluma devam etmeniz, bu sözleşmenin tüm maddelerini eksiksiz kabul ettiğiniz anlamına gelir.
+
+1. ÜCRETSİZ KULLANIM İZNİ:
+İşbu yazılım ("Stokendra"), bireysel ve kurumsal kullanıcılara stok ve malzeme takibi amacıyla ücretsiz olarak sunulmuştur. Yazılımı ticari veya kişisel iş süreçlerinizde ücretsiz olarak kullanabilirsiniz.
+
+2. İZİNSİZ GELİŞTİRME VE DAĞITIM YASAĞI:
+Telif hakkı sahibi Tolgahan Acar'ın önceden verilmiş açık ve yazılı izni olmaksızın;
+- Yazılımın kaynak kodlarının veya ikili dosyalarının değiştirilmesi,
+- Yazılım üzerine ek kod yazılarak geliştirilmesi,
+- Yazılımın çatallanması (fork) veya türetilmiş çalışmalar yapılması,
+- Kurulum dosyalarının yeniden paketlenmesi, kiralanması, satılması veya üçüncü şahıslara dağıtılması
+KESİNLİKLE YASAKTIR.
+
+3. SORUMLULUK REDDİ VE KULLANICI SORUMLULUĞU:
+BU YAZILIM, TELİF HAKKI SAHİBİ TARAFINDAN "OLDUĞU GİBİ" (AS IS) SAĞLANMIŞTIR. TİCARİ ELVERİŞLİLİK VEYA BELİRLİ BİR AMACA UYGUNLUK GİBİ ZIMNİ GARANTİLER DE DAHİL OLMAK ÜZERE AÇIK VEYA ZIMNİ HİÇBİR GARANTİ VERİLMEMEKTEDİR.
+
+YAZILIMIN KULLANIMINDAN, YAZILIMDA OLUŞABİLECEK HERHANGİ BİR GÜVENLİK AÇIĞINDAN, YAZILIMSAL HATADAN, VERİTABANI BOZULMASINDAN VEYA VERİ KAYBINDAN DOĞABİLECEK DOĞRUDAN VEYA DOLAYLI HİÇBİR ZARARDAN GELİŞTİRİCİ HUKUKİ VEYA CEZAİ OLARAK SORUMLU TUTULAMAZ.
+
+TÜM KULLANIM RİSKİ, VERİ YEDEKLEME VE GÜVENLİK SORUMLULUĞU TAMAMEN KULLANICIYA AİTTİR.
+
+Eğer bu koşulları kabul etmiyorsanız, "Anlaşmayı kabul etmiyorum" seçeneğini işaretleyip kurulumdan çıkınız.

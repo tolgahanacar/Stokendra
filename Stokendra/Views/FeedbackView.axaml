@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Stokendra.ViewModels"
+             xmlns:infra="using:Stokendra.Infrastructure"
+             x:Class="Stokendra.Views.FeedbackView"
+             x:DataType="vm:FeedbackViewModel"
+             Background="#0C0E14">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="32,24,32,24">
+            
+            <!-- Header Section -->
+            <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,16">
+                <TextBlock Text="{infra:L feedback_title}" FontSize="28" FontWeight="Black" Foreground="#F8FAFC"/>
+                <TextBlock Text="{infra:L feedback_subtitle}" FontSize="13" Foreground="#94A3B8"/>
+            </StackPanel>
+
+            <!-- Destination Info Card -->
+            <Border Grid.Row="1" Classes="Card" Background="#111827" BorderBrush="#1F2937" CornerRadius="10" Padding="18,12" Margin="0,0,0,16">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock Text="📬" FontSize="20" VerticalAlignment="Center"/>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{infra:L feedback_target_info}" FontSize="11" Foreground="#64748B" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TargetEmailDisplay}" FontSize="13" Foreground="#38AEFF" FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Content="{infra:L feedback_copy_btn}"
+                            Command="{Binding CopyReportToClipboardCommand}"
+                            Classes="Secondary"
+                            Padding="12,6"
+                            FontSize="12"
+                            VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+            <!-- Main Feedback Form Card -->
+            <Border Grid.Row="2" Background="#161B27" BorderBrush="#252F44" BorderThickness="1" CornerRadius="12" Padding="24" Margin="0,0,0,16">
+                <StackPanel Spacing="16">
+                    
+                    <!-- Row: Type & Optional Email -->
+                    <Grid ColumnDefinitions="*,*">
+                        <!-- Report Type -->
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0" Spacing="6">
+                            <TextBlock Text="{infra:L feedback_type_label}" FontSize="12" FontWeight="SemiBold" Foreground="#CBD5E1"/>
+                            <ComboBox ItemsSource="{Binding FeedbackTypes}"
+                                      SelectedItem="{Binding SelectedType}"
+                                      HorizontalAlignment="Stretch"
+                                      Background="#0C0E14"
+                                      BorderBrush="#252F44"
+                                      CornerRadius="8"
+                                      Padding="10,8"/>
+                        </StackPanel>
+
+                        <!-- Optional User Email -->
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0" Spacing="6">
+                            <TextBlock Text="{infra:L feedback_user_email_label}" FontSize="12" FontWeight="SemiBold" Foreground="#CBD5E1"/>
+                            <TextBox Text="{Binding UserEmail}"
+                                     Watermark="{infra:L feedback_user_email_placeholder}"
+                                     Background="#0C0E14"
+                                     BorderBrush="#252F44"
+                                     CornerRadius="8"
+                                     Padding="12,8"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Subject -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L feedback_subject_label}" FontSize="12" FontWeight="SemiBold" Foreground="#CBD5E1"/>
+                        <TextBox Text="{Binding Subject}"
+                                 Watermark="{infra:L feedback_subject_placeholder}"
+                                 Background="#0C0E14"
+                                 BorderBrush="#252F44"
+                                 CornerRadius="8"
+                                 Padding="12,8"/>
+                    </StackPanel>
+
+                    <!-- Message Body -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{infra:L feedback_message_label}" FontSize="12" FontWeight="SemiBold" Foreground="#CBD5E1"/>
+                        <TextBox Text="{Binding Message}"
+                                 Watermark="{infra:L feedback_message_placeholder}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 Height="120"
+                                 Background="#0C0E14"
+                                 BorderBrush="#252F44"
+                                 CornerRadius="8"
+                                 Padding="12,8"/>
+                    </StackPanel>
+
+                    <!-- Include Logs CheckBox -->
+                    <Border Background="#0C0E14" BorderBrush="#1F293D" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                        <CheckBox IsChecked="{Binding IncludeLogs}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{infra:L feedback_include_logs_label}" FontSize="13" FontWeight="SemiBold" Foreground="#F1F5F9"/>
+                                <TextBlock Text="{infra:L feedback_include_logs_desc}" FontSize="11" Foreground="#64748B" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </CheckBox>
+                    </Border>
+
+                    <!-- Action Buttons -->
+                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,8,0,0">
+                        <Button Grid.Column="0"
+                                Content="{infra:L feedback_send_btn}"
+                                Command="{Binding SendFeedbackCommand}"
+                                IsEnabled="{Binding !IsSending}"
+                                Classes="Primary"
+                                Padding="20,10"
+                                FontSize="13"
+                                FontWeight="Bold"
+                                Background="#2563EB"
+                                Foreground="White"
+                                CornerRadius="8"
+                                Cursor="Hand"
+                                Margin="0,0,10,0"/>
+
+                        <Button Grid.Column="1"
+                                Content="{infra:L feedback_mailclient_btn}"
+                                Command="{Binding OpenMailClientCommand}"
+                                Classes="Secondary"
+                                Padding="16,10"
+                                FontSize="13"
+                                CornerRadius="8"
+                                Cursor="Hand"/>
+
+                        <!-- Sending Progress / Status -->
+                        <ProgressBar Grid.Column="2"
+                                     IsIndeterminate="True"
+                                     IsVisible="{Binding IsSending}"
+                                     Width="120"
+                                     Height="4"
+                                     HorizontalAlignment="Right"
+                                     VerticalAlignment="Center"/>
+                    </Grid>
+
+                </StackPanel>
+            </Border>
+
+            <!-- Diagnostics & Logs Preview Expander -->
+            <Expander Grid.Row="3"
+                      Header="{infra:L feedback_sysinfo_title}"
+                      Background="#111827"
+                      BorderBrush="#1F2937"
+                      BorderThickness="1"
+                      CornerRadius="10"
+                      Padding="16"
+                      IsExpanded="False">
+                <Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+                    <!-- Left: System Info Preview -->
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0" Spacing="6">
+                        <TextBlock Text="{infra:L feedback_sysinfo_title}" FontSize="12" FontWeight="Bold" Foreground="#94A3B8"/>
+                        <TextBox Text="{Binding SystemInfoPreview}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 Height="140"
+                                 FontFamily="Consolas, Cascadia Code, Courier New, monospace"
+                                 FontSize="11"
+                                 Background="#0C0E14"
+                                 BorderBrush="#1F293D"
+                                 CornerRadius="6"/>
+                    </StackPanel>
+
+                    <!-- Right: Recent Logs Preview -->
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0" Text="{infra:L feedback_recent_logs_title}" FontSize="12" FontWeight="Bold" Foreground="#94A3B8"/>
+                            <Button Grid.Column="1"
+                                    Content="🔄"
+                                    Command="{Binding RefreshDiagnosticsCommand}"
+                                    Padding="6,2"
+                                    FontSize="11"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Cursor="Hand"/>
+                        </Grid>
+                        <TextBox Text="{Binding RecentLogsPreview}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 Height="140"
+                                 FontFamily="Consolas, Cascadia Code, Courier New, monospace"
+                                 FontSize="11"
+                                 Background="#0C0E14"
+                                 BorderBrush="#1F293D"
+                                 CornerRadius="6"/>
+                    </StackPanel>
+                </Grid>
+            </Expander>
+
+        </Grid>
+    </ScrollViewer>
+</UserControl>

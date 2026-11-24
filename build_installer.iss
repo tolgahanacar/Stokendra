@@ -58,8 +58,7 @@ SetupIconFile={#MyAppIcon}
 UninstallDisplayName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
-; Lisans Sözleşmesi (Click-Wrap EULA — Kurulum öncesi zorunlu onay)
-LicenseFile=LICENSE.txt
+; Lisans Sözleşmesi: Çok dilli olarak [Languages] bölümünde dil bazlı tanımlanmıştır (LICENSE_TR.txt / LICENSE_EN.txt)
 
 ; Sıkıştırma
 Compression=lzma2/ultra64
@@ -95,8 +94,8 @@ UsedUserAreasWarning=no
 
 ; ── Diller ────────────────────────────────────────────────────────────
 [Languages]
-Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"; LicenseFile: "LICENSE_TR.txt"
+Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "LICENSE_EN.txt"
 
 ; ── Görevler ──────────────────────────────────────────────────────────
 [Tasks]

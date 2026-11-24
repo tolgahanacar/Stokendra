@@ -88,6 +88,7 @@ class Program
         // ── Services ──────────────────────────────────────────────────────
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IUpdateService, UpdateService>();
+        services.AddSingleton<IFeedbackService, FeedbackService>();
         services.AddSingleton<AppServices>();
 
         // ── ViewModels ────────────────────────────────────────────────────
@@ -104,6 +105,7 @@ class Program
         services.AddSingleton<ReportsViewModel>();
         services.AddSingleton<GuideViewModel>();
         services.AddSingleton<UsersViewModel>();
+        services.AddSingleton<FeedbackViewModel>();
 
         // Geçici Pencereler ve Formlar (Transient)
         services.AddTransient<LoginViewModel>();
