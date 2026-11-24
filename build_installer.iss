@@ -58,6 +58,9 @@ SetupIconFile={#MyAppIcon}
 UninstallDisplayName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
+; Lisans Sözleşmesi (Click-Wrap EULA — Kurulum öncesi zorunlu onay)
+LicenseFile=LICENSE.txt
+
 ; Sıkıştırma
 Compression=lzma2/ultra64
 SolidCompression=yes

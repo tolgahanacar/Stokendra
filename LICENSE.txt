@@ -1,0 +1,32 @@
+STOKENDRA SON KULLANICI LİSANS SÖZLEŞMESİ VE SORUMLULUK REDDİ
+
+Lütfen programı kurmadan önce bu sözleşmeyi dikkatlice okuyunuz. Bu programı kurarak veya kullanarak, aşağıdaki tüm şartları ve yasal sorumluluk reddini peşinen, gayrikabili rücu kabul etmiş sayılırsınız.
+
+Telif Hakkı (c) 2024-2026 Tolgahan Acar. Tüm Hakları Saklıdır.
+
+1. LİSANS VE KULLANIM HAKKI:
+Bu yazılım ("Stokendra"), geliştiricisi Tolgahan Acar tarafından bireysel veya kurumsal kullanıcılara ücretsiz olarak sunulmuştur. Kullanıcı, programı kendi stok, malzeme ve servis süreçlerini yönetmek amacıyla ücretsiz olarak çalıştırabilir.
+
+2. İZİNSİZ GELİŞTİRME, DEĞİŞTİRME VE DAĞITIM YASAĞI:
+Yazılımın tüm fikri mülkiyet, telif ve kaynak kod hakları münhasıran Tolgahan Acar'a aittir. Geliştiricinin önceden verilmiş açık ve yazılı izni olmaksızın;
+- Yazılımın kaynak kodlarının değiştirilmesi, üzerine ekleme yapılması veya tersine mühendislik (reverse engineering) uygulanması,
+- Yazılımın çatallanması (fork), kopyalanması, üçüncü şahıslara veya platformlara yeniden dağıtılması,
+- Kurulum dosyalarının yeniden paketlenmesi,
+- Yazılımın doğrudan ya da dolaylı olarak herhangi bir bedel karşılığında satılması, kiralanması veya ticari bir menfaat karşılığı devredilmesi
+kesinlikle yasaktır ve yasal takibat konusudur (5846 sayılı Fikir ve Sanat Eserleri Kanunu).
+
+3. SORUMLULUK REDDİ VE GARANTİ VERİLMEMESİ (AS-IS):
+BU YAZILIM, GELİŞTİRİCİ TARAFINDAN "OLDUĞU GİBİ" (AS IS) ESASIYLA VE TÜM HATALARIYLA BİRLİKTE SAĞLANMIŞTIR.
+GELİŞTİRİCİ; YAZILIMIN KESİNTİSİZ, HATASIZ, GÜVENLİ VEYA HERHANGİ BİR DONANIM/İŞLETİM SİSTEMİYLE TAM UYUMLU ÇALIŞACAĞINA DAİR AÇIK VEYA ZIMNİ HİÇBİR TAAHHÜT VEYA GARANTİ VERMEMEKTEDİR.
+
+4. HUKUKİ VE CEZAİ SORUMSUZLUK (KULLANICI SORUMLULUĞU):
+YAZILIMIN KULLANIMINDAN YA DA KULLANILAMAMASINDAN DOĞABİLECEK;
+- HERHANGİ BİR VERİ KAYBI, VERİTABANI BOZULMASI YA DA HATALI KAYIT OLUŞMASI,
+- PROGRAMDA MEVCUT VEYA SONRADAN OLUŞABİLECEK HER TÜRLÜ GÜVENLİK AÇIĞI, SIZINTI YA DA AĞ ZAFİYETİ,
+- TİCARİ KÂR/KAZANÇ KAYBI, İŞİN KESİNTİYE UĞRAMASI VEYA HER TÜRLÜ MADDİ/MANEVİ ZARAR
+TAMAMEN VE MÜNHASIRAN KULLANICININ KENDİ RİSKİ VE SORUMLULUĞUNDADIR. 
+
+KULLANICI, GELİŞTİRİCİYE KARŞI HER NE AD ALTINDA OLURSA OLSUN HİÇBİR HUKUKİ, CEZAİ, TAZMİNAT YA DA BENZERİ TALEPTE BULUNMAYACAĞINI PEŞİNEN KABUL, BEYAN VE TAAHHÜT EDER (Türk Borçlar Kanunu m. 115 ve ilgili mevzuat).
+
+5. YEDEKLEME TAVSİYESİ:
+Verilerin güvenliği açısından, program içindeki yedekleme fonksiyonunu kullanarak veritabanı yedeğinizi (stok.db) düzenli aralıklarla harici bir ortama yedeklemek tamamen kullanıcının yükümlülüğündedir.
