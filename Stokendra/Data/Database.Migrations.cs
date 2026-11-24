@@ -113,14 +113,22 @@ public sealed partial class Database
 
     private static void MigrateToV14(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Location;");
-        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Supplier;");
-        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Barcode;");
+        if (!TableExists(connection, transaction, "StockCards")) return;
+
+        if (ColumnExists(connection, transaction, "StockCards", "Location"))
+            TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Location;");
+        if (ColumnExists(connection, transaction, "StockCards", "Supplier"))
+            TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Supplier;");
+        if (ColumnExists(connection, transaction, "StockCards", "Barcode"))
+            TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN Barcode;");
     }
 
     private static void MigrateToV15(SqliteConnection connection, SqliteTransaction? transaction)
     {
-        TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN UnitPrice;");
+        if (!TableExists(connection, transaction, "StockCards")) return;
+
+        if (ColumnExists(connection, transaction, "StockCards", "UnitPrice"))
+            TryAlter(connection, transaction, "ALTER TABLE StockCards DROP COLUMN UnitPrice;");
     }
 
     private static void MigrateToV13(SqliteConnection connection, SqliteTransaction? transaction)

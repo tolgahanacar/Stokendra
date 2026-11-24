@@ -26,6 +26,8 @@ public class FeedbackTests
         Assert.Contains("Stokendra", summary);
         Assert.Contains("v" + AppInfo.VersionString, summary);
         Assert.Contains(Environment.Version.ToString(), summary);
+        Assert.DoesNotContain("Makine", summary);
+        Assert.DoesNotContain(Environment.MachineName, summary);
     }
 
     [Fact]

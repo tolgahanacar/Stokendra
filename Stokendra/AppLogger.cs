@@ -90,7 +90,6 @@ public static class AppLogger
         sb.AppendLine($"Uygulama: Stokendra v{AppInfo.VersionString}");
         sb.AppendLine($"İşletim Sistemi: {Environment.OSVersion.VersionString} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
         sb.AppendLine($".NET Çalışma Zamanı: {Environment.Version}");
-        sb.AppendLine($"Makine Adı: {Environment.MachineName}");
         sb.AppendLine($"Tarih/Saat: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         return sb.ToString();
     }

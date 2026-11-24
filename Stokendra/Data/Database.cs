@@ -113,10 +113,15 @@ public sealed partial class Database : IDisposable
         try
         {
             int version = GetSchemaVersion(connection, null);
+            bool hasLegacyTables = TableExists(connection, null, "StokKartlari") || TableExists(connection, null, "StockCards");
+
             // V1–V12 migrations are no-ops (legacy, already folded into V13)
-            if (version < 13) MigrateToV13(connection, null);
-            if (version < 14) MigrateToV14(connection, null);
-            if (version < 15) MigrateToV15(connection, null);
+            if (hasLegacyTables)
+            {
+                if (version < 13) MigrateToV13(connection, null);
+                if (version < 14) MigrateToV14(connection, null);
+                if (version < 15) MigrateToV15(connection, null);
+            }
 
             EnsureSchema(connection, null);
             EnsureIndexes(connection, null);
