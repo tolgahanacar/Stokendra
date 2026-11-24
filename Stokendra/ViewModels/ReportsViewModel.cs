@@ -11,6 +11,12 @@ using System.Threading.Tasks;
 
 namespace Stokendra.ViewModels;
 
+public record StockCardReportItem(int? Id, string DisplayName)
+{
+    public static StockCardReportItem All => new(null, LocalizationManager.L("all"));
+    public override string ToString() => DisplayName;
+}
+
 public partial class ReportsViewModel : ViewModelBase
 {
     private readonly IMovementRepository _movements;
@@ -22,6 +28,7 @@ public partial class ReportsViewModel : ViewModelBase
     [ObservableProperty] private string _selectedDepartment = LocalizationManager.L("all");
     [ObservableProperty] private string _selectedCategory = LocalizationManager.L("all");
     [ObservableProperty] private string _selectedUser = LocalizationManager.L("all");
+    [ObservableProperty] private StockCardReportItem _selectedStockCard = StockCardReportItem.All;
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private double _totalConsumption;
     [ObservableProperty] private int _uniqueItemCount;
@@ -30,6 +37,7 @@ public partial class ReportsViewModel : ViewModelBase
     public ObservableCollection<string> Departments { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Categories { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Users { get; } = new() { LocalizationManager.L("all") };
+    public ObservableCollection<StockCardReportItem> StockCards { get; } = new() { StockCardReportItem.All };
     [ObservableProperty] private List<StockMovement> _reportRows = new();
 
     public List<(string Name, double Total)> ChartData { get; private set; } = new();
@@ -60,6 +68,13 @@ public partial class ReportsViewModel : ViewModelBase
             var cats = cards.Select(c => c.Category).Where(k => !string.IsNullOrEmpty(k)).Distinct().OrderBy(k => k);
             foreach (var c in cats) Categories.Add(c!);
 
+            var sortedCards = cards.OrderBy(c => c.Code).ThenBy(c => c.Name);
+            foreach (var c in sortedCards)
+            {
+                string display = !string.IsNullOrWhiteSpace(c.Code) ? $"{c.Code} - {c.Name}" : c.Name;
+                StockCards.Add(new StockCardReportItem(c.Id, display));
+            }
+
             var users = _movements.GetDeliveredPersons();
             foreach (var u in users) Users.Add(u);
 
@@ -87,6 +102,7 @@ public partial class ReportsViewModel : ViewModelBase
             string? dept = SelectedDepartment == LocalizationManager.L("all") ? null : SelectedDepartment;
             string? cat = SelectedCategory == LocalizationManager.L("all") ? null : SelectedCategory;
             string? user = SelectedUser == LocalizationManager.L("all") ? null : SelectedUser;
+            int? cardId = SelectedStockCard?.Id;
 
             // Büyük veri setlerinde bellek baskısını önlemek için sayfalı yükleme
             const int batchSize = 5000;
@@ -98,7 +114,7 @@ public partial class ReportsViewModel : ViewModelBase
                 token.ThrowIfCancellationRequested();
                 var batch = await _movements.GetPagedAsync(
                     page, batchSize,
-                    stockCardId: null,
+                    stockCardId: cardId,
                     startDate: StartDate.Date,
                     endDate: EndDate.Date.AddDays(1),
                     department: dept,
@@ -119,7 +135,7 @@ public partial class ReportsViewModel : ViewModelBase
             var rowsList = new List<StockMovement>();
             double total = 0;
             var uniqueIds = new HashSet<int>();
-            var totalsByCard = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var totalsGrouped = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var m in allMovements)
             {
@@ -127,13 +143,26 @@ public partial class ReportsViewModel : ViewModelBase
                 total += m.Quantity;
                 uniqueIds.Add(m.StockCardId);
                 
-                string cardKey = !string.IsNullOrWhiteSpace(m.StockCardCode)
-                    ? $"{m.StockCardCode} - {m.StockCardName}"
-                    : m.StockCardName;
-                if (totalsByCard.ContainsKey(cardKey))
-                    totalsByCard[cardKey] += m.Quantity;
+                string groupKey;
+                if (cardId.HasValue)
+                {
+                    // Belirli bir stok kartı seçildiyse grafiği Birim/Departman (veya Departman seçiliyse Teslim Alan) kırılımında grupla
+                    if (!string.IsNullOrEmpty(dept))
+                        groupKey = !string.IsNullOrWhiteSpace(m.Recipient) ? m.Recipient : LocalizationManager.L("all");
+                    else
+                        groupKey = !string.IsNullOrWhiteSpace(m.Department) ? m.Department : LocalizationManager.L("all");
+                }
                 else
-                    totalsByCard[cardKey] = m.Quantity;
+                {
+                    groupKey = !string.IsNullOrWhiteSpace(m.StockCardCode)
+                        ? $"{m.StockCardCode} - {m.StockCardName}"
+                        : m.StockCardName;
+                }
+
+                if (totalsGrouped.ContainsKey(groupKey))
+                    totalsGrouped[groupKey] += m.Quantity;
+                else
+                    totalsGrouped[groupKey] = m.Quantity;
             }
 
             ReportRows = rowsList;
@@ -142,7 +171,7 @@ public partial class ReportsViewModel : ViewModelBase
             UniqueItemCount = uniqueIds.Count;
             StatusText = string.Format(LocalizationManager.L("records_found"), allMovements.Count);
 
-            ChartData = totalsByCard.OrderByDescending(x => x.Value).Take(10)
+            ChartData = totalsGrouped.OrderByDescending(x => x.Value).Take(10)
                 .Select(x => (x.Key, x.Value)).ToList();
             
             OnPropertyChanged(nameof(ChartData));
@@ -187,6 +216,7 @@ public partial class ReportsViewModel : ViewModelBase
             {
                 string[] headers = { 
                     LocalizationManager.L("date"), 
+                    LocalizationManager.L("code_no"),
                     LocalizationManager.L("stock_card_header"), 
                     LocalizationManager.L("quantity"), 
                     LocalizationManager.L("delivered_to_header"), 
@@ -196,6 +226,7 @@ public partial class ReportsViewModel : ViewModelBase
                 ExcelService.ExportToExcel(path, "TuketimRaporu", headers, snapshot, r => new object?[]
                 {
                     r.Date.ToString("dd.MM.yyyy HH:mm"),
+                    r.StockCardCode,
                     r.StockCardName,
                     r.Quantity,
                     r.Recipient,
@@ -229,6 +260,7 @@ public partial class ReportsViewModel : ViewModelBase
             
             var sbHeaders = new System.Text.StringBuilder();
             sbHeaders.Append($"<th>{LocalizationManager.L("date")}</th>");
+            sbHeaders.Append($"<th>{LocalizationManager.L("code_no")}</th>");
             sbHeaders.Append($"<th>{LocalizationManager.L("stock_name")}</th>");
             sbHeaders.Append($"<th>{LocalizationManager.L("quantity")}</th>");
             sbHeaders.Append($"<th>{LocalizationManager.L("department")}</th>");
@@ -239,6 +271,7 @@ public partial class ReportsViewModel : ViewModelBase
             {
                 sbBody.Append("<tr>");
                 sbBody.Append($"<td>{r.Date:dd.MM.yyyy HH:mm}</td>");
+                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardCode)}</td>");
                 sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardName)}</td>");
                 sbBody.Append($"<td>{r.Quantity}</td>");
                 sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Department)}</td>");
@@ -282,6 +315,7 @@ public partial class ReportsViewModel : ViewModelBase
         SelectedDepartment = LocalizationManager.L("all");
         SelectedCategory = LocalizationManager.L("all");
         SelectedUser = LocalizationManager.L("all");
+        SelectedStockCard = StockCardReportItem.All;
         await GenerateReport();
     }
 }

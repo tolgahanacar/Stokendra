@@ -43,6 +43,7 @@ public class ReportsViewModelTests
         vm.EndDate = new DateTime(2023, 12, 31);
         vm.SelectedDepartment = "IT";
         vm.SelectedCategory = "Electronics";
+        vm.SelectedStockCard = new StockCardReportItem(10, "CRG-725");
 
         // Act
         vm.ClearFiltersCommand.Execute(null);
@@ -51,8 +52,45 @@ public class ReportsViewModelTests
         Assert.Equal(LocalizationManager.L("all"), vm.SelectedDepartment);
         Assert.Equal(LocalizationManager.L("all"), vm.SelectedCategory);
         Assert.Equal(LocalizationManager.L("all"), vm.SelectedUser);
+        Assert.Equal(StockCardReportItem.All, vm.SelectedStockCard);
         Assert.Equal(DateTime.Today.AddDays(-30), vm.StartDate);
         Assert.Equal(DateTime.Today, vm.EndDate.Date);
+    }
+
+    [Fact]
+    public async Task Test_GenerateReport_FiltersByStockCardId()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.SelectedDepartment = "Sicil";
+        vm.SelectedStockCard = new StockCardReportItem(42, "CRG-725");
+
+        _movementsMock.GetPagedAsync(
+            1, 5000,
+            stockCardId: 42,
+            startDate: Arg.Any<DateTime>(),
+            endDate: Arg.Any<DateTime>(),
+            department: "Sicil",
+            movementType: "Exit",
+            category: null,
+            searchTerm: null,
+            recipient: null,
+            cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(new System.Collections.Generic.List<Stokendra.Models.StockMovement>
+            {
+                new Stokendra.Models.StockMovement { Id = 1, StockCardId = 42, StockCardCode = "CRG-725", StockCardName = "Toner", Quantity = 5, Department = "Sicil" },
+                new Stokendra.Models.StockMovement { Id = 2, StockCardId = 42, StockCardCode = "CRG-725", StockCardName = "Toner", Quantity = 3, Department = "Sicil" }
+            }));
+
+        // Act
+        await vm.GenerateReportCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Equal(2, vm.ReportRows.Count);
+        Assert.Equal(8, vm.TotalConsumption);
+        Assert.Equal(1, vm.UniqueItemCount);
+        Assert.NotEmpty(vm.ChartData);
+        Assert.Equal(8, vm.ChartData[0].Total);
     }
 
     [Fact]

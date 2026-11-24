@@ -32,6 +32,10 @@
                     <ComboBox ItemsSource="{Binding Departments}" SelectedItem="{Binding SelectedDepartment}" Width="160"/>
                 </StackPanel>
                 <StackPanel Spacing="4" Margin="0,0,16,8">
+                    <TextBlock Text="{infra:L stock_card_header}" FontSize="11" Foreground="#94A3B8"/>
+                    <ComboBox ItemsSource="{Binding StockCards}" SelectedItem="{Binding SelectedStockCard}" Width="190"/>
+                </StackPanel>
+                <StackPanel Spacing="4" Margin="0,0,16,8">
                     <TextBlock Text="{infra:L category}" FontSize="11" Foreground="#94A3B8"/>
                     <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" Width="160"/>
                 </StackPanel>
@@ -80,11 +84,12 @@
                 CornerRadius="12" BorderBrush="#1E2D45" BorderThickness="1">
             <DataGrid ItemsSource="{Binding ReportRows}" IsReadOnly="True" Background="Transparent">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="{infra:L stock_name}" Binding="{Binding StockCardName}" Width="250"/>
-                    <DataGridTextColumn Header="{infra:L quantity}" Binding="{Binding Quantity}" Width="100"/>
-                    <DataGridTextColumn Header="{infra:L delivered_to}" Binding="{Binding Recipient}" Width="200"/>
-                    <DataGridTextColumn Header="{infra:L department}" Binding="{Binding Department}" Width="300"/>
-                    <DataGridTextColumn Header="{infra:L date}" Binding="{Binding Date, StringFormat=dd.MM.yyyy HH:mm}" Width="250"/>
+                    <DataGridTextColumn Header="{infra:L code_no}" Binding="{Binding StockCardCode}" Width="120"/>
+                    <DataGridTextColumn Header="{infra:L stock_name}" Binding="{Binding StockCardName}" Width="220"/>
+                    <DataGridTextColumn Header="{infra:L quantity}" Binding="{Binding Quantity}" Width="90"/>
+                    <DataGridTextColumn Header="{infra:L delivered_to}" Binding="{Binding Recipient}" Width="180"/>
+                    <DataGridTextColumn Header="{infra:L department}" Binding="{Binding Department}" Width="200"/>
+                    <DataGridTextColumn Header="{infra:L date}" Binding="{Binding Date, StringFormat=dd.MM.yyyy HH:mm}" Width="160"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
