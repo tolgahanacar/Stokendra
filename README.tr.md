@@ -46,5 +46,6 @@ Stokendra; işletmeler, kurumlar ve bireysel kullanıcılar için stok kartları
 ## 👨‍💻 Geliştirici
 
 - **Geliştirici:** Tolgahan Acar
+- **E-Posta:** [2005.tolgahan@gmail.com](mailto:2005.tolgahan@gmail.com)
 - **Proje Bağlantısı:** [https://github.com/tolgahanacar/Stokendra](https://github.com/tolgahanacar/Stokendra)
 - **Hata Bildirimi:** [GitHub Issues](https://github.com/tolgahanacar/Stokendra/issues)

@@ -45,5 +45,6 @@ Stokendra is a professional desktop application designed for enterprises, instit
 ## 👨‍💻 Author
 
 - **Developer:** Tolgahan Acar
+- **Email:** [2005.tolgahan@gmail.com](mailto:2005.tolgahan@gmail.com)
 - **GitHub:** [https://github.com/tolgahanacar/Stokendra](https://github.com/tolgahanacar/Stokendra)
 - **Issues & Suggestions:** [GitHub Issues](https://github.com/tolgahanacar/Stokendra/issues)

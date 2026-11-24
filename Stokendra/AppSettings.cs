@@ -32,7 +32,7 @@ public class AppSettings
     public DateTime? LastBackupDate { get; set; }
 
     /// <summary>Geri bildirim ve hata raporlarının iletileceği e-posta adresi.</summary>
-    public string FeedbackEmail { get; set; } = "tolgahanacar.dev@gmail.com";
+    public string FeedbackEmail { get; set; } = "2005.tolgahan@gmail.com";
 
     /// <summary>Özel bildirim webhook adresi (opsiyonel).</summary>
     public string FeedbackWebhookUrl { get; set; } = "";

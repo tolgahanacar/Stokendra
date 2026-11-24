@@ -7,6 +7,7 @@
 Stokendra uygulamasında veya bağımlılıklarında bir güvenlik açığı, veri sızıntısı veya zafiyet tespit ederseniz, lütfen bunu herkese açık GitHub Issue'larında paylaşmak yerine doğrudan geliştiriciye iletiniz:
 
 - **Geliştirici Profili:** [Tolgahan Acar (GitHub)](https://github.com/tolgahanacar)
+- **E-Posta:** [2005.tolgahan@gmail.com](mailto:2005.tolgahan@gmail.com)
 - **Güvenlik Bildirimi:** [GitHub Security Advisories](https://github.com/tolgahanacar/Stokendra/security/advisories/new) üzerinden gizli bildirim oluşturabilirsiniz.
 - Bildirilen açıklar hızla incelenecek ve gerekli yamalar sonraki sürümde yayınlanacaktır.
 

@@ -7,6 +7,7 @@
 If you discover a security vulnerability or sensitive data issue in Stokendra, please report it directly to the developer rather than creating a public issue.
 
 - **Developer:** [Tolgahan Acar (GitHub Profile)](https://github.com/tolgahanacar)
+- **Email Contact:** [2005.tolgahan@gmail.com](mailto:2005.tolgahan@gmail.com)
 - **Security Advisory:** You can submit a confidential report via [GitHub Security Advisories](https://github.com/tolgahanacar/Stokendra/security/advisories/new) or contact the developer directly.
 - Reported issues will be assessed promptly, and verified patches will be published in the subsequent release.
 

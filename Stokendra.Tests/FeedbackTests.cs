@@ -39,6 +39,13 @@ public class FeedbackTests
     }
 
     [Fact]
+    public void FeedbackService_TargetEmail_DefaultsToCorrectGmailAddress()
+    {
+        var service = new FeedbackService();
+        Assert.Equal("2005.tolgahan@gmail.com", service.TargetEmail);
+    }
+
+    [Fact]
     public void FeedbackService_BuildFullReportText_IncludesAllSections()
     {
         var service = new FeedbackService();

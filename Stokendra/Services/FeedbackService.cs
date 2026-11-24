@@ -24,7 +24,7 @@ public class FeedbackService : IFeedbackService
             var settings = AppSettings.Load();
             return !string.IsNullOrWhiteSpace(settings.FeedbackEmail)
                 ? settings.FeedbackEmail.Trim()
-                : "tolgahanacar.dev@gmail.com";
+                : "2005.tolgahan@gmail.com";
         }
     }
 
