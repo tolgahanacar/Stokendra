@@ -129,6 +129,36 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Stok ve Güvenlik Ayarları -->
+                    <Border Classes="Card" VerticalAlignment="Top">
+                        <StackPanel Spacing="14">
+                            <TextBlock Text="{infra:L stock_security_settings}" FontSize="15" FontWeight="Bold" Foreground="#38AEFF"/>
+
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{infra:L low_stock_threshold_label}" FontSize="12" Foreground="#8A9BBF"/>
+                                <NumericUpDown Value="{Binding LowStockThreshold}"
+                                               Minimum="0" Maximum="100000" Increment="1"
+                                               FormatString="0"
+                                               IsEnabled="{Binding CanEdit}"
+                                               HorizontalAlignment="Stretch"/>
+                            </StackPanel>
+
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{infra:L master_security_code_label}" FontSize="12" Foreground="#8A9BBF"/>
+                                <TextBox Text="{Binding MasterSecurityCode}"
+                                         PasswordChar="●"
+                                         MaxLength="32"
+                                         Watermark="{infra:L security_code_watermark}"
+                                         IsEnabled="{Binding CanEdit}"/>
+                            </StackPanel>
+
+                            <Button Content="{infra:L save_settings}" Classes="Primary"
+                                    Command="{Binding SaveSettingsCommand}"
+                                    IsEnabled="{Binding CanEdit}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Yedekleme ve Bakım -->
                     <Border Classes="Card" VerticalAlignment="Top">
                         <StackPanel Spacing="16">

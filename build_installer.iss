@@ -97,6 +97,10 @@ UsedUserAreasWarning=no
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"; LicenseFile: "LICENSE_TR.txt"
 Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: "LICENSE_EN.txt"
 
+[CustomMessages]
+turkish.DeleteUserData=Stokendra verilerinizi, ayarlarınızı ve günlüklerinizi (stok.db, ayarlar.json, logs) bilgisayarınızdan silmek istiyor musunuz?
+english.DeleteUserData=Do you want to delete your stock data, settings, and logs (stok.db, ayarlar.json, logs) from your computer?
+
 ; ── Görevler ──────────────────────────────────────────────────────────
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checkedonce
@@ -163,7 +167,8 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usPostUninstall then
   begin
-    if MsgBox('Stok verilerinizi, ayarlarınızı ve günlüklerinizi (stok.db, ayarlar.json, logs) bilgisayarınızdan silmek istiyor musunuz?', mbConfirmation, MB_YESNO) = IDYES then
+    if (not UninstallSilent) and
+       (SuppressibleMsgBox(CustomMessage('DeleteUserData'), mbConfirmation, MB_YESNO, IDNO) = IDYES) then
     begin
       DelTree(ExpandConstant('{localappdata}\Stokendra'), True, True, True);
     end;

@@ -35,8 +35,17 @@ public sealed class ConfigRepository(IDbConnectionFactory connectionFactory)
 
     public void CreateBackup(string destinationPath)
     {
+        if (File.Exists(destinationPath)) File.Delete(destinationPath);
+        if (File.Exists(destinationPath + "-wal")) File.Delete(destinationPath + "-wal");
+        if (File.Exists(destinationPath + "-shm")) File.Delete(destinationPath + "-shm");
+
         using var source = ConnectionFactory.CreateConnection();
-        using var destination = new SqliteConnection($"Data Source={destinationPath};Pooling=False");
+        var csb = new SqliteConnectionStringBuilder
+        {
+            DataSource = destinationPath,
+            Pooling = false
+        };
+        using var destination = new SqliteConnection(csb.ToString());
         destination.Open();
         source.BackupDatabase(destination);
     }

@@ -85,7 +85,7 @@
                     <TextBox Text="{Binding Username}" Watermark="{infra:L username}" Margin="0,0,0,12"/>
 
                     <TextBlock Text="{infra:L security_code_label}" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
-                    <TextBox Text="{Binding SecurityCode}" PasswordChar="●" Watermark="{infra:L security_code_watermark}" MaxLength="4" Margin="0,0,0,12"/>
+                    <TextBox Text="{Binding SecurityCode}" PasswordChar="●" Watermark="{infra:L security_code_watermark}" MaxLength="32" Margin="0,0,0,12"/>
 
                     <TextBlock Text="{infra:L new_password}" Foreground="#B9C3DC" FontSize="11" Margin="0,0,0,4"/>
                     <TextBox Text="{Binding NewPassword}" PasswordChar="●" Watermark="{infra:L new_password_watermark}" Margin="0,0,0,20"/>

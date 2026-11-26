@@ -3,6 +3,7 @@
         xmlns:vm="using:Stokendra.ViewModels"
         xmlns:infra="using:Stokendra.Infrastructure"
         xmlns:models="using:Stokendra.Models"
+        xmlns:views="using:Stokendra.Views"
         x:Class="Stokendra.Views.BulkEditNotesView"
         Title="{Binding Title}"
         Width="900" Height="600"
@@ -104,7 +105,7 @@
                     <DataGridTemplateColumn Header="{infra:L date}" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate x:DataType="models:Note">
-                                <CalendarDatePicker SelectedDate="{Binding CreatedAt, Mode=TwoWay}"
+                                <views:SafeCalendarDatePicker SelectedDate="{Binding CreatedAt, Mode=TwoWay}"
                                                     Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

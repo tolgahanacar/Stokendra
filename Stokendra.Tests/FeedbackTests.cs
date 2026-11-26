@@ -24,7 +24,8 @@ public class FeedbackTests
 
         Assert.NotNull(summary);
         Assert.Contains("Stokendra", summary);
-        Assert.Contains("v" + AppInfo.VersionString, summary);
+        Assert.Contains(AppInfo.VersionString, summary);
+        Assert.DoesNotContain("v" + AppInfo.VersionString, summary);
         Assert.Contains(Environment.Version.ToString(), summary);
         Assert.DoesNotContain("Makine", summary);
         Assert.DoesNotContain(Environment.MachineName, summary);

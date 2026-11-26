@@ -69,6 +69,10 @@
                              Height="75" AcceptsReturn="True" TextWrapping="Wrap"/>
                 </StackPanel>
 
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#FF5B5B" FontSize="12"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
             </StackPanel>
         </ScrollViewer>
 

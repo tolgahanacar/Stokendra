@@ -26,9 +26,14 @@ public partial class PrintPreviewViewModel : ViewModelBase
     {
         try
         {
-            string safeTitle = string.Join("_", Title.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Replace(" ", "_");
+            var invalidChars = Path.GetInvalidFileNameChars()
+                .Concat(new[] { '<', '>', ':', '"', '/', '\\', '|', '?', '*' })
+                .Distinct()
+                .ToArray();
+            string safeTitle = string.Join("_", (Title ?? "Report").Split(invalidChars, StringSplitOptions.RemoveEmptyEntries)).Replace(" ", "_");
             if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Report";
-            string tempPath = Path.Combine(Path.GetTempPath(), $"Stokendra_{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.html");
+            if (safeTitle.Length > 40) safeTitle = safeTitle.Substring(0, 40);
+            string tempPath = Path.Combine(Path.GetTempPath(), $"Stokendra_{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.html");
             await File.WriteAllTextAsync(tempPath, Content);
             
             var psi = new System.Diagnostics.ProcessStartInfo { FileName = tempPath, UseShellExecute = true };

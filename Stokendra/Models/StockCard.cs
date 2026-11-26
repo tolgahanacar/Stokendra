@@ -13,6 +13,7 @@ public partial class StockCard : ObservableObject
     partial void OnNameChanged(string value) => _cachedSearchKey = null;
     partial void OnCodeChanged(string value) => _cachedSearchKey = null;
     partial void OnCategoryChanged(string value) => _cachedSearchKey = null;
+    partial void OnDescriptionChanged(string value) => _cachedSearchKey = null;
 
     /// <summary>
     /// Fast in-memory search match using cached normalized lowercase string.
@@ -21,7 +22,7 @@ public partial class StockCard : ObservableObject
     public bool MatchesSearch(string termLower)
     {
         if (string.IsNullOrEmpty(termLower)) return true;
-        _cachedSearchKey ??= $"{Code} {Name} {Category}".ToTurkishLower();
+        _cachedSearchKey ??= $"{Code} {Name} {Category} {Description}".ToTurkishLower();
         return _cachedSearchKey.Contains(termLower);
     }
     /// <summary>Primary key.</summary>
@@ -83,6 +84,7 @@ public partial class StockCard : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsParentCard))]
     [NotifyPropertyChangedFor(nameof(IsLowStock))]
     [NotifyPropertyChangedFor(nameof(IsDepleted))]
+    [NotifyPropertyChangedFor(nameof(StatusColor))]
     private string _cardType = "Child";
 
     /// <summary>Parent card ID. Valid only for Child cards.</summary>
@@ -124,11 +126,11 @@ public partial class StockCard : ObservableObject
     public string DisplayName => $"{Code} - {Name}";
 
     /// <summary>Color code for stock status.</summary>
-    public string StatusColor => 
+    public string StatusColor =>
+        IsParentCard ? "#38AEFF" :
         IsDepleted ? "#EF4444" : // Red 500
-        CurrentStock > MinStock ? "#10B981" : // Emerald 500
-        CurrentStock < MinStock ? "#EF4444" : // Red 500
-        "#D97706"; // Amber 600
+        IsLowStock ? "#D97706" : // Amber 600
+        "#10B981"; // Emerald 500
 
     /// <summary>Text label for stock status.</summary>
     public string StatusLabel => $"{CurrentStock} {Unit}";

@@ -1,4 +1,4 @@
-using System.Globalization;
+using System;
 
 namespace Stokendra.Models;
 
@@ -21,13 +21,20 @@ public static class EnumExtensions
     /// <summary>
     /// Converts database string representation to <see cref="MovementType"/>.
     /// </summary>
-    public static MovementType ToMovementType(this string? value) => value?.Trim() switch
+    public static MovementType ToMovementType(this string? value)
     {
-        "Entry" or "Giris" or "Giriş" => MovementType.Entry,
-        "Exit" or "Cikis" or "Çıkış" => MovementType.Exit,
-        "Blank" or "Bos" or "Boş" => MovementType.Blank,
-        _ => MovementType.Blank
-    };
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return MovementType.Blank;
+        if (trimmed.Equals("Entry", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Giris", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Giriş", StringComparison.OrdinalIgnoreCase))
+            return MovementType.Entry;
+        if (trimmed.Equals("Exit", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Cikis", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Çıkış", StringComparison.OrdinalIgnoreCase))
+            return MovementType.Exit;
+        return MovementType.Blank;
+    }
 
     /// <summary>
     /// Converts <see cref="CardType"/> to database string representation.
@@ -42,11 +49,14 @@ public static class EnumExtensions
     /// <summary>
     /// Converts database string representation to <see cref="CardType"/>.
     /// </summary>
-    public static CardType ToCardType(this string? value) => value?.Trim() switch
+    public static CardType ToCardType(this string? value)
     {
-        "Parent" or "Ust" or "Üst" => CardType.Parent,
-        "Child" or "Alt" => CardType.Child,
-        _ => CardType.Child
-    };
-
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return CardType.Child;
+        if (trimmed.Equals("Parent", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Ust", StringComparison.OrdinalIgnoreCase) ||
+            trimmed.Equals("Üst", StringComparison.OrdinalIgnoreCase))
+            return CardType.Parent;
+        return CardType.Child;
+    }
 }

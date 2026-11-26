@@ -242,13 +242,17 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
     public string GetNextCode()
     {
         using var conn = ConnectionFactory.CreateConnection();
-        var result = conn.ExecuteScalar("SELECT MAX(CAST(Code AS INTEGER)) FROM StockCards WHERE Code GLOB '[0-9]*'");
-        int max = (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : 0;
+        var result = conn.ExecuteScalar("SELECT MAX(CAST(Code AS INTEGER)) FROM StockCards WHERE Code GLOB '[0-9]*' AND Code NOT GLOB '*[^0-9]*' AND LENGTH(Code) <= 9");
+        long max = (result != null && result != DBNull.Value) ? Convert.ToInt64(result) : 0;
+        if (max >= int.MaxValue) max = 0;
         return (max + 1).ToString("D3", CultureInfo.InvariantCulture);
     }
 
     public void AddBulk(IEnumerable<StockCard> stockCards)
     {
+        var list = stockCards.ToList();
+        if (list.Count == 0) return;
+
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = conn.BeginTransaction();
         try
@@ -258,11 +262,11 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
-            foreach (var card in stockCards)
+            foreach (var card in list)
             {
                 ValidateCard(card, conn, trans);
                 card.Id = conn.ExecuteScalar<int>(sql, card, transaction: trans);
-                LogAudit("Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
+                LogAudit(conn, trans, "Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
             }
             trans.Commit();
         }
@@ -275,6 +279,9 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
 
     public async Task AddBulkAsync(IEnumerable<StockCard> stockCards, CancellationToken cancellationToken = default)
     {
+        var list = stockCards.ToList();
+        if (list.Count == 0) return;
+
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try
@@ -284,12 +291,12 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
                 SELECT last_insert_rowid();
                 """;
-            foreach (var card in stockCards)
+            foreach (var card in list)
             {
                 ValidateCard(card, conn, (SqliteTransaction)trans);
                 card.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                     sql, card, transaction: trans, cancellationToken: cancellationToken));
-                LogAudit("Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
+                LogAudit(conn, (SqliteTransaction)trans, "Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
             }
             await trans.CommitAsync(cancellationToken);
         }
@@ -439,11 +446,14 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
     {
         if (string.IsNullOrWhiteSpace(s.Name)) throw new InvalidOperationException(LocalizationManager.L("name_required"));
         if (string.IsNullOrWhiteSpace(s.Code)) throw new InvalidOperationException(LocalizationManager.L("code_required"));
-        
+
+        s.Name = s.Name.Trim();
+        s.Code = s.Code.Trim();
+        s.CardType = s.CardTypeEnum.ToDbString();
         if (s.MinStock < 0) s.MinStock = 0;
 
         var count = conn.ExecuteScalar<int>(
-            "SELECT COUNT(*) FROM StockCards WHERE Code=@Code AND Id<>@Id",
+            "SELECT COUNT(*) FROM StockCards WHERE Code=@Code COLLATE NOCASE AND Id<>@Id",
             new { Code = s.Code, Id = s.Id },
             transaction: trans);
         if (count > 0)
@@ -461,7 +471,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 new { ParentId = s.ParentId.Value },
                 transaction: trans);
 
-            if (parentType == null)
+            if (parentType == null || parentType.ToCardType() != CardType.Parent)
                 throw new InvalidOperationException(LocalizationManager.L("parent_card_not_found"));
 
             // Cycle detection
@@ -489,6 +499,16 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 transaction: trans);
             if (hasMovements)
                 throw new InvalidOperationException(LocalizationManager.L("parent_card_with_movements"));
+        }
+        else if (s.Id > 0)
+        {
+            // Child card cannot still have children pointing to it
+            var hasChildren = conn.ExecuteScalar<bool>(
+                "SELECT EXISTS(SELECT 1 FROM StockCards WHERE ParentId=@Id)",
+                new { Id = s.Id },
+                transaction: trans);
+            if (hasChildren)
+                throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
         }
     }
 }

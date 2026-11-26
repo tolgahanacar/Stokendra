@@ -72,7 +72,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "🚀",
-            Tag = "TEMEL İŞ AKIŞI",
+            Tag = LocalizationManager.L("guide_tag_quickstart"),
             TagColor = "#FFD700",
             TagBg = "#332A00",
             Title = LocalizationManager.L("guide_user_quickstart_title"),
@@ -82,7 +82,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "📇",
-            Tag = "ENVANTER",
+            Tag = LocalizationManager.L("guide_tag_inventory"),
             TagColor = "#38AEFF",
             TagBg = "#0A2540",
             Title = LocalizationManager.L("guide_user_stockcards_title"),
@@ -92,7 +92,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "🔄",
-            Tag = "HAREKETLER",
+            Tag = LocalizationManager.L("guide_tag_movements"),
             TagColor = "#00DC82",
             TagBg = "#063720",
             Title = LocalizationManager.L("guide_user_movements_title"),
@@ -102,7 +102,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "🛠️",
-            Tag = "SERVİS TAKİBİ",
+            Tag = LocalizationManager.L("guide_tag_services"),
             TagColor = "#F39C12",
             TagBg = "#3D2403",
             Title = LocalizationManager.L("guide_user_services_title"),
@@ -112,7 +112,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "📝",
-            Tag = "NOTLAR",
+            Tag = LocalizationManager.L("guide_tag_notes"),
             TagColor = "#A78BFA",
             TagBg = "#2E1065",
             Title = LocalizationManager.L("guide_user_notes_title"),
@@ -122,7 +122,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "👥",
-            Tag = "YETKİLENDİRME",
+            Tag = LocalizationManager.L("guide_tag_users"),
             TagColor = "#38BDF8",
             TagBg = "#082F49",
             Title = LocalizationManager.L("guide_user_users_title"),
@@ -132,7 +132,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "💾",
-            Tag = "GÜVENLİK & YEDEK",
+            Tag = LocalizationManager.L("guide_tag_backup"),
             TagColor = "#C084FC",
             TagBg = "#3B0764",
             Title = LocalizationManager.L("guide_user_backup_title"),
@@ -142,7 +142,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "📊",
-            Tag = "RAPORLAMA",
+            Tag = LocalizationManager.L("guide_tag_reports"),
             TagColor = "#FB923C",
             TagBg = "#431407",
             Title = LocalizationManager.L("guide_user_reports_title"),
@@ -152,7 +152,7 @@ public partial class GuideViewModel : ViewModelBase
         _userCards.Add(new GuideCardItem
         {
             Icon = "⚡",
-            Tag = "CANLI GÜNCELLEME",
+            Tag = LocalizationManager.L("guide_tag_updates"),
             TagColor = "#34D399",
             TagBg = "#064E3B",
             Title = LocalizationManager.L("guide_user_updates_title"),
@@ -163,7 +163,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "🚀",
-            Tag = "YENİLİK (v7.5.0)",
+            Tag = LocalizationManager.L("guide_tag_dev_roadmap"),
             TagColor = "#F43F5E",
             TagBg = "#4C0519",
             Title = LocalizationManager.L("guide_dev_roadmap_title"),
@@ -174,7 +174,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "⚡",
-            Tag = ".NET 10 & PERFORMANS",
+            Tag = LocalizationManager.L("guide_tag_dev_perf"),
             TagColor = "#FFD700",
             TagBg = "#332A00",
             Title = LocalizationManager.L("guide_dev_perf_title"),
@@ -185,7 +185,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "🏗️",
-            Tag = "MVVM MİMARİSİ",
+            Tag = LocalizationManager.L("guide_tag_dev_mvvm"),
             TagColor = "#38AEFF",
             TagBg = "#0A2540",
             Title = LocalizationManager.L("guide_dev_mvvm_title"),
@@ -196,7 +196,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "📂",
-            Tag = "PROJE HİYERARŞİSİ",
+            Tag = LocalizationManager.L("guide_tag_dev_folders"),
             TagColor = "#00DC82",
             TagBg = "#063720",
             Title = LocalizationManager.L("guide_dev_folders_title"),
@@ -207,7 +207,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "🌐",
-            Tag = "ÇOKLU DİL",
+            Tag = LocalizationManager.L("guide_tag_dev_lang"),
             TagColor = "#F39C12",
             TagBg = "#3D2403",
             Title = LocalizationManager.L("guide_dev_lang_title"),
@@ -218,7 +218,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "🗄️",
-            Tag = "VERİTABANI & GÖÇ",
+            Tag = LocalizationManager.L("guide_tag_dev_db"),
             TagColor = "#9B59B6",
             TagBg = "#2E1065",
             Title = LocalizationManager.L("guide_dev_db_title"),
@@ -229,7 +229,7 @@ public partial class GuideViewModel : ViewModelBase
         _devCards.Add(new GuideCardItem
         {
             Icon = "📊",
-            Tag = "EXCEL MOTORU",
+            Tag = LocalizationManager.L("guide_tag_dev_excel"),
             TagColor = "#38BDF8",
             TagBg = "#082F49",
             Title = LocalizationManager.L("guide_dev_excel_title"),

@@ -28,13 +28,19 @@ public static class DataEvents
     /// </summary>
     public static void NotifyChanged(DataDomain domain)
     {
-        try
+        var handlers = DataChanged;
+        if (handlers == null) return;
+
+        foreach (var del in handlers.GetInvocationList())
         {
-            DataChanged?.Invoke(domain);
-        }
-        catch (Exception ex)
-        {
-            AppLogger.LogError($"DataEvents: Error notifying change for {domain}", ex);
+            try
+            {
+                ((Action<DataDomain>)del)(domain);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogError($"DataEvents: Error notifying change for {domain}", ex);
+            }
         }
     }
 }

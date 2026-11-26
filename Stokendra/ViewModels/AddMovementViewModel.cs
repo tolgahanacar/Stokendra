@@ -27,6 +27,7 @@ public partial class AddMovementViewModel : ViewModelBase
     [ObservableProperty] private string _errorMessage = "";
 
     private readonly StockCard? _preSelectedCard;
+    private Task? _initTask;
 
     public ObservableCollection<StockCard> AllCards { get; } = new();
     public ObservableCollection<string> AllDepartments { get; } = new();
@@ -55,21 +56,31 @@ public partial class AddMovementViewModel : ViewModelBase
             Quantity = movement.Quantity;
             DeliveredTo = movement.Recipient;
             Department = movement.Department;
-            Date = new DateTimeOffset(movement.Date);
+            Date = SafeDateTimeOffset(movement.Date);
             Description = movement.Description;
         }
         else
         {
             Title = LocalizationManager.L("new_movement");
-            if (preSelectedCard != null)
+            if (preSelectedCard != null && preSelectedCard.CardTypeEnum != CardType.Parent)
             {
                 SelectedCard = preSelectedCard;
             }
         }
 
+        _initTask = InitAsync();
         AsyncHelper.RunSafe(
-            () => InitAsync(),
+            () => _initTask,
             ex => AppLogger.LogError("AddMovement init failed", ex));
+    }
+
+    private static DateTimeOffset SafeDateTimeOffset(DateTime dt)
+    {
+        if (dt <= DateTime.MinValue.AddDays(2) || dt >= DateTime.MaxValue.AddDays(-2))
+            return DateTimeOffset.Now;
+
+        try { return new DateTimeOffset(dt); }
+        catch { return DateTimeOffset.Now; }
     }
 
     private async Task InitAsync()
@@ -91,10 +102,11 @@ public partial class AddMovementViewModel : ViewModelBase
             {
                 // Default Values
                 SelectedTypeIndex = 1; // Exit (Çıkış)
-                int? targetCardId = _preSelectedCard?.Id ?? SelectedCard?.Id;
+                var validPreSelected = _preSelectedCard?.CardTypeEnum != CardType.Parent ? _preSelectedCard : null;
+                int? targetCardId = validPreSelected?.Id ?? SelectedCard?.Id;
                 if (targetCardId.HasValue)
                 {
-                    SelectedCard = AllCards.FirstOrDefault(c => c.Id == targetCardId.Value) ?? _preSelectedCard ?? AllCards.FirstOrDefault();
+                    SelectedCard = AllCards.FirstOrDefault(c => c.Id == targetCardId.Value) ?? validPreSelected ?? AllCards.FirstOrDefault();
                 }
                 else
                 {
@@ -112,9 +124,32 @@ public partial class AddMovementViewModel : ViewModelBase
     public StockMovement? Result { get; private set; }
 
     [RelayCommand]
-    private void Save()
+    private async Task SaveAsync()
     {
-        if (SelectedCard == null) return;
+        ErrorMessage = "";
+
+        if (_initTask is { IsCompleted: false })
+        {
+            await _initTask;
+        }
+
+        if (SelectedCard == null)
+        {
+            ErrorMessage = $"⚠️ {LocalizationManager.L("select_stock_card")}";
+            return;
+        }
+
+        if (SelectedCard.CardTypeEnum == CardType.Parent)
+        {
+            ErrorMessage = $"⚠️ {LocalizationManager.L("parent_card_movement_forbidden")}";
+            return;
+        }
+
+        if (double.IsNaN(Quantity) || double.IsInfinity(Quantity) || Quantity < 0 || Quantity > 1_000_000_000)
+        {
+            ErrorMessage = $"⚠️ {LocalizationManager.L("invalid_quantity")}";
+            return;
+        }
         
         string tur = SelectedTypeIndex switch { 0 => "Entry", 1 => "Exit", 2 => "Blank", _ => "Entry" };
 

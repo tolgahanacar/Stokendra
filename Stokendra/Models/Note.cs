@@ -1,29 +1,36 @@
 using System;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Stokendra.Models;
 
 /// <summary>
 /// User note domain model.
 /// </summary>
-public class Note
+public partial class Note : ObservableObject
 {
     /// <summary>Primary key.</summary>
-    public int Id { get; set; }
+    [ObservableProperty]
+    private int _id;
 
     /// <summary>Note date and time (legacy).</summary>
-    public DateTime Date { get; set; } = DateTime.Now;
+    [ObservableProperty]
+    private DateTime _date = DateTime.Now;
 
     /// <summary>Creation date.</summary>
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
+    [ObservableProperty]
+    private DateTime _createdAt = DateTime.Now;
 
     /// <summary>Last update date.</summary>
-    public DateTime UpdatedAt { get; set; } = DateTime.Now;
+    [ObservableProperty]
+    private DateTime _updatedAt = DateTime.Now;
 
     /// <summary>Note title (required).</summary>
-    public string Title { get; set; } = "";
+    [ObservableProperty]
+    private string _title = string.Empty;
 
     /// <summary>Note content.</summary>
-    public string Content { get; set; } = "";
+    [ObservableProperty]
+    private string _content = string.Empty;
 
     /// <inheritdoc/>
     public override string ToString() => $"[{Date:dd.MM.yyyy}] {Title}";

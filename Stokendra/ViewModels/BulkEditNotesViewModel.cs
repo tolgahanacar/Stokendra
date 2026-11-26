@@ -49,7 +49,8 @@ public partial class BulkEditNotesViewModel : ViewModelBase
                 Title = n.Title,
                 Content = n.Content,
                 CreatedAt = n.CreatedAt,
-                UpdatedAt = n.UpdatedAt
+                UpdatedAt = n.UpdatedAt,
+                Date = n.Date
             });
         }
 
@@ -79,10 +80,15 @@ public partial class BulkEditNotesViewModel : ViewModelBase
             }
             if (IsApplyContent && !string.IsNullOrWhiteSpace(ContentAppend))
             {
-                n.Content = string.IsNullOrWhiteSpace(n.Content)
-                    ? ContentAppend.Trim()
-                    : $"{n.Content}\n{ContentAppend.Trim()}";
-                updated++;
+                string trimmedAppend = ContentAppend.Trim();
+                if (!string.Equals(n.Content, trimmedAppend, StringComparison.Ordinal) &&
+                    !(n.Content?.EndsWith("\n" + trimmedAppend, StringComparison.Ordinal) ?? false))
+                {
+                    n.Content = string.IsNullOrWhiteSpace(n.Content)
+                        ? trimmedAppend
+                        : $"{n.Content}\n{trimmedAppend}";
+                    updated++;
+                }
             }
         }
 
@@ -97,6 +103,7 @@ public partial class BulkEditNotesViewModel : ViewModelBase
     private async Task SaveAsync()
     {
         ErrorMessage = "";
+        ApplyBulk();
         try
         {
             foreach (var n in EditingNotes)

@@ -16,27 +16,10 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
     public async Task<List<ServiceRecord>> GetAllAsync(DateTime? start, DateTime? end, string? search, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        
-        var sql = "SELECT Id, DeviceName, SerialNumber, Company, ServiceDate, Issue, Result FROM ServiceRecords WHERE 1=1";
         var @params = new DynamicParameters();
+        string where = BuildWhereClause(start, end, search, @params);
 
-        if (start.HasValue)
-        {
-            sql += " AND ServiceDate >= @Start";
-            @params.Add("Start", start.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        }
-        if (end.HasValue)
-        {
-            sql += " AND ServiceDate < @End";
-            @params.Add("End", end.Value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-        }
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            sql += " AND (DeviceName LIKE @Search OR SerialNumber LIKE @Search OR Company LIKE @Search)";
-            @params.Add("Search", $"%{search}%");
-        }
-        
-        sql += " ORDER BY ServiceDate DESC, Id DESC";
+        var sql = $"SELECT Id, DeviceName, SerialNumber, Company, ServiceDate, Description, Issue, Result FROM ServiceRecords {where} ORDER BY ServiceDate DESC, Id DESC";
 
         var result = await conn.QueryAsync<ServiceRecord>(new CommandDefinition(
             sql, @params, cancellationToken: cancellationToken));
@@ -71,6 +54,8 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
 
     public async Task UpdateAsync(ServiceRecord record, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(record.DeviceName)) throw new ArgumentException(LocalizationManager.L("device_name_required"));
+
         using var conn = ConnectionFactory.CreateConnection();
         var sql = """
             UPDATE ServiceRecords SET 
@@ -86,8 +71,8 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
                 SerialNumber = record.SerialNumber ?? "",
                 Company = record.Company ?? "",
                 ServiceDateString = record.ServiceDate.Date.Add(DateTime.Now.TimeOfDay).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                record.Issue,
-                record.Result,
+                Issue = record.Issue ?? "",
+                Result = record.Result ?? "",
                 record.Id
             }, 
             cancellationToken: cancellationToken));
@@ -162,7 +147,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
         string where = BuildWhereClause(start, end, search, @params);
         
         var sql = $"""
-            SELECT Id, DeviceName, SerialNumber, Company, ServiceDate, Issue, Result 
+            SELECT Id, DeviceName, SerialNumber, Company, ServiceDate, Description, Issue, Result 
             FROM ServiceRecords 
             {where} 
             ORDER BY ServiceDate DESC, Id DESC 

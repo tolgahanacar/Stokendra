@@ -63,7 +63,8 @@ public partial class DashboardViewModel : ViewModelBase
         if (!_hasLoadedOnce) IsLoading = true;
         try
         {
-            int lowStockThreshold = AppServices.Current.Settings.LowStockThreshold;
+            _isDirty = false;
+            int lowStockThreshold = AppServices.TryGetCurrent(out var app) ? app!.Settings.LowStockThreshold : 3;
             var stats = await _reports.GetDashboardStatsAsync(lowStockThreshold);
             TotalCards     = stats.TotalCards;
             TotalStock     = FormatNumber(stats.TotalStock);
@@ -85,10 +86,10 @@ public partial class DashboardViewModel : ViewModelBase
             }));
 
             _hasLoadedOnce = true;
-            _isDirty = false;
         }
         catch (Exception ex)
         {
+            _isDirty = true;
             AppLogger.LogError("Dashboard load error", ex);
         }
         finally

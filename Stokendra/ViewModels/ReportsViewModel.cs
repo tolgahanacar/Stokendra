@@ -42,6 +42,9 @@ public partial class ReportsViewModel : ViewModelBase
 
     public List<(string Name, double Total)> ChartData { get; private set; } = new();
 
+    private bool _isLoaded;
+    private bool _filtersDirty = true;
+
     public ReportsViewModel(
         IMovementRepository movements,
         IDepartmentRepository departments,
@@ -52,33 +55,84 @@ public partial class ReportsViewModel : ViewModelBase
         _departments = departments;
         _stockCards = stockCards;
         _dialogService = dialogService;
+        DataEvents.DataChanged += OnDataChanged;
         AsyncHelper.RunSafe(
-            () => InitializeAsync(),
+            () => EnsureLoadedAsync(),
             ex => AppLogger.LogError("Reports initialize failed", ex));
+    }
+
+    private void OnDataChanged(DataDomain domain)
+    {
+        if (domain is DataDomain.Movements or DataDomain.StockCards or DataDomain.Departments)
+        {
+            if (domain is DataDomain.StockCards or DataDomain.Departments or DataDomain.Movements)
+                _filtersDirty = true;
+            _isLoaded = false;
+        }
+    }
+
+    public async Task EnsureLoadedAsync()
+    {
+        if (_filtersDirty || !_isLoaded)
+        {
+            await InitializeAsync();
+        }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        _filtersDirty = true;
+        _isLoaded = false;
     }
 
     private async Task InitializeAsync()
     {
-        try 
+        try
         {
+            string prevDept = SelectedDepartment;
+            string prevCat = SelectedCategory;
+            string prevUser = SelectedUser;
+            int? prevCardId = SelectedStockCard?.Id;
+            string allLabel = LocalizationManager.L("all");
+
             var depts = await _departments.GetAllAsync();
+            var cards = await _stockCards.GetChildCardsAsync();
+            var cats = cards.Select(c => c.Category).Where(k => !string.IsNullOrEmpty(k)).Distinct().OrderBy(k => k).ToList();
+            var sortedCards = cards.OrderBy(c => c.Code).ThenBy(c => c.Name).ToList();
+            var users = _movements.GetDeliveredPersons();
+
+            Departments.Clear();
+            Departments.Add(allLabel);
             foreach (var d in depts) Departments.Add(d);
 
-            var cards = await _stockCards.GetChildCardsAsync();
-            var cats = cards.Select(c => c.Category).Where(k => !string.IsNullOrEmpty(k)).Distinct().OrderBy(k => k);
+            Categories.Clear();
+            Categories.Add(allLabel);
             foreach (var c in cats) Categories.Add(c!);
 
-            var sortedCards = cards.OrderBy(c => c.Code).ThenBy(c => c.Name);
+            StockCards.Clear();
+            var allCardItem = StockCardReportItem.All;
+            StockCards.Add(allCardItem);
             foreach (var c in sortedCards)
             {
                 string display = !string.IsNullOrWhiteSpace(c.Code) ? $"{c.Code} - {c.Name}" : c.Name;
                 StockCards.Add(new StockCardReportItem(c.Id, display));
             }
 
-            var users = _movements.GetDeliveredPersons();
+            Users.Clear();
+            Users.Add(allLabel);
             foreach (var u in users) Users.Add(u);
 
+            SelectedDepartment = Departments.FirstOrDefault(d => string.Equals(d, prevDept, StringComparison.OrdinalIgnoreCase)) ?? allLabel;
+            SelectedCategory = Categories.FirstOrDefault(c => string.Equals(c, prevCat, StringComparison.OrdinalIgnoreCase)) ?? allLabel;
+            SelectedUser = Users.FirstOrDefault(u => string.Equals(u, prevUser, StringComparison.OrdinalIgnoreCase)) ?? allLabel;
+            SelectedStockCard = prevCardId.HasValue
+                ? StockCards.FirstOrDefault(sc => sc.Id == prevCardId.Value) ?? allCardItem
+                : allCardItem;
+
+            _filtersDirty = false;
             await GenerateReport();
+            _isLoaded = true;
         }
         catch (Exception ex)
         {
@@ -112,11 +166,12 @@ public partial class ReportsViewModel : ViewModelBase
             while (true)
             {
                 token.ThrowIfCancellationRequested();
+                DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
                 var batch = await _movements.GetPagedAsync(
                     page, batchSize,
                     stockCardId: cardId,
                     startDate: StartDate.Date,
-                    endDate: EndDate.Date.AddDays(1),
+                    endDate: safeEnd,
                     department: dept,
                     movementType: "Exit",
                     category: cat,
@@ -185,7 +240,11 @@ public partial class ReportsViewModel : ViewModelBase
             AppLogger.LogError("Report generation error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), string.Format(LocalizationManager.L("report_generation_failed"), ex.Message));
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            if (token == _cts?.Token)
+                IsLoading = false;
+        }
     }
 
     [RelayCommand]
@@ -291,7 +350,10 @@ public partial class ReportsViewModel : ViewModelBase
                 dateInfo: LocalizationManager.L("report_date_label") + $"<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b><br/>{StartDate:dd.MM.yyyy} - {EndDate:dd.MM.yyyy}",
                 tableHeadersHtml: sbHeaders.ToString(),
                 tableBodyHtml: sbBody.ToString(),
-                footerHtml: string.Format(LocalizationManager.L("printed_by"), DateTime.Now.ToString("dd.MM.yyyy HH:mm"), AppServices.Current.Session?.Username ?? "admin"),
+                footerHtml: string.Format(
+                    LocalizationManager.L("printed_by"),
+                    DateTime.Now.ToString("dd.MM.yyyy HH:mm"),
+                    PrintTemplateBuilder.Escape(AppServices.TryGetCurrent(out var app) ? (app?.Session?.Username ?? "admin") : "admin")),
                 additionalSummaryHtml: summaryHtml
             );
             

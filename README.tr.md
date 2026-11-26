@@ -10,7 +10,7 @@ Stokendra; işletmeler, kurumlar ve bireysel kullanıcılar için stok kartları
 
 ## 🚀 Öne Çıkan Özellikler
 
-- **📦 Stok Kartı Yönetimi:** Hiyerarşik (Üst Kart / Alt Kart) yapı, ürün kodları, kategoriler, görsel yükleme ve kritik stok seviyesi uyarıları.
+- **📦 Stok Kartı Yönetimi:** Hiyerarşik (Üst Kart / Alt Kart) yapı, ürün kodları, kategoriler ve kritik stok seviyesi uyarıları.
 - **🔄 Stok Hareketleri:** Hızlı malzeme girişi, çıkışı ve devir işlemleri; departman ve teslim alan personel takibi; toplu düzenleme imkânı.
 - **📊 Gelişmiş Raporlama:** 
   - Belirli bir birimin veya personelin belirli bir üründen ne kadar tükettiğini filtreleme.
@@ -18,8 +18,8 @@ Stokendra; işletmeler, kurumlar ve bireysel kullanıcılar için stok kartları
   - Excel (.xlsx) dışa aktarımı ve profesyonel HTML yazdırma/çıktı alma desteği.
 - **🛠️ Servis & Bakım Kayıtları:** Cihaz seri numaraları, arıza durumları, işlem detayları ve servis geçmişi takibi.
 - **📝 Hızlı Notlar:** Günlük operasyonel notlar ve görev takibi.
-- **👥 Kullanıcı Yetkilendirme:** Yönetici, Depo Sorumlusu ve Rapor Görüntüleyici rolleri ile güvenli oturum yönetimi.
-- **💾 Veri Güvenliği & Yedekleme:** SQLite WAL mimarisi, tek tıkla veritabanı yedekleme ve geri yükleme.
+- **👥 Kullanıcı Yetkilendirme:** Yönetici ve Standart Kullanıcı rolleri, PBKDF2 parola karma koruması ve güvenli oturum yönetimi.
+- **💾 Veri Güvenliği & Yedekleme:** SQLite WAL mimarisi, veritabanı yedekleme, bütünlük doğrulama, sıkıştırma ve tam Excel dışa aktarma.
 - **⚡ Taşınabilir ve Hızlı:** .NET 10 LTS ve Avalonia UI tabanlıdır. Bilgisayarınızda .NET yüklü olmasa bile çalışır (Self-contained).
 
 ---

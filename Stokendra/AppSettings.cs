@@ -56,9 +56,20 @@ public class AppSettings
             {
                 var json = File.ReadAllText(AppPaths.SettingsFilePath);
                 var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
-                settings.DbPath = string.IsNullOrWhiteSpace(settings.DbPath)
-                    ? ""
-                    : AppPaths.NormalizeDatabasePath(settings.DbPath);
+                try
+                {
+                    settings.DbPath = string.IsNullOrWhiteSpace(settings.DbPath)
+                        ? ""
+                        : AppPaths.NormalizeDatabasePath(settings.DbPath);
+                }
+                catch (Exception pathEx)
+                {
+                    AppLogger.LogError("AppSettings.Load DbPath normalize warning: " + pathEx);
+                    settings.DbPath = "";
+                }
+                settings.MasterSecurityCode ??= "1951";
+                settings.CompanyName ??= "";
+                settings.AutoBackupPath ??= "";
                 settings.Language = Array.Exists(LocalizationManager.SupportedLanguages, x => x == settings.Language)
                     ? settings.Language
                     : "tr";
@@ -84,7 +95,7 @@ public class AppSettings
                 DbPath = AppPaths.NormalizeDatabasePath(DbPath);
 
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            string tempFile = AppPaths.SettingsFilePath + ".tmp";
+            string tempFile = $"{AppPaths.SettingsFilePath}.{Guid.NewGuid():N}.tmp";
             File.WriteAllText(tempFile, json);
 
             if (File.Exists(AppPaths.SettingsFilePath))
@@ -126,7 +137,7 @@ public class AppSettings
                 DbPath = AppPaths.NormalizeDatabasePath(DbPath);
 
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            string tempFile = AppPaths.SettingsFilePath + ".tmp";
+            string tempFile = $"{AppPaths.SettingsFilePath}.{Guid.NewGuid():N}.tmp";
             await File.WriteAllTextAsync(tempFile, json);
 
             if (File.Exists(AppPaths.SettingsFilePath))

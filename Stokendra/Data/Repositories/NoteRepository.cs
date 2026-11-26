@@ -49,13 +49,14 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
 
     public async Task UpdateAsync(Note note, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(note.Title)) throw new ArgumentException(LocalizationManager.L("name_required"));
+        if (string.IsNullOrWhiteSpace(note.Title)) throw new ArgumentException(LocalizationManager.L("title_required"));
 
         note.UpdatedAt = DateTime.Now;
         using var conn = ConnectionFactory.CreateConnection();
-        var sql = "UPDATE Notes SET Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
+        var sql = "UPDATE Notes SET Date=@Date, Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
         
         await conn.ExecuteAsync(new CommandDefinition(sql, new {
+            Date = note.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
             note.Title,
             Content = note.Content ?? "",
             CreatedAt = note.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
@@ -89,22 +90,30 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
 
     public async Task AddBulkAsync(IEnumerable<Note> notes, CancellationToken cancellationToken = default)
     {
+        var list = notes.ToList();
+        if (list.Count == 0) return;
+        foreach (var n in list)
+        {
+            if (string.IsNullOrWhiteSpace(n.Title))
+                throw new InvalidOperationException(LocalizationManager.L("title_required"));
+        }
+
         using var conn = ConnectionFactory.CreateConnection();
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try
         {
             var sql = @"INSERT INTO Notes (Date, Title, Content, CreatedAt, UpdatedAt) 
                         VALUES (@Date, @Title, @Content, @CreatedAt, @UpdatedAt)";
-            var data = notes.Select(n => new {
+            var data = list.Select(n => new {
                 Date = n.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-                Title = n.Title,
+                Title = n.Title.Trim(),
                 Content = n.Content ?? "",
                 CreatedAt = n.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
                 UpdatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
             });
             await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Insert", "Notes", 0, $"Bulk Insert ({list.Count})");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Insert", "Notes", 0, "Bulk Insert");
         }
         catch
         {

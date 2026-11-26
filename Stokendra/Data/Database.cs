@@ -135,9 +135,13 @@ public sealed partial class Database : IDisposable
         }
         catch
         {
-            using var cmdRollback = connection.CreateCommand();
-            cmdRollback.CommandText = "ROLLBACK";
-            cmdRollback.ExecuteNonQuery();
+            try
+            {
+                using var cmdRollback = connection.CreateCommand();
+                cmdRollback.CommandText = "ROLLBACK";
+                cmdRollback.ExecuteNonQuery();
+            }
+            catch { /* SQLite transaction may have already auto-rolled back */ }
             throw;
         }
         finally

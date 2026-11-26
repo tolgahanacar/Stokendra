@@ -12,7 +12,7 @@ namespace Stokendra.Tests;
 
 public class TestViewModel : ViewModelBase
 {
-    // A concrete implementation of ViewModelBase to check CanEdit/IsAdmin behaviour
+    public bool CanEditViaGuard() => EnsureCanEditForSession();
 }
 
 public class LoginViewModelTests : IDisposable
@@ -306,5 +306,34 @@ public class LoginViewModelTests : IDisposable
 
         // Assert
         Assert.True(testVm.CanEdit);
+    }
+
+    [Fact]
+    public async Task Test_DoResetPassword_NullMasterSecurityCode_ReturnsSecurityErrorWithoutCrashing()
+    {
+        _appServices.Settings.MasterSecurityCode = null!;
+        var vm = CreateViewModel();
+        vm.Username = "admin";
+        vm.SecurityCode = "1951";
+        vm.NewPassword = "safe_new_password";
+
+        await vm.DoResetPasswordCommand.ExecuteAsync(null);
+
+        Assert.Equal(LocalizationManager.L("security_code_incorrect"), vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void Test_EnsureCanEditForSession_BlocksNonAdminAndAllowsAdmin()
+    {
+        var testVm = new TestViewModel();
+
+        _appServices.BeginSession("staff_member", "user");
+        Assert.False(testVm.CanEditViaGuard());
+
+        _appServices.BeginSession("admin_user", "admin");
+        Assert.True(testVm.CanEditViaGuard());
+
+        _appServices.EndSession();
+        Assert.True(testVm.CanEditViaGuard());
     }
 }

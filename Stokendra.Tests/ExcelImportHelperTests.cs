@@ -171,4 +171,68 @@ public class ExcelImportHelperTests
             }
         }
     }
+
+    [Fact]
+    public void Test_ParseCellDouble_TurkishThousandsAndDecimals_ParsedLosslessly()
+    {
+        string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"stokendra_num_{Guid.NewGuid():N}.xlsx");
+        try
+        {
+            using (var wb = new ClosedXML.Excel.XLWorkbook())
+            {
+                var ws = wb.AddWorksheet("Test");
+                ws.Cell(1, 1).Value = "1.250";
+                ws.Cell(1, 2).Value = "1.250,50";
+                ws.Cell(1, 3).Value = "1,250.50";
+                ws.Cell(1, 4).Value = "12,5";
+                ws.Cell(1, 5).Value = 1250.75;
+                wb.SaveAs(tempFile);
+            }
+
+            using var readWb = new ClosedXML.Excel.XLWorkbook(tempFile);
+            var readWs = readWb.Worksheet(1);
+            Assert.Equal(1250.0, ExcelImportHelper.ParseCellDouble(readWs.Cell(1, 1)));
+            Assert.Equal(1250.5, ExcelImportHelper.ParseCellDouble(readWs.Cell(1, 2)));
+            Assert.Equal(1250.5, ExcelImportHelper.ParseCellDouble(readWs.Cell(1, 3)));
+            Assert.Equal(12.5, ExcelImportHelper.ParseCellDouble(readWs.Cell(1, 4)));
+            Assert.Equal(1250.75, ExcelImportHelper.ParseCellDouble(readWs.Cell(1, 5)));
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+            {
+                try { System.IO.File.Delete(tempFile); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void Test_ImportData_LockedFile_ThrowsFriendlyIOException()
+    {
+        string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"stokendra_lock_{Guid.NewGuid():N}.xlsx");
+        try
+        {
+            using (var wb = new ClosedXML.Excel.XLWorkbook())
+            {
+                var ws = wb.AddWorksheet("Sheet1");
+                ws.Cell(1, 1).Value = "code";
+                ws.Cell(2, 1).Value = "C1";
+                wb.SaveAs(tempFile);
+            }
+
+            using var lockStream = new System.IO.FileStream(tempFile, System.IO.FileMode.Open, System.IO.FileAccess.ReadWrite, System.IO.FileShare.None);
+            var mappings = new System.Collections.Generic.Dictionary<string, string[]> { { "code", new[] { "code" } } };
+
+            var ex = Assert.Throws<System.IO.IOException>(() =>
+                ExcelImportHelper.ImportData(tempFile, mappings, null, (r, c) => "x"));
+            Assert.Equal(LocalizationManager.L("file_in_use_error", System.IO.Path.GetFileName(tempFile)), ex.Message);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+            {
+                try { System.IO.File.Delete(tempFile); } catch { }
+            }
+        }
+    }
 }

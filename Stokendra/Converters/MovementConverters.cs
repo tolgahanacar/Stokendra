@@ -10,8 +10,8 @@ public static class MovementConverters
     public static readonly IValueConverter TypeToText =
         new FuncValueConverter<string, string>(t => t switch
         {
-            "Entry" or "Giris" or "Giriş" => "[G]",
-            "Exit" or "Cikis" or "Çıkış"   => "[Ç]",
+            "Entry" or "Giris" or "Giriş" => Stokendra.Infrastructure.MovementFormatter.EntryTag,
+            "Exit" or "Cikis" or "Çıkış"   => Stokendra.Infrastructure.MovementFormatter.ExitTag,
             _ => "[B]"
         });
 

@@ -16,6 +16,12 @@ public sealed class AppServices : IDisposable
     public static AppServices Current => _instance
         ?? throw new InvalidOperationException("AppServices henüz başlatılmadı.");
 
+    public static bool TryGetCurrent(out AppServices? current)
+    {
+        current = _instance;
+        return current != null;
+    }
+
     public AppSettings Settings { get; private set; }
     public Database Database { get; private set; }
     public UserSession? Session { get; private set; }

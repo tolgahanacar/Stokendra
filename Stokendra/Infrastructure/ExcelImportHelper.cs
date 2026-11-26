@@ -18,7 +18,18 @@ public static class ExcelImportHelper
         Func<IXLRangeRow, Dictionary<string, int>, T?> rowParser)
     {
         var result = new List<T>();
-        using var workbook = new XLWorkbook(filePath);
+        XLWorkbook workbook;
+        try
+        {
+            workbook = new XLWorkbook(filePath);
+        }
+        catch (System.IO.IOException)
+        {
+            throw new System.IO.IOException(LocalizationManager.L("file_in_use_error", System.IO.Path.GetFileName(filePath)));
+        }
+
+        using (workbook)
+        {
         var worksheet = workbook.Worksheet(1);
         
         var firstRow = worksheet.FirstRowUsed();
@@ -93,6 +104,7 @@ public static class ExcelImportHelper
         }
 
         return result;
+        }
     }
 
     /// <summary>
@@ -139,7 +151,8 @@ public static class ExcelImportHelper
     }
 
     /// <summary>
-    /// Safely extracts a double from an Excel cell.
+    /// Safely extracts a double from an Excel cell, accurately normalizing Turkish ("1.250,50" / "1.250")
+    /// and international ("1,250.50" / "15.5") number formatting.
     /// </summary>
     public static double ParseCellDouble(IXLCell cell, double defaultValue = 0.0)
     {
@@ -150,10 +163,8 @@ public static class ExcelImportHelper
         if (!string.IsNullOrWhiteSpace(str))
         {
             str = str.Trim();
-            if (double.TryParse(str.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var iVal))
-                return iVal;
-            if (double.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.CurrentCulture, out var cVal))
-                return cVal;
+            if (TryParseLocaleResilientDouble(str, out var parsed))
+                return parsed;
         }
 
         return defaultValue;
@@ -171,13 +182,63 @@ public static class ExcelImportHelper
         if (!string.IsNullOrWhiteSpace(str))
         {
             str = str.Trim();
-            if (int.TryParse(str, out var parsed))
+            if (int.TryParse(str, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed))
                 return parsed;
-            if (double.TryParse(str.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dParsed))
+            if (TryParseLocaleResilientDouble(str, out var dParsed))
                 return (int)Math.Round(dParsed);
         }
 
         return defaultValue;
+    }
+
+    private static bool TryParseLocaleResilientDouble(string str, out double result)
+    {
+        int lastComma = str.LastIndexOf(',');
+        int lastDot = str.LastIndexOf('.');
+
+        // Both separators present -> last separator is decimal mark, the other is thousands grouping
+        if (lastComma >= 0 && lastDot >= 0)
+        {
+            string normalized = lastComma > lastDot
+                ? str.Replace(".", "").Replace(',', '.')   // TR/EU: "1.250,50" -> "1250.50"
+                : str.Replace(",", "");                    // EN/US: "1,250.50" -> "1250.50"
+            return double.TryParse(normalized, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
+        }
+
+        if (lastComma >= 0)
+        {
+            // Only commas: multiple commas or exact 3-digit grouping after single comma? Check TR/EN ambiguity:
+            // "15,5" -> 15.5; "1,250,000" -> 1250000
+            int commaCount = str.Count(c => c == ',');
+            if (commaCount > 1)
+                return double.TryParse(str.Replace(",", ""), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
+
+            return double.TryParse(str.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
+        }
+
+        if (lastDot >= 0)
+        {
+            int dotCount = str.Count(c => c == '.');
+            if (dotCount > 1)
+                return double.TryParse(str.Replace(".", ""), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
+
+            // In Turkish culture, "1.250" (3 digits after dot, non-zero leading digit or grouped) can mean 1250
+            // whereas "15.5" or "0.250" means decimal 15.5 / 0.25. Only treat single dot with 3 digits as thousands if CurrentCulture decimal separator is ','.
+            int afterDotLen = str.Length - lastDot - 1;
+            if (afterDotLen == 3 &&
+                !str.StartsWith("0.", StringComparison.Ordinal) &&
+                !str.StartsWith("-0.", StringComparison.Ordinal) &&
+                System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," &&
+                long.TryParse(str.Replace(".", ""), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var groupedVal))
+            {
+                result = groupedVal;
+                return true;
+            }
+
+            return double.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
+        }
+
+        return double.TryParse(str, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out result);
     }
 
     /// <summary>

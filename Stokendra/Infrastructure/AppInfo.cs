@@ -12,7 +12,7 @@ public static class AppInfo
     public const string Name = "Stokendra";
 
     private static readonly Version _version = 
-        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(7, 5, 4);
+        Assembly.GetExecutingAssembly().GetName().Version ?? new Version(7, 5, 5);
 
     /// <summary>Uygulama sürümü nesnesi.</summary>
     public static Version Version => _version;

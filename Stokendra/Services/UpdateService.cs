@@ -41,9 +41,12 @@ public class UpdateService : IUpdateService
                 ? (DateTime.TryParse(pubProp.GetString(), out var dt) ? dt : DateTime.MinValue) 
                 : DateTime.MinValue;
 
-            string cleanTag = tagName.TrimStart('v', 'V');
+            string cleanTag = tagName.TrimStart('v', 'V').Split('-')[0];
             if (!Version.TryParse(cleanTag, out var version))
                 return null;
+            // Normalize 2-part versions (e.g. 7.5) to 3 parts so Build isn't -1
+            if (version.Build < 0)
+                version = new Version(version.Major, version.Minor, 0);
 
             // Asset'lerden installer (.exe) dosyasını bul
             string? installerUrl = null;
@@ -87,7 +90,10 @@ public class UpdateService : IUpdateService
 
     public async Task DownloadInstallerAsync(string downloadUrl, string destinationPath, IProgress<int>? progress = null, CancellationToken ct = default)
     {
-        using var response = await _client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("Only HTTPS download URLs are permitted.");
+
+        using var response = await _client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
 
         var totalBytes = response.Content.Headers.ContentLength ?? -1L;
@@ -101,31 +107,35 @@ public class UpdateService : IUpdateService
 
         try
         {
-            await using var contentStream = await response.Content.ReadAsStreamAsync(ct);
-            await using var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
-
-            var buffer = new byte[81920];
-            long totalRead = 0;
-            int lastReportedPercent = -1;
-
-            while (true)
+            await using (var contentStream = await response.Content.ReadAsStreamAsync(ct))
+            await using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
             {
-                int bytesRead = await contentStream.ReadAsync(buffer, ct);
-                if (bytesRead == 0) break;
+                var buffer = new byte[81920];
+                long totalRead = 0;
+                int lastReportedPercent = -1;
 
-                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
-                totalRead += bytesRead;
-
-                if (totalBytes > 0 && progress != null)
+                while (true)
                 {
-                    int percent = (int)(totalRead * 100 / totalBytes);
-                    if (percent != lastReportedPercent)
+                    int bytesRead = await contentStream.ReadAsync(buffer, ct);
+                    if (bytesRead == 0) break;
+
+                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
+                    totalRead += bytesRead;
+
+                    if (totalBytes > 0 && progress != null)
                     {
-                        lastReportedPercent = percent;
-                        progress.Report(percent);
+                        int percent = (int)(totalRead * 100 / totalBytes);
+                        if (percent != lastReportedPercent)
+                        {
+                            lastReportedPercent = percent;
+                            progress.Report(percent);
+                        }
                     }
                 }
             }
+
+            // Başarılı indirme: temp → asıl dosya (dosya akışı kapandıktan sonra ve try içinde)
+            File.Move(tempPath, destinationPath, overwrite: true);
         }
         catch
         {
@@ -133,8 +143,5 @@ public class UpdateService : IUpdateService
             try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch (Exception cleanupEx) { AppLogger.LogError("UpdateService: temp file cleanup failed", cleanupEx); }
             throw;
         }
-
-        // Başarılı indirme: temp → asıl dosya
-        File.Move(tempPath, destinationPath, overwrite: true);
     }
 }

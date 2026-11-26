@@ -82,7 +82,11 @@ public partial class StocksViewModel : ViewModelBase
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }
-        finally { IsLoading = false; }
+        finally
+        {
+            if (token == _loadingCts?.Token)
+                IsLoading = false;
+        }
     }
 
     partial void OnSearchTextChanged(string value) => ScheduleFilter();
@@ -110,7 +114,8 @@ public partial class StocksViewModel : ViewModelBase
         var data = _searchIndex.Search(SearchText);
         Stocks.ReplaceAll(data);
         
-        int lowStockCount = data.Count(k => k.CurrentStock <= k.MinStock && k.CurrentStock > 0);
+        int threshold = AppServices.TryGetCurrent(out var app) ? app!.Settings.LowStockThreshold : 3;
+        int lowStockCount = data.Count(k => k.CurrentStock > 0 && k.CurrentStock <= (k.MinStock > 0 ? k.MinStock : threshold));
         int depletedCount = data.Count(k => k.CurrentStock <= 0);
         
         // Localized status text

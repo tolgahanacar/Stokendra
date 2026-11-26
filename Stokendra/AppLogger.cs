@@ -87,10 +87,10 @@ public static class AppLogger
     public static string GetSystemDiagnosticSummary()
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"Uygulama: Stokendra v{AppInfo.VersionString}");
-        sb.AppendLine($"İşletim Sistemi: {Environment.OSVersion.VersionString} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
-        sb.AppendLine($".NET Çalışma Zamanı: {Environment.Version}");
-        sb.AppendLine($"Tarih/Saat: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Stokendra {AppInfo.VersionString}");
+        sb.AppendLine($"OS: {Environment.OSVersion.VersionString} ({(Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit")})");
+        sb.AppendLine($".NET Runtime: {Environment.Version}");
+        sb.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         return sb.ToString();
     }
 
@@ -105,7 +105,10 @@ public static class AppLogger
             var info = new FileInfo(logPath);
             if (info.Length < MaxLogSizeBytes) return;
 
-            string archivePath = logPath.Replace(".log", $"_{DateTime.Now:yyyyMMdd_HHmmss}.log");
+            string dir = Path.GetDirectoryName(logPath) ?? "";
+            string baseName = Path.GetFileNameWithoutExtension(logPath);
+            string ext = Path.GetExtension(logPath);
+            string archivePath = Path.Combine(dir, $"{baseName}_{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid():N}{ext}");
             File.Move(logPath, archivePath);
 
             // Eski arşivleri temizle (son 10 tane tut)

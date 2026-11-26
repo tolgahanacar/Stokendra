@@ -48,6 +48,7 @@
             <Button Content="{infra:L export_excel}" Classes="Secondary"
                     Command="{Binding ExportExcelCommand}"/>
             <Button Content="{infra:L import_excel}" Classes="Secondary"
+                    IsVisible="{Binding CanEdit}"
                     Command="{Binding ImportCommand}"/>
             <Button Content="{infra:L print}" Classes="Success"
                     Command="{Binding PrintCommand}"/>

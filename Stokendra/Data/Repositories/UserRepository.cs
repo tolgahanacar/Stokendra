@@ -129,8 +129,8 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
         string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
         string hash = HashV4(pass, salt);
         await conn.ExecuteAsync(new CommandDefinition(
-            "UPDATE Users SET PasswordHash=@Hash, Salt=@Salt WHERE Username=@Username",
-            new { Hash = hash, Salt = salt, Username = user },
+            "UPDATE Users SET PasswordHash=@Hash, Salt=@Salt WHERE Username=@Username COLLATE NOCASE",
+            new { Hash = hash, Salt = salt, Username = user.Trim() },
             cancellationToken: cancellationToken));
     }
 
@@ -168,10 +168,17 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
     {
         try
         {
+            string cleanUsername = username?.Trim() ?? "";
+            string cleanRole = string.IsNullOrWhiteSpace(role) ? "user" : role.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(cleanUsername)) return false;
+            if (ValidatePasswordPolicy(password, cleanUsername) != null) return false;
+
             using var conn = ConnectionFactory.CreateConnection();
+            using var trans = await conn.BeginTransactionAsync(cancellationToken);
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
-                new { Username = username.Trim() },
+                new { Username = cleanUsername },
+                transaction: trans,
                 cancellationToken: cancellationToken));
             if (count > 0) return false;
 
@@ -180,9 +187,11 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
 
             await conn.ExecuteAsync(new CommandDefinition(
                 "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES (@Username, @PasswordHash, @Salt, @Role)",
-                new { Username = username.Trim(), PasswordHash = hash, Salt = salt, Role = role.Trim() },
+                new { Username = cleanUsername, PasswordHash = hash, Salt = salt, Role = cleanRole },
+                transaction: trans,
                 cancellationToken: cancellationToken));
-            LogAudit("Insert", "Users", 0, $"Created user: {username.Trim()} ({role.Trim()})");
+            LogAudit(conn, (SqliteTransaction)trans, "Insert", "Users", 0, $"Created user: {cleanUsername} ({cleanRole})");
+            await trans.CommitAsync(cancellationToken);
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("AddUserAsync failed", ex); return false; }
@@ -193,15 +202,16 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
         try
         {
             using var conn = ConnectionFactory.CreateConnection();
+            using var trans = await conn.BeginTransactionAsync(cancellationToken);
 
             var targetUser = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
-                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, cancellationToken: cancellationToken));
+                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
             if (targetUser == null) return false;
 
             if (targetUser.Role.Equals("admin", StringComparison.OrdinalIgnoreCase))
             {
                 var adminCount = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
-                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin'", cancellationToken: cancellationToken));
+                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin' COLLATE NOCASE", transaction: trans, cancellationToken: cancellationToken));
                 if (adminCount <= 1)
                 {
                     AppLogger.LogError($"Cannot delete user ID {id}: last remaining administrator.");
@@ -212,8 +222,10 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
             await conn.ExecuteAsync(new CommandDefinition(
                 "DELETE FROM Users WHERE Id = @Id",
                 new { Id = id },
+                transaction: trans,
                 cancellationToken: cancellationToken));
-            LogAudit("Delete", "Users", id, $"Deleted user ID: {id}");
+            LogAudit(conn, (SqliteTransaction)trans, "Delete", "Users", id, $"Deleted user ID: {id}");
+            await trans.CommitAsync(cancellationToken);
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("DeleteUserAsync failed", ex); return false; }
@@ -223,16 +235,18 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
     {
         try
         {
+            string cleanRole = string.IsNullOrWhiteSpace(role) ? "user" : role.Trim().ToLowerInvariant();
             using var conn = ConnectionFactory.CreateConnection();
+            using var trans = await conn.BeginTransactionAsync(cancellationToken);
 
             var targetUser = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
-                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, cancellationToken: cancellationToken));
+                "SELECT Role FROM Users WHERE Id = @Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
             if (targetUser == null) return false;
 
-            if (targetUser.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) && !role.Equals("admin", StringComparison.OrdinalIgnoreCase))
+            if (targetUser.Role.Equals("admin", StringComparison.OrdinalIgnoreCase) && !cleanRole.Equals("admin", StringComparison.OrdinalIgnoreCase))
             {
                 var adminCount = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
-                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin'", cancellationToken: cancellationToken));
+                    "SELECT COUNT(*) FROM Users WHERE Role = 'admin' COLLATE NOCASE", transaction: trans, cancellationToken: cancellationToken));
                 if (adminCount <= 1)
                 {
                     AppLogger.LogError($"Cannot demote user ID {id}: last remaining administrator.");
@@ -242,9 +256,11 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
 
             await conn.ExecuteAsync(new CommandDefinition(
                 "UPDATE Users SET Role = @Role WHERE Id = @Id",
-                new { Role = role.Trim(), Id = id },
+                new { Role = cleanRole, Id = id },
+                transaction: trans,
                 cancellationToken: cancellationToken));
-            LogAudit("Update", "Users", id, $"Updated role for user ID: {id} to {role.Trim()}");
+            LogAudit(conn, (SqliteTransaction)trans, "Update", "Users", id, $"Updated role for user ID: {id} to {cleanRole}");
+            await trans.CommitAsync(cancellationToken);
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("UpdateUserRoleAsync failed", ex); return false; }

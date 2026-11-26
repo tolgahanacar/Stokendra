@@ -82,14 +82,15 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
             
-            var totalCount = await _services.GetCountAsync(StartDate.Date, EndDate.Date.AddDays(1), term, token);
+            var totalCount = await _services.GetCountAsync(StartDate.Date, safeEnd, term, token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
             
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate.Date, EndDate.Date.AddDays(1), term, token);
+            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate.Date, safeEnd, term, token);
 
             token.ThrowIfCancellationRequested();
 
@@ -106,7 +107,11 @@ public partial class ServicesViewModel : ViewModelBase
             AppLogger.LogError("Services load error", ex);
             StatusText = LocalizationManager.L("svc_load_error");
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            if (token == _cts?.Token)
+                IsLoading = false;
+        }
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
@@ -115,9 +120,9 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public void ClearFilters()
     {
-        _searchCts?.Cancel();
         _cts?.Cancel();
         SearchText  = "";
+        _searchCts?.Cancel();
         StartDate   = new DateTime(2024, 1, 1);
         EndDate     = DateTime.Today;
         CurrentPage = 1;
@@ -155,6 +160,7 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (SelectedRecords.Count >= 2)
         {
             int count = SelectedRecords.Count;
@@ -207,6 +213,7 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task AddAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         var vm = new AddServiceViewModel();
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
@@ -228,14 +235,16 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (SelectedRecords.Count >= 2)
         {
+            int updatedCount = SelectedRecords.Count;
             var vm = new BulkEditServicesViewModel(SelectedRecords.ToList(), _services, _dialogService);
             if (await _dialogService.ShowDialogAsync(vm) == true)
             {
                 DataEvents.NotifyChanged(DataDomain.Services);
                 await LoadAsync();
-                StatusText = LocalizationManager.L("bulk_edit_success", SelectedRecords.Count);
+                StatusText = LocalizationManager.L("bulk_edit_success", updatedCount);
             }
         }
         else
@@ -273,7 +282,8 @@ public partial class ServicesViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("svc_excel_saving");
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var allRecords = await _services.GetAllAsync(StartDate.Date, EndDate.Date.AddDays(1), term);
+            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+            var allRecords = await _services.GetAllAsync(StartDate.Date, safeEnd, term);
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();
@@ -312,6 +322,7 @@ public partial class ServicesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ImportAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("svc_excel_select_title"), LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
@@ -361,6 +372,7 @@ public partial class ServicesViewModel : ViewModelBase
                 
                 if (toImport.Count > 0) await _services.AddBulkAsync(toImport);
             });
+            DataEvents.NotifyChanged(DataDomain.Services);
             await LoadAsync();
             StatusText = LocalizationManager.L("svc_import_done");
         }
@@ -376,7 +388,8 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            var allRecords = await _services.GetAllAsync(StartDate.Date, EndDate.Date.AddDays(1), term);
+            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+            var allRecords = await _services.GetAllAsync(StartDate.Date, safeEnd, term);
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();

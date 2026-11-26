@@ -130,8 +130,10 @@ public static class LocalizationManager
             try
             {
                 var json = File.ReadAllText(filePath);
-                newStrings = JsonSerializer.Deserialize<Dictionary<string, string>>(json)
-                    ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                newStrings = loaded != null
+                    ? new Dictionary<string, string>(loaded, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
             catch (Exception ex)
             {

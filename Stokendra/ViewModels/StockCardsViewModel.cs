@@ -77,7 +77,7 @@ public partial class StockCardsViewModel : ViewModelBase
 
     private void OnDataChanged(DataDomain domain)
     {
-        if (domain == DataDomain.StockCards)
+        if (domain is DataDomain.StockCards or DataDomain.Movements)
         {
             _isLoaded = false;
         }
@@ -113,7 +113,11 @@ public partial class StockCardsViewModel : ViewModelBase
             AppLogger.LogError("StockCards load error", ex);
             StatusText = LocalizationManager.L("error"); 
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            if (token == _loadingCts?.Token)
+                IsLoading = false;
+        }
     }
 
     partial void OnSearchTextChanged(string value) => ScheduleFilter();
@@ -152,6 +156,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task AddCardAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         var vm = new AddStockCardViewModel(_stockCards);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
@@ -173,6 +178,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditCardAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         var cardToEdit = SelectedCard ?? SelectedCards.FirstOrDefault();
         if (cardToEdit == null) return;
 
@@ -197,6 +203,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteCardAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (SelectedCards.Count >= 2)
         {
             int count = SelectedCards.Count;
@@ -267,6 +274,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task ImportExcelAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("import_excel"), "Excel File (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
@@ -324,7 +332,7 @@ public partial class StockCardsViewModel : ViewModelBase
         catch (Exception ex)
         {
             AppLogger.LogError("Stock cards import error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("import_error", ex.Message));
         }
     }
 
@@ -344,8 +352,10 @@ public partial class StockCardsViewModel : ViewModelBase
             _dialogService);
             
         await _dialogService.ShowDialogAsync(vm);
-        DataEvents.NotifyChanged(DataDomain.StockCards);
-        await LoadAsync();
+        if (vm.HasChanges)
+        {
+            await LoadAsync();
+        }
     }
 
     [RelayCommand]

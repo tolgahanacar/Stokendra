@@ -44,6 +44,9 @@ public partial class FeedbackViewModel : ViewModelBase
 
     public override void RefreshSession()
     {
+        base.RefreshSession();
+        int previousIndex = FeedbackTypes.IndexOf(SelectedType);
+
         FeedbackTypes = new ObservableCollection<string>
         {
             LocalizationManager.L("feedback_type_bug"),
@@ -51,10 +54,9 @@ public partial class FeedbackViewModel : ViewModelBase
             LocalizationManager.L("feedback_type_question")
         };
 
-        if (string.IsNullOrWhiteSpace(SelectedType) || !FeedbackTypes.Contains(SelectedType))
-        {
-            SelectedType = FeedbackTypes[0];
-        }
+        SelectedType = (previousIndex >= 0 && previousIndex < FeedbackTypes.Count)
+            ? FeedbackTypes[previousIndex]
+            : FeedbackTypes[0];
 
         TargetEmailDisplay = _feedbackService.TargetEmail;
         RefreshDiagnostics();
@@ -111,7 +113,7 @@ public partial class FeedbackViewModel : ViewModelBase
     public void OpenMailClient()
     {
         if (string.IsNullOrWhiteSpace(Subject))
-            Subject = $"{SelectedType} - Bildirim";
+            Subject = $"{SelectedType} - {LocalizationManager.L("feedback_default_subject")}";
 
         var report = BuildCurrentReport();
         _feedbackService.OpenDefaultMailClient(report);

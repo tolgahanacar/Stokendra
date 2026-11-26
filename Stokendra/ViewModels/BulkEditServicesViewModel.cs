@@ -118,6 +118,7 @@ public partial class BulkEditServicesViewModel : ViewModelBase
     private async Task SaveAsync()
     {
         ErrorMessage = "";
+        ApplyBulk();
         try
         {
             foreach (var r in EditingRecords)

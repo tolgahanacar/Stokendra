@@ -109,9 +109,10 @@ public partial class LoginViewModel : ViewModelBase
         }
 
         // Master code kontrolü (zamanlama saldırılarına karşı sabit zamanlı karşılaştırma)
+        string configuredMaster = (AppServices.Current.Settings.MasterSecurityCode ?? "").Trim();
         byte[] inputBytes = Encoding.UTF8.GetBytes(SecurityCode.Trim());
-        byte[] masterBytes = Encoding.UTF8.GetBytes(AppServices.Current.Settings.MasterSecurityCode.Trim());
-        bool match = inputBytes.Length == masterBytes.Length && CryptographicOperations.FixedTimeEquals(inputBytes, masterBytes);
+        byte[] masterBytes = Encoding.UTF8.GetBytes(configuredMaster);
+        bool match = masterBytes.Length > 0 && inputBytes.Length == masterBytes.Length && CryptographicOperations.FixedTimeEquals(inputBytes, masterBytes);
         if (!match)
         {
             ErrorMessage = LocalizationManager.L("security_code_incorrect");
@@ -124,10 +125,16 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
 
-        // Şifre kullanıcı adını içermemeli
         if (NewPassword.Contains(Username.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             ErrorMessage = LocalizationManager.L("password_contains_username");
+            return;
+        }
+
+        var policyError = _userRepository.ValidatePasswordPolicy(NewPassword, Username.Trim());
+        if (!string.IsNullOrEmpty(policyError))
+        {
+            ErrorMessage = policyError;
             return;
         }
 

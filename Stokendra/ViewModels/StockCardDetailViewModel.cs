@@ -17,10 +17,21 @@ public partial class StockCardDetailViewModel : ViewModelBase
     private readonly IMovementRepository _movements;
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
-    [ObservableProperty] private StockCard? _card;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanAddMovement))]
+    private StockCard? _card;
     [ObservableProperty] private double _totalEntryLast30;
     [ObservableProperty] private double _totalExitLast30;
     [ObservableProperty] private bool _isLoading;
+
+    public bool HasChanges { get; private set; }
+    public bool CanAddMovement => CanEdit && Card != null && Card.CardTypeEnum != CardType.Parent;
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        OnPropertyChanged(nameof(CanAddMovement));
+    }
 
     public BulkObservableCollection<StockMovement> Movements { get; } = new();
 
@@ -66,7 +77,8 @@ public partial class StockCardDetailViewModel : ViewModelBase
     [RelayCommand]
     public async Task AddMovementAsync()
     {
-        if (Card == null) return;
+        if (!EnsureCanEditForSession()) return;
+        if (Card == null || Card.CardTypeEnum == CardType.Parent) return;
         var vm = new AddMovementViewModel(_stockCards, _departments, preSelectedCard: Card);
         vm.SelectedCard = Card; // Auto-select the current card
         
@@ -75,6 +87,9 @@ public partial class StockCardDetailViewModel : ViewModelBase
             try
             {
                 await _movements.AddAsync(vm.Result);
+                HasChanges = true;
+                DataEvents.NotifyChanged(DataDomain.Movements);
+                DataEvents.NotifyChanged(DataDomain.StockCards);
                 await LoadDataAsync();
             }
             catch (Exception ex)

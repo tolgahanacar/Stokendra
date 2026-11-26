@@ -10,16 +10,16 @@ Stokendra is a professional desktop application designed for enterprises, instit
 
 ## 🚀 Key Features
 
-- **📦 Stock Card Management:** Hierarchical (Parent/Child) relationships, codes, categories, picture uploads, and critical minimum stock alerts.
+- **📦 Stock Card Management:** Hierarchical (Parent/Child) relationships, codes, categories, and critical minimum stock alerts.
 - **🔄 Stock Movements:** Fast entry, issue, and handover tracking; department and recipient personnel auditing; bulk inline editing.
 - **📊 Advanced Reporting:** 
   - Filter consumption by specific stock item, department, or personnel.
   - Interactive consumption graphs.
   - One-click Excel (.xlsx) export and formatted HTML printing.
-- **🛠️ Service & Maintenance Records:** Device serial tracking, warranty statuses, repair logs, and history.
+- **🛠️ Service & Maintenance Records:** Device serial tracking, issue descriptions, repair logs, and history.
 - **📝 Operational Notes:** Quick memo system and task tracking.
-- **👥 Multi-User RBAC:** Admin, Warehouse Officer, and Report Viewer roles.
-- **💾 Data Security & Backup:** SQLite WAL architecture with integrated one-click database backup and restore.
+- **👥 User Access Control:** Administrator and Standard User roles with PBKDF2 password hashing and recovery security code.
+- **💾 Data Security & Backup:** SQLite WAL architecture with database backup, integrity checks, optimization, and full Excel export.
 - **⚡ Fast & Portable:** Powered by .NET 10 LTS and Avalonia UI. 100% Self-contained (no .NET runtime installation required).
 
 ---

@@ -13,38 +13,80 @@ namespace Stokendra.Infrastructure;
 
 public class DialogService : IDialogService
 {
-    private Window? GetMainWindow()
+    private Window? GetActiveWindow()
     {
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            return desktop.MainWindow;
+            var activeModal = desktop.Windows.LastOrDefault(w => w.IsVisible && w.IsActive)
+                              ?? desktop.Windows.LastOrDefault(w => w.IsVisible);
+            return activeModal ?? desktop.MainWindow;
         }
         return null;
     }
 
     public async Task ShowMessageAsync(string title, string message)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return;
         await MessageBoxWindow.Show(window, title, message);
     }
 
     public async Task<bool> ShowConfirmAsync(string title, string message)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return false;
         return await MessageBoxWindow.ShowConfirm(window, title, message);
     }
 
+    private static (List<FilePickerFileType>? FileTypes, string? DefaultExt) ParseFilter(string? filter, string? fileName = null)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            string? extFromName = Path.GetExtension(fileName);
+            return (null, string.IsNullOrEmpty(extFromName) ? null : extFromName.TrimStart('.'));
+        }
+
+        // Format expected: "Label (*.xlsx)|*.xlsx" or multiple pairs separated by '|'
+        var parts = filter.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        var types = new List<FilePickerFileType>();
+        string? firstExt = null;
+
+        for (int i = 0; i + 1 < parts.Length; i += 2)
+        {
+            var name = parts[i].Trim();
+            var patterns = parts[i + 1].Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .ToArray();
+
+            if (patterns.Length > 0)
+            {
+                types.Add(new FilePickerFileType(name) { Patterns = patterns });
+                if (firstExt == null)
+                {
+                    var p = patterns[0].TrimStart('*').TrimStart('.');
+                    if (!string.IsNullOrEmpty(p) && p != "*") firstExt = p;
+                }
+            }
+        }
+
+        if (firstExt == null && !string.IsNullOrEmpty(fileName))
+            firstExt = Path.GetExtension(fileName).TrimStart('.');
+
+        return (types.Count > 0 ? types : null, string.IsNullOrEmpty(firstExt) ? null : firstExt);
+    }
+
     public async Task<string?> SaveFileAsync(string title, string defaultFileName, string filter)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return null;
 
+        var (fileTypes, defaultExt) = ParseFilter(filter, defaultFileName);
         var options = new FilePickerSaveOptions
         {
             Title = title,
-            SuggestedFileName = defaultFileName
+            SuggestedFileName = defaultFileName,
+            DefaultExtension = defaultExt,
+            FileTypeChoices = fileTypes
         };
 
         var file = await window.StorageProvider.SaveFilePickerAsync(options);
@@ -53,13 +95,15 @@ public class DialogService : IDialogService
 
     public async Task<string?> OpenFileAsync(string title, string filter)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return null;
 
+        var (fileTypes, _) = ParseFilter(filter);
         var options = new FilePickerOpenOptions
         {
             Title = title,
-            AllowMultiple = false
+            AllowMultiple = false,
+            FileTypeFilter = fileTypes
         };
 
         var files = await window.StorageProvider.OpenFilePickerAsync(options);
@@ -68,7 +112,7 @@ public class DialogService : IDialogService
 
     public async Task<string?> OpenFolderAsync(string title)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return null;
 
         var options = new FolderPickerOpenOptions
@@ -83,7 +127,7 @@ public class DialogService : IDialogService
 
     public async Task<bool> ShowDialogAsync<TViewModel>(TViewModel viewModel) where TViewModel : class
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return false;
 
         var view = ViewLocator.CreateView(viewModel);
@@ -103,6 +147,11 @@ public class DialogService : IDialogService
                 Background = templatedControl.Background ?? Avalonia.Media.Brushes.Transparent
             };
             return await wrapper.ShowDialog<bool>(window);
+        }
+        else if (view is TextBlock tb)
+        {
+            AppLogger.LogError($"Dialog view resolution failed for {typeof(TViewModel).Name}: {tb.Text}");
+            await MessageBoxWindow.Show(window, LocalizationManager.L("error"), tb.Text ?? "View resolution failed.");
         }
         
         return false;

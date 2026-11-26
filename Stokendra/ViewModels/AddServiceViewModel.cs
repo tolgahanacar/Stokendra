@@ -16,6 +16,7 @@ public partial class AddServiceViewModel : ViewModelBase
     [ObservableProperty] private DateTimeOffset _date = DateTimeOffset.Now;
     [ObservableProperty] private string _issue = "";
     [ObservableProperty] private string _resultText = "";
+    [ObservableProperty] private string _errorMessage = "";
 
     public AddServiceViewModel(ServiceRecord? record = null)
     {
@@ -26,7 +27,9 @@ public partial class AddServiceViewModel : ViewModelBase
             DeviceName = record.DeviceName;
             SerialNumber = record.SerialNumber;
             Company = record.Company;
-            Date = new DateTimeOffset(record.ServiceDate);
+            Date = (record.ServiceDate > DateTime.MinValue.AddDays(2) && record.ServiceDate < DateTime.MaxValue.AddDays(-2))
+                ? new DateTimeOffset(record.ServiceDate)
+                : DateTimeOffset.Now;
             Issue = record.Issue;
             ResultText = record.Result;
         }
@@ -37,17 +40,22 @@ public partial class AddServiceViewModel : ViewModelBase
     [RelayCommand]
     private void Save()
     {
-        if (string.IsNullOrWhiteSpace(DeviceName)) return;
+        ErrorMessage = "";
+        if (string.IsNullOrWhiteSpace(DeviceName))
+        {
+            ErrorMessage = $"⚠️ {LocalizationManager.L("device_name_required")}";
+            return;
+        }
 
         Result = new ServiceRecord
         {
             Id = _editingRecord?.Id ?? 0,
-            DeviceName = DeviceName,
-            SerialNumber = SerialNumber,
-            Company = Company,
+            DeviceName = DeviceName.Trim(),
+            SerialNumber = (SerialNumber ?? "").Trim(),
+            Company = (Company ?? "").Trim(),
             ServiceDate = Date.DateTime,
-            Issue = Issue,
-            Result = ResultText
+            Issue = (Issue ?? "").Trim(),
+            Result = (ResultText ?? "").Trim()
         };
         CloseAction?.Invoke(true);
     }

@@ -1,5 +1,7 @@
+using Dapper;
 using Microsoft.Data.Sqlite;
 using Stokendra.Data.Interfaces;
+using System;
 using System.Globalization;
 
 namespace Stokendra.Data.Repositories;
@@ -13,20 +15,37 @@ public abstract class RepositoryBase(IDbConnectionFactory connectionFactory)
         try
         {
             using var conn = ConnectionFactory.CreateConnection();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                INSERT INTO AuditLog (Date, Action, TableName, RecordId, Details)
-                VALUES ($t, $it, $ta, $id, $d)";
-            cmd.Parameters.AddWithValue("$t", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
-            cmd.Parameters.AddWithValue("$it", type);
-            cmd.Parameters.AddWithValue("$ta", table);
-            cmd.Parameters.AddWithValue("$id", recordId);
-            cmd.Parameters.AddWithValue("$d", detail ?? "");
-            cmd.ExecuteNonQuery();
+            LogAudit(conn, null, type, table, recordId, detail);
         }
         catch (Exception ex)
         {
             // Audit log hatası ana işlemi bozmamalı
+            System.Diagnostics.Debug.WriteLine($"AuditLog error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Var olan bağlantı ve transaction üzerinde denetim kaydı oluşturur (SQLite yazma kilitlenmesini önler).
+    /// </summary>
+    protected static void LogAudit(SqliteConnection conn, SqliteTransaction? trans, string type, string table, int recordId, string detail)
+    {
+        try
+        {
+            const string sql = """
+                INSERT INTO AuditLog (Date, Action, TableName, RecordId, Details)
+                VALUES (@Date, @Action, @TableName, @RecordId, @Details)
+                """;
+            conn.Execute(sql, new
+            {
+                Date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Action = type,
+                TableName = table,
+                RecordId = recordId,
+                Details = detail ?? ""
+            }, transaction: trans);
+        }
+        catch (Exception ex)
+        {
             System.Diagnostics.Debug.WriteLine($"AuditLog error: {ex.Message}");
         }
     }

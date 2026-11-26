@@ -17,7 +17,7 @@ public partial class StocksView : UserControl
         if (DataContext is StocksViewModel vm)
         {
             Infrastructure.AsyncHelper.RunSafe(
-                () => vm.LoadAsync(),
+                () => vm.EnsureLoadedAsync(),
                 ex => AppLogger.LogError("StocksView load failed", ex));
         }
     }

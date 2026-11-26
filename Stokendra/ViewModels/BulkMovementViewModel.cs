@@ -100,6 +100,8 @@ public partial class BulkMovementViewModel : ViewModelBase
     [RelayCommand]
     public async Task SaveAsync()
     {
+        if (!EnsureCanEditForSession()) return;
+
         var selected = _allItemViewModels.Where(i => i.IsSelected && i.Quantity.HasValue && i.Quantity > 0).ToList();
         if (selected.Count == 0)
         {
@@ -109,8 +111,37 @@ public partial class BulkMovementViewModel : ViewModelBase
 
         try
         {
+            foreach (var item in selected)
+            {
+                double q = item.Quantity!.Value;
+                if (double.IsNaN(q) || double.IsInfinity(q) || q <= 0 || q > 1_000_000_000)
+                {
+                    await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("invalid_quantity"));
+                    return;
+                }
+            }
+
             string tur = SelectedTypeIndex == 0 ? "Entry" : "Exit";
-            var targetDate = (Date ?? DateTime.Now).Date.Add(DateTime.Now.TimeOfDay);
+            if (tur == "Exit")
+            {
+                foreach (var grp in selected.GroupBy(i => i.Card.Id))
+                {
+                    var card = grp.First().Card;
+                    double totalExit = grp.Sum(x => x.Quantity!.Value);
+                    if (card.CurrentStock - totalExit < -1e-9)
+                    {
+                        await _dialogService.ShowMessageAsync(
+                            LocalizationManager.L("warning"),
+                            $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({card.Name}: {card.CurrentStock})");
+                        return;
+                    }
+                }
+            }
+
+            var baseDate = (Date.HasValue && Date.Value > DateTime.MinValue.AddDays(2) && Date.Value < DateTime.MaxValue.AddDays(-2))
+                ? Date.Value.Date
+                : DateTime.Today;
+            var targetDate = baseDate.Add(DateTime.Now.TimeOfDay);
             var movements = selected.Select(i => new StockMovement
             {
                 StockCardId = i.Card.Id,

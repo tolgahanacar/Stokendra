@@ -82,6 +82,7 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public void NewNote()
     {
+        if (!EnsureCanEditForSession()) return;
         _editingId   = 0;
         EditTitle    = "";
         EditContent  = "";
@@ -92,7 +93,8 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditNoteAsync(System.Collections.IList? items)
     {
-        var list = items?.Cast<Note>().ToList() ?? SelectedNotes.ToList();
+        if (!EnsureCanEditForSession()) return;
+        var list = items?.OfType<Note>().ToList() ?? SelectedNotes.ToList();
         if (list.Count == 0 && SelectedNote != null) list.Add(SelectedNote);
         if (list.Count == 0) return;
 
@@ -113,14 +115,24 @@ public partial class NotesViewModel : ViewModelBase
             _editingId = note.Id;
             EditTitle = note.Title;
             EditContent = note.Content;
-            EditCreatedAt = new DateTimeOffset(note.CreatedAt);
+            EditCreatedAt = SafeDateTimeOffset(note.CreatedAt);
             IsEditing = true;
         }
+    }
+
+    private static DateTimeOffset SafeDateTimeOffset(DateTime dt)
+    {
+        if (dt <= DateTime.MinValue.AddDays(2) || dt >= DateTime.MaxValue.AddDays(-2))
+            return DateTimeOffset.Now;
+
+        try { return new DateTimeOffset(dt); }
+        catch { return DateTimeOffset.Now; }
     }
 
     [RelayCommand]
     public async Task SaveNoteAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (string.IsNullOrWhiteSpace(EditTitle))
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("title_empty"));
@@ -158,7 +170,8 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteSelectedAsync(System.Collections.IList? items)
     {
-        var list = items?.Cast<Note>().ToList() ?? SelectedNotes.ToList();
+        if (!EnsureCanEditForSession()) return;
+        var list = items?.OfType<Note>().ToList() ?? SelectedNotes.ToList();
         if (list.Count == 0 && SelectedNote != null) list.Add(SelectedNote);
         if (list.Count == 0) return;
 
@@ -268,6 +281,7 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ImportExcelAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("svc_excel_select_title"), LocalizationManager.L("svc_excel_filter"));
         if (string.IsNullOrEmpty(path)) return;
 
@@ -319,13 +333,19 @@ public partial class NotesViewModel : ViewModelBase
         { 
             AppLogger.LogError("Notes Excel import error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("import_error", ex.Message));
         }
     }
 
     public override void RefreshSession()
     {
         base.RefreshSession();
+        IsEditing = false;
+        _editingId = 0;
+        EditTitle = "";
+        EditContent = "";
+        SelectedNote = null;
+        SelectedNotes.Clear();
         _isLoaded = false;
     }
 }

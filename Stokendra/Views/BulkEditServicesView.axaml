@@ -3,6 +3,7 @@
         xmlns:vm="using:Stokendra.ViewModels"
         xmlns:infra="using:Stokendra.Infrastructure"
         xmlns:models="using:Stokendra.Models"
+        xmlns:views="using:Stokendra.Views"
         x:Class="Stokendra.Views.BulkEditServicesView"
         Title="{Binding Title}"
         Width="1050" Height="650"
@@ -133,7 +134,7 @@
                     <DataGridTemplateColumn Header="{infra:L maintenance_date}" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate x:DataType="models:ServiceRecord">
-                                <CalendarDatePicker SelectedDate="{Binding ServiceDate, Mode=TwoWay}" Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
+                                <views:SafeCalendarDatePicker SelectedDate="{Binding ServiceDate, Mode=TwoWay}" Height="28" VerticalAlignment="Center" HorizontalAlignment="Stretch"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

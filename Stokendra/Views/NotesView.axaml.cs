@@ -47,7 +47,7 @@ public partial class NotesView : UserControl
 
             listBox.DoubleTapped += (s, e) =>
             {
-                if (DataContext is NotesViewModel vm)
+                if (DataContext is NotesViewModel vm && vm.CanEdit)
                 {
                     if (vm.EditNoteCommand.CanExecute(listBox.SelectedItems))
                     {

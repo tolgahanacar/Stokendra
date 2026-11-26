@@ -152,7 +152,7 @@
                     <DataGridTemplateColumn Header="{infra:L date}" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate x:DataType="models:StockMovement">
-                                <CalendarDatePicker SelectedDate="{Binding Date, Mode=TwoWay}"
+                                <views:SafeCalendarDatePicker SelectedDate="{Binding Date, Mode=TwoWay}"
                                                      HorizontalAlignment="Stretch"
                                                      Height="28"
                                                      VerticalAlignment="Center"/>

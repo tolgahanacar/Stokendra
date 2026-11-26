@@ -86,6 +86,29 @@ public class SearchIndex<T> where T : class
                     foreach (var part in parts)
                     {
                         IndexToken(part, itemPrefixes);
+
+                        // Also index camelCase / letter-digit sub-parts (e.g. "USBKablo" -> "Kablo", "TK7235" -> "7235")
+                        int subStart = 0;
+                        for (int i = 1; i < part.Length; i++)
+                        {
+                            char prev = part[i - 1];
+                            char curr = part[i];
+                            bool isLetterToDigit = char.IsLetter(prev) && char.IsDigit(curr);
+                            bool isDigitToUpper = char.IsDigit(prev) && char.IsUpper(curr);
+                            bool isCamelBoundary = char.IsLower(prev) && char.IsUpper(curr);
+                            bool isAcronymEnd = char.IsUpper(prev) && char.IsUpper(curr) && i + 1 < part.Length && char.IsLower(part[i + 1]);
+
+                            if (isLetterToDigit || isDigitToUpper || isCamelBoundary || isAcronymEnd)
+                            {
+                                IndexToken(part.Substring(subStart, i - subStart), itemPrefixes);
+                                subStart = i;
+                            }
+                        }
+
+                        if (subStart > 0)
+                        {
+                            IndexToken(part.Substring(subStart), itemPrefixes);
+                        }
                     }
                 }
             }
@@ -103,7 +126,7 @@ public class SearchIndex<T> where T : class
 
         lock (_syncLock)
         {
-            _allItems = list;
+            _allItems = list.AsReadOnly();
             _prefixMap = newPrefixMap;
         }
     }
@@ -159,7 +182,7 @@ public class SearchIndex<T> where T : class
             var term = searchTerms[0];
             if (prefixMap.TryGetValue(term, out var list))
             {
-                return list;
+                return list.AsReadOnly();
             }
 
             // Fallback for non-prefix substring or arbitrary middle-word search

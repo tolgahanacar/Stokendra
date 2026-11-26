@@ -42,10 +42,10 @@ public sealed class ReportRepository(IDbConnectionFactory connectionFactory) : I
             SELECT
                 (SELECT COUNT(*) FROM StockCards WHERE CardType = 'Child') AS TotalCards,
                 (SELECT COALESCE(SUM(CASE
-                    WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity
-                    WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN -Quantity
+                    WHEN m.Type IN ('Entry', 'Giris', 'Giriş') THEN m.Quantity
+                    WHEN m.Type IN ('Exit', 'Cikis', 'Çıkış') THEN -m.Quantity
                     ELSE 0
-                END), 0) FROM StockMovements) AS TotalStock,
+                END), 0) FROM StockMovements m INNER JOIN StockCards s ON m.StockCardId = s.Id WHERE s.CardType = 'Child') AS TotalStock,
                 (SELECT COUNT(*) FROM StockBalances WHERE Balance <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END) AS LowStock,
                 (SELECT COUNT(*) FROM StockBalances WHERE Balance <= 0) AS DepletedStock,
                 (SELECT COUNT(*) FROM StockMovements) AS TotalMovements,
@@ -96,8 +96,17 @@ public sealed class ReportRepository(IDbConnectionFactory connectionFactory) : I
 
     public void ExportSqlBackup(string destinationPath)
     {
+        if (File.Exists(destinationPath)) File.Delete(destinationPath);
+        if (File.Exists(destinationPath + "-wal")) File.Delete(destinationPath + "-wal");
+        if (File.Exists(destinationPath + "-shm")) File.Delete(destinationPath + "-shm");
+
         using var source = connectionFactory.CreateConnection();
-        using var destination = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={destinationPath};Pooling=False");
+        var csb = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+        {
+            DataSource = destinationPath,
+            Pooling = false
+        };
+        using var destination = new Microsoft.Data.Sqlite.SqliteConnection(csb.ToString());
         destination.Open();
         source.BackupDatabase(destination);
     }

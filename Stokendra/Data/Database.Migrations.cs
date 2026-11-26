@@ -83,6 +83,12 @@ public sealed partial class Database
         }
     }
 
+    private static void ExecuteCriticalMigrationSql(SqliteConnection connection, SqliteTransaction? transaction, string sql)
+    {
+        using var command = CreateCommand(connection, transaction, sql);
+        command.ExecuteNonQuery();
+    }
+
     private static bool ColumnExists(SqliteConnection connection, SqliteTransaction? transaction, string tableName, string columnName)
     {
         try
@@ -154,8 +160,8 @@ public sealed partial class Database
         var srcCards = GetSourceTable("StokKartlari", "StockCards");
         if (srcCards != null)
         {
-            TryAlter(connection, transaction, "DROP TABLE IF EXISTS StockCards_temp;");
-            TryAlter(connection, transaction, @"
+            ExecuteCriticalMigrationSql(connection, transaction, "DROP TABLE IF EXISTS StockCards_temp;");
+            ExecuteCriticalMigrationSql(connection, transaction, @"
                 CREATE TABLE StockCards_temp (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Name TEXT NOT NULL,
@@ -190,18 +196,18 @@ public sealed partial class Database
                 SELECT {colId}, COALESCE({colName}, ''), COALESCE({colCode}, ''), COALESCE({colDesc}, ''), COALESCE({colMinStock}, 0), COALESCE({colCategory}, ''), {exprCardType}, {colParentId}, COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, ''), COALESCE({colUnit}, 'Adet')
                 FROM [{srcCards}]
             ";
-            TryAlter(connection, transaction, insertSql);
+            ExecuteCriticalMigrationSql(connection, transaction, insertSql);
         }
 
         // 2. StockMovements
         var srcMovements = GetSourceTable("StokHareketleri", "StockMovements");
         if (srcMovements != null)
         {
-            TryAlter(connection, transaction, "DROP TABLE IF EXISTS StockMovements_temp;");
-            TryAlter(connection, transaction, @"
+            ExecuteCriticalMigrationSql(connection, transaction, "DROP TABLE IF EXISTS StockMovements_temp;");
+            ExecuteCriticalMigrationSql(connection, transaction, @"
                 CREATE TABLE StockMovements_temp (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    StockCardId INTEGER NOT NULL,
+                    StockCardId INTEGER NOT NULL REFERENCES StockCards(Id) ON DELETE CASCADE,
                     Type TEXT NOT NULL,
                     Quantity REAL NOT NULL,
                     Recipient TEXT DEFAULT '',
@@ -221,21 +227,25 @@ public sealed partial class Database
             string colDesc = GetSelectColumn(connection, transaction, srcMovements, "Description", "Aciklama", "Description");
 
             string exprType = $"CASE WHEN {colType} IN ('Giris', 'Giriş', 'entry', 'Entry') THEN 'Entry' WHEN {colType} IN ('Cikis', 'Çıkış', 'exit', 'Exit') THEN 'Exit' ELSE 'Blank' END";
+            string orphanFilter = srcCards != null
+                ? $"WHERE {colCardId} IS NOT NULL AND {colCardId} IN (SELECT Id FROM StockCards_temp)"
+                : $"WHERE {colCardId} IS NOT NULL";
 
             string insertSql = $@"
                 INSERT INTO StockMovements_temp (Id, StockCardId, Type, Quantity, Recipient, Department, Date, Description)
-                SELECT {colId}, {colCardId}, {exprType}, COALESCE({colQty}, 0.0), COALESCE({colRecipient}, ''), COALESCE({colDept}, ''), COALESCE({colDate}, datetime('now')), COALESCE({colDesc}, '')
+                SELECT {colId}, {colCardId}, {exprType}, COALESCE({colQty}, 0.0), COALESCE({colRecipient}, ''), COALESCE({colDept}, ''), COALESCE({colDate}, datetime('now', 'localtime')), COALESCE({colDesc}, '')
                 FROM [{srcMovements}]
+                {orphanFilter}
             ";
-            TryAlter(connection, transaction, insertSql);
+            ExecuteCriticalMigrationSql(connection, transaction, insertSql);
         }
 
         // 3. Notes
         var srcNotes = GetSourceTable("Notlar", "Notes");
         if (srcNotes != null)
         {
-            TryAlter(connection, transaction, "DROP TABLE IF EXISTS Notes_temp;");
-            TryAlter(connection, transaction, "CREATE TABLE Notes_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT NOT NULL, Title TEXT NOT NULL, Content TEXT DEFAULT '', CreatedAt TEXT DEFAULT '', UpdatedAt TEXT DEFAULT '')");
+            ExecuteCriticalMigrationSql(connection, transaction, "DROP TABLE IF EXISTS Notes_temp;");
+            ExecuteCriticalMigrationSql(connection, transaction, "CREATE TABLE Notes_temp (Id INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT NOT NULL, Title TEXT NOT NULL, Content TEXT DEFAULT '', CreatedAt TEXT DEFAULT '', UpdatedAt TEXT DEFAULT '')");
 
             string colId = GetSelectColumn(connection, transaction, srcNotes, "Id", "Id");
             string colDate = GetSelectColumn(connection, transaction, srcNotes, "Date", "Tarih", "Date");
@@ -246,10 +256,10 @@ public sealed partial class Database
 
             string insertSql = $@"
                 INSERT INTO Notes_temp (Id, Date, Title, Content, CreatedAt, UpdatedAt)
-                SELECT {colId}, COALESCE({colDate}, datetime('now')), COALESCE({colTitle}, ''), COALESCE({colContent}, ''), COALESCE({colCreatedAt}, ''), COALESCE({colUpdatedAt}, '')
+                SELECT {colId}, COALESCE(NULLIF({colDate}, ''), datetime('now', 'localtime')), COALESCE({colTitle}, ''), COALESCE({colContent}, ''), COALESCE(NULLIF({colCreatedAt}, ''), COALESCE(NULLIF({colDate}, ''), datetime('now', 'localtime'))), COALESCE(NULLIF({colUpdatedAt}, ''), COALESCE(NULLIF({colDate}, ''), datetime('now', 'localtime')))
                 FROM [{srcNotes}]
             ";
-            TryAlter(connection, transaction, insertSql);
+            ExecuteCriticalMigrationSql(connection, transaction, insertSql);
         }
 
         // 4. Units
@@ -380,7 +390,7 @@ public sealed partial class Database
 
         foreach (var t in tablesToDrop)
         {
-            TryAlter(connection, transaction, $"DROP TABLE IF EXISTS [{t}];");
+            ExecuteCriticalMigrationSql(connection, transaction, $"DROP TABLE IF EXISTS [{t}];");
         }
 
         // Rename temp tables to final names
@@ -388,7 +398,7 @@ public sealed partial class Database
         {
             if (TableExists(connection, transaction, tempName))
             {
-                TryAlter(connection, transaction, $"ALTER TABLE [{tempName}] RENAME TO [{finalName}];");
+                ExecuteCriticalMigrationSql(connection, transaction, $"ALTER TABLE [{tempName}] RENAME TO [{finalName}];");
             }
         }
 

@@ -75,9 +75,13 @@ public partial class SettingsViewModel : ViewModelBase
     {
         try
         {
-            if (File.Exists(DbPath))
+            string effectiveDbPath = string.IsNullOrWhiteSpace(DbPath)
+                ? AppPaths.DefaultDatabasePath
+                : DbPath;
+
+            if (File.Exists(effectiveDbPath))
             {
-                var fileInfo = new FileInfo(DbPath);
+                var fileInfo = new FileInfo(effectiveDbPath);
                 double sizeInKb = fileInfo.Length / 1024.0;
                 DatabaseSize = sizeInKb > 1024 
                     ? $"{(sizeInKb / 1024.0):N2} MB" 
@@ -99,6 +103,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task SaveSettingsAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (string.IsNullOrWhiteSpace(MasterSecurityCode) || MasterSecurityCode.Trim().Length < 4)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("security_code_required"));
@@ -111,8 +116,9 @@ public partial class SettingsViewModel : ViewModelBase
         }
 
         var settings = AppServices.Current.Settings;
-        settings.CompanyName = CompanyName.Trim();
-        settings.AutoBackupPath = AutoBackupPath.Trim();
+        int previousThreshold = settings.LowStockThreshold;
+        settings.CompanyName = (CompanyName ?? "").Trim();
+        settings.AutoBackupPath = (AutoBackupPath ?? "").Trim();
         settings.LowStockThreshold = LowStockThreshold;
         settings.MasterSecurityCode = MasterSecurityCode.Trim();
         
@@ -147,6 +153,11 @@ public partial class SettingsViewModel : ViewModelBase
 
 
 
+            if (previousThreshold != settings.LowStockThreshold)
+            {
+                DataEvents.NotifyChanged(DataDomain.StockCards);
+            }
+
             if (langChanged || dbPathChanged)
             {
                 StatusMessage = LocalizationManager.L("saved_restart");
@@ -165,6 +176,10 @@ public partial class SettingsViewModel : ViewModelBase
                     if (!string.IsNullOrEmpty(processPath))
                     {
                         System.Diagnostics.Process.Start(processPath);
+                    }
+                    if (AppServices.TryGetCurrent(out var app))
+                    {
+                        app?.Dispose();
                     }
                     Environment.Exit(0);
                 }
@@ -228,7 +243,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         var policyError = _users.ValidatePasswordPolicy(NewPassword,
             AppServices.Current.Session?.Username);
-        if (policyError != null)
+        if (!string.IsNullOrEmpty(policyError))
         {
             StatusMessage = policyError;
             return;
@@ -341,7 +356,7 @@ public partial class SettingsViewModel : ViewModelBase
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "PRAGMA integrity_check;";
                 var val = cmd.ExecuteScalar()?.ToString();
-                return val ?? "Bilinmeyen hata";
+                return val ?? LocalizationManager.L("db_integrity_unknown_error");
             });
 
             if (result.Equals("ok", StringComparison.OrdinalIgnoreCase))
@@ -410,10 +425,10 @@ public partial class SettingsViewModel : ViewModelBase
                 throw new Exception(LocalizationManager.L("update_check_failed"));
             }
 
-            string currentVersionStr = AppVersion.TrimStart('v', 'V');
+            string currentVersionStr = (AppVersion ?? "").TrimStart('v', 'V').Split('-')[0];
             if (!Version.TryParse(currentVersionStr, out var currentVersion))
             {
-                throw new FormatException("Version string parsing failed.");
+                throw new FormatException(LocalizationManager.L("invalid_version_format"));
             }
 
             if (updateInfo.Version > currentVersion)
@@ -455,6 +470,17 @@ public partial class SettingsViewModel : ViewModelBase
                 string.Format(LocalizationManager.L("update_error"), ex.Message)
             );
         }
+    }
+
+    public override void RefreshSession()
+    {
+        base.RefreshSession();
+        OldPassword = "";
+        NewPassword = "";
+        ConfirmPassword = "";
+        StatusMessage = "";
+        IsSuccess = false;
+        Load();
     }
 
 }

@@ -79,17 +79,19 @@ public partial class UsersViewModel : ViewModelBase
     [RelayCommand]
     public async Task AddUserAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         StatusMessage = "";
         IsSuccess = false;
 
-        if (string.IsNullOrWhiteSpace(NewUsername) || string.IsNullOrWhiteSpace(NewPassword))
+        string cleanUsername = (NewUsername ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(cleanUsername) || string.IsNullOrWhiteSpace(NewPassword))
         {
             StatusMessage = LocalizationManager.L("username_password_required");
             return;
         }
 
-        var policyError = _userRepository.ValidatePasswordPolicy(NewPassword, NewUsername);
-        if (policyError != null)
+        var policyError = _userRepository.ValidatePasswordPolicy(NewPassword, cleanUsername);
+        if (!string.IsNullOrEmpty(policyError))
         {
             StatusMessage = policyError;
             return;
@@ -98,10 +100,10 @@ public partial class UsersViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            bool ok = await _userRepository.AddUserAsync(NewUsername.Trim(), NewPassword, NewRole);
+            bool ok = await _userRepository.AddUserAsync(cleanUsername, NewPassword, NewRole);
             if (ok)
             {
-                StatusMessage = string.Format(LocalizationManager.L("user_added_success"), NewUsername);
+                StatusMessage = string.Format(LocalizationManager.L("user_added_success"), cleanUsername);
                 IsSuccess = true;
                 NewUsername = "";
                 NewPassword = "";
@@ -128,6 +130,7 @@ public partial class UsersViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteUserAsync(User? user)
     {
+        if (!EnsureCanEditForSession()) return;
         var targetUser = user ?? SelectedUser;
         if (targetUser == null) return;
         if (targetUser.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
@@ -177,6 +180,7 @@ public partial class UsersViewModel : ViewModelBase
     [RelayCommand]
     public async Task ChangeRoleAsync(User? user)
     {
+        if (!EnsureCanEditForSession()) return;
         var targetUser = user ?? SelectedUser;
         if (targetUser == null) return;
         if (targetUser.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
@@ -192,24 +196,39 @@ public partial class UsersViewModel : ViewModelBase
         }
 
         string nextRole = targetUser.Role == "admin" ? "user" : "admin";
-        bool ok = await _userRepository.UpdateUserRoleAsync(targetUser.Id, nextRole);
-        if (ok)
+        IsLoading = true;
+        try
         {
-            DataEvents.NotifyChanged(DataDomain.Users);
-            await LoadUsersAsync();
-            StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, nextRole);
-            IsSuccess = true;
+            bool ok = await _userRepository.UpdateUserRoleAsync(targetUser.Id, nextRole);
+            if (ok)
+            {
+                DataEvents.NotifyChanged(DataDomain.Users);
+                await LoadUsersAsync();
+                StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, nextRole);
+                IsSuccess = true;
+            }
+            else
+            {
+                StatusMessage = LocalizationManager.L("role_update_failed");
+                IsSuccess = false;
+            }
         }
-        else
+        catch (Exception ex)
         {
-            StatusMessage = LocalizationManager.L("role_update_failed");
+            AppLogger.LogError("Change user role error", ex);
+            StatusMessage = $"{LocalizationManager.L("error")}: {ex.Message}";
             IsSuccess = false;
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 
     [RelayCommand]
     public async Task ResetPasswordAsync(User? user)
     {
+        if (!EnsureCanEditForSession()) return;
         var targetUser = user ?? SelectedUser;
         if (targetUser == null) return;
 
@@ -229,7 +248,7 @@ public partial class UsersViewModel : ViewModelBase
             }
 
             var policyError = _userRepository.ValidatePasswordPolicy(newPassword, targetUser.Username);
-            if (policyError != null)
+            if (!string.IsNullOrEmpty(policyError))
             {
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), policyError);
                 return;
@@ -265,9 +284,21 @@ public partial class UsersViewModel : ViewModelBase
     public override void RefreshSession()
     {
         base.RefreshSession();
+        NewUsername = "";
+        NewPassword = "";
+        StatusMessage = "";
         _isLoaded = false;
-        AsyncHelper.RunSafe(
-            () => LoadUsersAsync(),
-            ex => AppLogger.LogError("Users refresh failed", ex));
+
+        if (IsAdmin)
+        {
+            AsyncHelper.RunSafe(
+                () => LoadUsersAsync(),
+                ex => AppLogger.LogError("Users refresh failed", ex));
+        }
+        else
+        {
+            Users.Clear();
+            SelectedUser = null;
+        }
     }
 }

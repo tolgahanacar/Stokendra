@@ -238,4 +238,36 @@ public class SearchIndexTests
         // Each prefix search should easily take less than 0.5 ms (typically 0.005 ms)
         Assert.True(avgSearchMs < 1.0, $"Avg search time was too slow: {avgSearchMs}ms");
     }
+
+    [Fact]
+    public void Test_SearchIndex_CamelCaseAndLetterDigitTokens_MatchSubTokens()
+    {
+        var cards = new List<StockCard>
+        {
+            new() { Id = 1, Code = "TK7235", Name = "USBKablo Uzun", Description = "Yüksek hızlı adaptör" },
+            new() { Id = 2, Code = "OTH-1", Name = "Başka Ürün", Description = "Standart" }
+        };
+
+        _index.Build(cards);
+
+        Assert.Single(_index.Search("kablo"));
+        Assert.Single(_index.Search("7235"));
+        Assert.Single(_index.Search("usb"));
+        Assert.Equal("TK7235", _index.Search("kablo")[0].Code);
+        Assert.Equal("TK7235", _index.Search("7235")[0].Code);
+    }
+
+    [Fact]
+    public void Test_SearchIndex_ReturnsReadOnlyResults_AndStockCardDescriptionUpdatesSearchKey()
+    {
+        var card = new StockCard { Id = 1, Code = "C-1", Name = "Router", Description = "Eski not" };
+        _index.Build(new[] { card });
+
+        var bucketResult = _index.Search("router");
+        Assert.Throws<NotSupportedException>(() => ((ICollection<StockCard>)bucketResult).Add(new StockCard()));
+
+        card.Description = "Yedek Fiber Modül";
+        Assert.True(card.MatchesSearch("fiber"));
+        Assert.False(card.MatchesSearch("eski"));
+    }
 }

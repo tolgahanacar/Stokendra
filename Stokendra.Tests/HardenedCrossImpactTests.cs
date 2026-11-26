@@ -1,4 +1,5 @@
 using Xunit;
+using NSubstitute;
 using Stokendra.Data;
 using Stokendra.Data.Repositories;
 using Stokendra.Models;
@@ -342,5 +343,187 @@ public class HardenedCrossImpactTests : IDisposable
         var allMovements = await _movementRepo.GetAllAsync(null, null, null, null, null, null, null);
         Assert.DoesNotContain(allMovements, m => m.Id == exitA.Id);
         Assert.Contains(allMovements, m => m.Id == exitB.Id);
+    }
+
+    [Fact]
+    public async Task Test_StockCardRepository_AddBulkAsync_LogsAuditWithoutSelfDeadlock()
+    {
+        var cards = Enumerable.Range(1, 20).Select(i => new StockCard
+        {
+            Code = $"BLK-{i:D3}",
+            Name = $"Toplu Kart {i}",
+            CardType = "Child",
+            Unit = "Adet"
+        }).ToList();
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        await _stockCardRepo.AddBulkAsync(cards);
+        sw.Stop();
+
+        Assert.True(sw.ElapsedMilliseconds < 5000, $"AddBulkAsync took suspiciously long ({sw.ElapsedMilliseconds}ms), possible SQLite lock.");
+
+        var allCards = await _stockCardRepo.GetAllAsync();
+        Assert.Equal(20, allCards.Count(c => c.Code.StartsWith("BLK-", StringComparison.Ordinal)));
+
+        using var conn = _connectionFactory.CreateConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM AuditLog WHERE Action = 'Insert' AND TableName = 'StockCards';";
+        long auditCount = Convert.ToInt64(cmd.ExecuteScalar());
+        Assert.Equal(20, auditCount);
+    }
+
+    [Fact]
+    public async Task Test_MovementRepository_AddBulkAsync_RejectsInvalidQuantitiesAndRollsBack()
+    {
+        var card = new StockCard { Code = "VAL-01", Name = "Doğrulama Kartı", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        var validMove = new StockMovement { StockCardId = card.Id, Type = "Entry", Quantity = 10, Department = "Genel" };
+        var zeroExit = new StockMovement { StockCardId = card.Id, Type = "Exit", Quantity = 0, Department = "Genel" };
+
+        await Assert.ThrowsAnyAsync<Exception>(() => _movementRepo.AddBulkAsync(new[] { validMove, zeroExit }));
+
+        var persisted = await _movementRepo.GetAllAsync(card.Id, null, null, null, null, null, null);
+        Assert.Empty(persisted);
+    }
+
+    [Fact]
+    public async Task Test_Database_CascadeDeleteOnStockCard_DeletesMovements()
+    {
+        var card = new StockCard { Code = "CAS-01", Name = "Kaskad Kartı", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+        await _movementRepo.AddAsync(new StockMovement { StockCardId = card.Id, Type = "Entry", Quantity = 12, Department = "Genel" });
+
+        using (var conn = _connectionFactory.CreateConnection())
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "DELETE FROM StockCards WHERE Id = @id;";
+            cmd.Parameters.AddWithValue("@id", card.Id);
+            cmd.ExecuteNonQuery();
+        }
+
+        var orphanMoves = await _movementRepo.GetAllAsync(card.Id, null, null, null, null, null, null);
+        Assert.Empty(orphanMoves);
+    }
+
+    [Fact]
+    public async Task Test_ReportsViewModel_DataEventsSync_ReloadsFiltersAndTotalsOnNewMovement()
+    {
+        await _departmentRepo.AddAsync("Bilgi İşlem");
+        var dialogMock = NSubstitute.Substitute.For<Stokendra.Infrastructure.IDialogService>();
+        var reportsVm = new Stokendra.ViewModels.ReportsViewModel(_movementRepo, _departmentRepo, _stockCardRepo, dialogMock);
+        await reportsVm.EnsureLoadedAsync();
+        Assert.Equal(0, reportsVm.TotalConsumption);
+
+        var newCard = new StockCard { Code = "RPT-NEW", Name = "Yeni Rapor Ürünü", CardType = "Child", Category = "Ağ" };
+        await _stockCardRepo.AddAsync(newCard);
+        await _movementRepo.AddAsync(new StockMovement { StockCardId = newCard.Id, Type = "Entry", Quantity = 20, Department = "Bilgi İşlem" });
+        await _movementRepo.AddAsync(new StockMovement { StockCardId = newCard.Id, Type = "Exit", Quantity = 6, Department = "Bilgi İşlem", Recipient = "Ada" });
+
+        DataEvents.NotifyChanged(DataDomain.StockCards);
+        DataEvents.NotifyChanged(DataDomain.Movements);
+        await reportsVm.EnsureLoadedAsync();
+
+        Assert.Equal(6, reportsVm.TotalConsumption);
+        Assert.Contains(reportsVm.StockCards, s => s.Id == newCard.Id);
+    }
+
+    [Fact]
+    public async Task Test_StockMovementsViewModel_ReloadCards_PreservesSelectedCardByIdOnInsert()
+    {
+        var cardB = new StockCard { Code = "B-200", Name = "B Kartı", CardType = "Child" };
+        await _stockCardRepo.AddAsync(cardB);
+
+        var dialogMock = NSubstitute.Substitute.For<Stokendra.Infrastructure.IDialogService>();
+        var vm = new Stokendra.ViewModels.StockMovementsViewModel(_movementRepo, _stockCardRepo, _departmentRepo, dialogMock);
+        await vm.EnsureLoadedAsync();
+
+        // Index 0 = "Tümü", Index 1 = "B-200 - B Kartı"
+        vm.SelectedStockIndex = 1;
+        Assert.StartsWith("B-200", vm.StockItems[vm.SelectedStockIndex]);
+
+        // "A-100" alphabetically precedes "B-200", pushing "B-200" from index 1 to index 2
+        var cardA = new StockCard { Code = "A-100", Name = "A Kartı", CardType = "Child" };
+        await _stockCardRepo.AddAsync(cardA);
+
+        DataEvents.NotifyChanged(DataDomain.StockCards);
+        await vm.EnsureLoadedAsync();
+
+        Assert.Equal(2, vm.SelectedStockIndex);
+        Assert.StartsWith("B-200", vm.StockItems[vm.SelectedStockIndex]);
+    }
+
+    [Fact]
+    public async Task Test_StockMovementsViewModel_ImportXlsxAsync_HandlesEnglishTagAndTurkishWordsAndZeroQty()
+    {
+        var card = new StockCard { Code = "BR-01", Name = "Demir Boru", CardType = "Child" };
+        await _stockCardRepo.AddAsync(card);
+
+        string tempFile = Path.Combine(Path.GetTempPath(), $"stokendra_move_import_{Guid.NewGuid():N}.xlsx");
+        try
+        {
+            using (var wb = new ClosedXML.Excel.XLWorkbook())
+            {
+                var ws = wb.AddWorksheet("Hareketler");
+                ws.Cell(1, 1).Value = "Tarih";
+                ws.Cell(1, 2).Value = "Stok Kodu";
+                ws.Cell(1, 3).Value = "Tür";
+                ws.Cell(1, 4).Value = "Miktar";
+                ws.Cell(1, 5).Value = "Açıklama";
+
+                // Row 2: [E] uppercase English entry tag (case-insensitive code lookup too)
+                ws.Cell(2, 1).Value = DateTime.Today;
+                ws.Cell(2, 2).Value = "br-01";
+                ws.Cell(2, 3).Value = "[E] Entry";
+                ws.Cell(2, 4).Value = "25";
+                ws.Cell(2, 5).Value = "Giriş";
+
+                // Row 3: description/type word containing "bo" ("boru") must map to Exit, NOT Blank
+                ws.Cell(3, 1).Value = DateTime.Today;
+                ws.Cell(3, 2).Value = "BR-01";
+                ws.Cell(3, 3).Value = "Boru Çıkışı";
+                ws.Cell(3, 4).Value = "10";
+                ws.Cell(3, 5).Value = "Bakım";
+
+                // Row 4: Zero quantity Exit must be ignored cleanly
+                ws.Cell(4, 1).Value = DateTime.Today;
+                ws.Cell(4, 2).Value = "BR-01";
+                ws.Cell(4, 3).Value = "Çıkış";
+                ws.Cell(4, 4).Value = "0";
+                ws.Cell(4, 5).Value = "Sıfır miktar";
+
+                wb.SaveAs(tempFile);
+            }
+
+            var dialogMock = NSubstitute.Substitute.For<Stokendra.Infrastructure.IDialogService>();
+            dialogMock.OpenFileAsync(NSubstitute.Arg.Any<string>(), NSubstitute.Arg.Any<string>())
+                .Returns(Task.FromResult<string?>(tempFile));
+
+            var vm = new Stokendra.ViewModels.StockMovementsViewModel(_movementRepo, _stockCardRepo, _departmentRepo, dialogMock);
+            await vm.ImportXlsxAsync();
+
+            var imported = await _movementRepo.GetAllAsync(card.Id, null, null, null, null, null, null);
+            Assert.Equal(2, imported.Count);
+            Assert.Contains(imported, m => m.Type == "Entry" && m.Quantity == 25);
+            Assert.Contains(imported, m => m.Type == "Exit" && m.Quantity == 10);
+
+            var updatedCard = await _stockCardRepo.GetByIdAsync(card.Id);
+            Assert.Equal(15, updatedCard!.CurrentStock);
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+            {
+                try { File.Delete(tempFile); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Test_DepartmentRepository_DuplicateCaseInsensitive_ThrowsLocalizedError()
+    {
+        await _departmentRepo.AddAsync("Bilgi İşlem");
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _departmentRepo.AddAsync("BİLGİ İŞLEM"));
+        Assert.Equal(LocalizationManager.L("dept_exists"), ex.Message);
     }
 }

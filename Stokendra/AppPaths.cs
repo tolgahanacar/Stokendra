@@ -110,10 +110,11 @@ public static class AppPaths
                     File.Copy(oldSettings, newSettings, true);
                 }
 
+                string markerFile = Path.Combine(newRoot, ".legacy_migrated");
                 string oldDb = Path.Combine(oldRoot, "stok.db");
                 string newDb = DefaultDatabasePath;
 
-                if (File.Exists(oldDb))
+                if (File.Exists(oldDb) && !File.Exists(markerFile))
                 {
                     bool shouldCopy = false;
                     if (!File.Exists(newDb))
@@ -122,7 +123,7 @@ public static class AppPaths
                     }
                     else
                     {
-                        // Check if the new database is empty (no stock cards)
+                        // Check if the new database is genuinely unused (no cards, notes, services, or extra users)
                         try
                         {
                             using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={newDb};Pooling=False");
@@ -136,18 +137,23 @@ public static class AppPaths
                             }
                             else
                             {
-                                cmd.CommandText = "SELECT COUNT(*) FROM StockCards";
-                                try
+                                long QueryCount(string tbl)
                                 {
-                                    var cardCount = Convert.ToInt32(cmd.ExecuteScalar());
-                                    if (cardCount == 0) shouldCopy = true;
+                                    try
+                                    {
+                                        cmd.CommandText = $"SELECT COUNT(*) FROM [{tbl}]";
+                                        return Convert.ToInt64(cmd.ExecuteScalar() ?? 0);
+                                    }
+                                    catch { return 0; }
                                 }
-                                catch
-                                {
-                                    cmd.CommandText = "SELECT COUNT(*) FROM StokKartlari";
-                                    var cardCount = Convert.ToInt32(cmd.ExecuteScalar());
-                                    if (cardCount == 0) shouldCopy = true;
-                                }
+
+                                long cardCount = QueryCount("StockCards") + QueryCount("StokKartlari");
+                                long noteCount = QueryCount("Notes") + QueryCount("Notlar");
+                                long svcCount = QueryCount("ServiceRecords") + QueryCount("ServisKayitlari");
+                                long userCount = QueryCount("Users") + QueryCount("Kullanicilar");
+
+                                if (cardCount == 0 && noteCount == 0 && svcCount == 0 && userCount <= 1)
+                                    shouldCopy = true;
                             }
                         }
                         catch
@@ -159,14 +165,31 @@ public static class AppPaths
                     if (shouldCopy)
                     {
                         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+                        // Checkpoint legacy WAL if present before copying main db
+                        try
+                        {
+                            using var oldConn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={oldDb};Pooling=False");
+                            oldConn.Open();
+                            using var walCmd = oldConn.CreateCommand();
+                            walCmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                            walCmd.ExecuteNonQuery();
+                        }
+                        catch { }
+
                         if (File.Exists(newDb))
                         {
                             string backupPath = newDb + ".backup";
                             if (File.Exists(backupPath)) File.Delete(backupPath);
                             File.Move(newDb, backupPath);
                         }
+                        if (File.Exists(newDb + "-wal")) File.Delete(newDb + "-wal");
+                        if (File.Exists(newDb + "-shm")) File.Delete(newDb + "-shm");
+
                         File.Copy(oldDb, newDb, true);
                     }
+
+                    try { File.WriteAllText(markerFile, DateTime.UtcNow.ToString("O")); } catch { }
                 }
             }
         }

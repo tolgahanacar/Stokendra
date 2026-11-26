@@ -112,14 +112,15 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand] public void NavigateToSettings()    { if (CurrentPage == _settings) return; CurrentPage = _settings;   ActiveMenu = "settings";   }
     [RelayCommand] public void NavigateToStocks()      { if (CurrentPage == _stocks) return; CurrentPage = _stocks;     ActiveMenu = "stocks";     AsyncHelper.RunSafe(() => _stocks.EnsureLoadedAsync(), ex => AppLogger.LogError("Stocks nav refresh failed", ex)); }
     [RelayCommand] public void NavigateToDepartments() { if (CurrentPage == _departments) return; CurrentPage = _departments; ActiveMenu = "departments"; AsyncHelper.RunSafe(() => _departments.EnsureLoadedAsync(), ex => AppLogger.LogError("Departments nav refresh failed", ex)); }
-    [RelayCommand] public void NavigateToReports()     { if (CurrentPage == _reports) return; CurrentPage = _reports;     ActiveMenu = "reports";     }
+    [RelayCommand] public void NavigateToReports()     { if (CurrentPage == _reports) return; CurrentPage = _reports;     ActiveMenu = "reports";     AsyncHelper.RunSafe(() => _reports.EnsureLoadedAsync(), ex => AppLogger.LogError("Reports nav refresh failed", ex)); }
     [RelayCommand] public void NavigateToGuide()       { if (CurrentPage == _guide) return; CurrentPage = _guide;       ActiveMenu = "guide";       }
     [RelayCommand] public void NavigateToUsers()       { if (CurrentPage == _users) return; CurrentPage = _users;       ActiveMenu = "users";       AsyncHelper.RunSafe(() => _users.EnsureLoadedAsync(), ex => AppLogger.LogError("Users nav refresh failed", ex)); }
     [RelayCommand] public void NavigateToFeedback()    { if (CurrentPage == _feedback) return; CurrentPage = _feedback; ActiveMenu = "feedback";    _feedback.RefreshDiagnostics(); }
 
     public override void RefreshSession()
     {
-        CurrentUser = AppServices.Current.Session?.Username ?? "admin";
+        base.RefreshSession();
+        CurrentUser = AppServices.TryGetCurrent(out var app) ? (app?.Session?.Username ?? "admin") : "admin";
         OnPropertyChanged(nameof(CurrentUser));
         OnPropertyChanged(nameof(CurrentRole));
 
@@ -136,12 +137,23 @@ public partial class MainViewModel : ViewModelBase
         _users.RefreshSession();
         _feedback.RefreshSession();
 
-        NavigateToDashboard();
+        if (CurrentPage == _dashboard)
+        {
+            AsyncHelper.RunSafe(() => _dashboard.EnsureLoadedAsync(), ex => AppLogger.LogError("Dashboard refresh failed", ex));
+        }
+        else
+        {
+            NavigateToDashboard();
+        }
     }
 
     [RelayCommand]
     public void Logout()
     {
+        _downloadCts?.Cancel();
+        _downloadCts?.Dispose();
+        _downloadCts = null;
+
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             AppServices.Current.EndSession();
@@ -225,7 +237,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public async Task DownloadAndInstallUpdateAsync()
     {
-        if (_pendingUpdate == null) return;
+        if (IsDownloading || _pendingUpdate == null) return;
 
         // İndirilebilir installer yoksa tarayıcıda aç
         if (string.IsNullOrEmpty(_pendingUpdate.InstallerDownloadUrl))
@@ -243,7 +255,9 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            string fileName = _pendingUpdate.InstallerFileName ?? $"Stokendra_Setup_{_pendingUpdate.TagName}.exe";
+            string rawName = _pendingUpdate.InstallerFileName ?? $"Stokendra_Setup_{_pendingUpdate.TagName}.exe";
+            string fileName = Path.GetFileName(rawName);
+            if (string.IsNullOrWhiteSpace(fileName)) fileName = "Stokendra_Setup.exe";
             string downloadsDir = Path.Combine(AppPaths.ApplicationDataDirectory, "updates");
             Directory.CreateDirectory(downloadsDir);
             string destPath = Path.Combine(downloadsDir, fileName);
@@ -342,6 +356,7 @@ public partial class MainViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
+            IsDownloading = false;
             AppLogger.LogError("Failed to launch installer.", ex);
             DownloadStatusText = string.Format(LocalizationManager.L("update_launch_error"), ex.Message);
         }

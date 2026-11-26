@@ -44,14 +44,13 @@ public class FeedbackService : IFeedbackService
                 ? settings.Web3FormsAccessKey.Trim()
                 : "";
 
-            // Eğer özel webhook varsa veya web3forms anahtarı tanımlıysa
             if (!string.IsNullOrWhiteSpace(accessKey) || !string.IsNullOrWhiteSpace(settings.FeedbackWebhookUrl))
             {
                 var payload = new
                 {
                     access_key = accessKey,
-                    subject = $"[Stokendra v{AppInfo.VersionString}] [{report.Type}] {report.Subject}",
-                    from_name = string.IsNullOrWhiteSpace(report.UserEmail) ? "Stokendra Kullanıcısı" : report.UserEmail,
+                    subject = $"[Stokendra {AppInfo.VersionString}] [{report.Type}] {report.Subject}",
+                    from_name = string.IsNullOrWhiteSpace(report.UserEmail) ? "Stokendra User" : report.UserEmail,
                     email = string.IsNullOrWhiteSpace(report.UserEmail) ? TargetEmail : report.UserEmail,
                     message = fullReport
                 };
@@ -63,69 +62,104 @@ public class FeedbackService : IFeedbackService
                 {
                     return (true, LocalizationManager.L("feedback_send_success"));
                 }
+
+                AppLogger.LogError($"Feedback HTTP submission returned {(int)response.StatusCode} ({response.ReasonPhrase})");
             }
 
-            // Doğrudan API yapılandırılmamışsa veya başarısız olursa istemciye mailto yönlendirmesi öner
-            OpenDefaultMailClient(report);
-            return (true, LocalizationManager.L("feedback_opened_in_mail_client"));
+            // Doğrudan API yapılandırılmamışsa veya HTTP başarısız olduysa e-posta istemcisine yönlendir
+            if (TryOpenDefaultMailClient(report, out string? mailError))
+            {
+                return (true, LocalizationManager.L("feedback_opened_in_mail_client"));
+            }
+
+            return (false, $"{LocalizationManager.L("feedback_send_failed")}: {mailError}");
         }
         catch (Exception ex)
         {
             AppLogger.LogError("FeedbackService send error", ex);
-            // Hata durumunda da kullanıcının emeği kaybolmasın diye mailto ile aç
-            OpenDefaultMailClient(report);
+            if (TryOpenDefaultMailClient(report, out _))
+            {
+                return (true, LocalizationManager.L("feedback_opened_in_mail_client"));
+            }
             return (false, $"{LocalizationManager.L("feedback_send_failed")}: {ex.Message}");
         }
     }
 
     public void OpenDefaultMailClient(FeedbackReport report)
     {
+        TryOpenDefaultMailClient(report, out _);
+    }
+
+    private bool TryOpenDefaultMailClient(FeedbackReport report, out string? error)
+    {
+        error = null;
         try
         {
             string email = TargetEmail;
-            string subject = $"[Stokendra v{AppInfo.VersionString}] [{report.Type}] {report.Subject}";
+            string subject = $"[Stokendra {AppInfo.VersionString}] [{report.Type}] {report.Subject}";
+            string encodedSubject = Uri.EscapeDataString(subject);
 
-            // Mailto gövdesi (Windows mailto max URL uzunluğu sınırı ~2000 karakterdir)
-            var sb = new StringBuilder();
-            sb.AppendLine($"--- STOKENDRA GERİ BİLDİRİM / HATA RAPORU ---");
-            sb.AppendLine($"Tür: {report.Type}");
-            sb.AppendLine($"Konu: {report.Subject}");
+            // Windows ShellExecute mailto: URI length limit (~2000 chars); progressively trim logs then message so launch never fails.
+            const int MaxMailtoLength = 1900;
+            string prefixHeader = $"[Stokendra {AppInfo.VersionString}] {report.Type}\nSubject: {report.Subject}\n";
             if (!string.IsNullOrWhiteSpace(report.UserEmail))
-                sb.AppendLine($"Gönderen: {report.UserEmail}");
-            sb.AppendLine($"Tarih: {report.CreatedAt:yyyy-MM-dd HH:mm:ss}");
-            sb.AppendLine();
-            sb.AppendLine($"[AÇIKLAMA]");
-            sb.AppendLine(report.Message);
-            sb.AppendLine();
+                prefixHeader += $"From: {report.UserEmail}\n";
+            prefixHeader += $"Time: {report.CreatedAt:yyyy-MM-dd HH:mm:ss}\n\n{report.Message}\n";
 
-            if (report.IncludeLogs)
+            string sysSection = report.IncludeLogs && !string.IsNullOrWhiteSpace(report.SystemInfo)
+                ? $"\n--- SYSTEM ---\n{report.SystemInfo}"
+                : "";
+
+            string logText = report.IncludeLogs ? (report.RecentLogs ?? "") : "";
+            // Prefer the newest lines from error.log (tail), not oldest lines
+            if (logText.Length > 600)
+                logText = "...\n" + logText.Substring(logText.Length - 600);
+
+            string BuildBody(string msgHeader, string sys, string logs)
             {
-                sb.AppendLine($"[SİSTEM BİLGİSİ]");
-                sb.AppendLine(report.SystemInfo);
+                if (string.IsNullOrWhiteSpace(logs)) return msgHeader + sys;
+                return msgHeader + sys + "\n--- RECENT LOGS ---\n" + logs;
+            }
 
-                if (!string.IsNullOrWhiteSpace(report.RecentLogs))
+            string body = BuildBody(prefixHeader, sysSection, logText);
+            string mailtoUrl = $"mailto:{email}?subject={encodedSubject}&body={Uri.EscapeDataString(body)}";
+
+            if (mailtoUrl.Length > MaxMailtoLength && !string.IsNullOrEmpty(logText))
+            {
+                // Binary trim logs to fit budget
+                while (mailtoUrl.Length > MaxMailtoLength && logText.Length > 0)
                 {
-                    sb.AppendLine($"[SON HATA GÜNLÜĞÜ ÖZETİ]");
-                    // Mailto boyutunu aşmamak için ilk 500 karakterini ekle
-                    string truncatedLogs = report.RecentLogs.Length > 500
-                        ? report.RecentLogs.Substring(0, 500) + "\r\n... [Kalan loglar kırpıldı]"
-                        : report.RecentLogs;
-                    sb.AppendLine(truncatedLogs);
+                    int cut = Math.Max(1, logText.Length / 2);
+                    logText = logText.Length > cut ? logText.Substring(cut) : "";
+                    body = BuildBody(prefixHeader, sysSection, string.IsNullOrEmpty(logText) ? "" : "..." + logText);
+                    mailtoUrl = $"mailto:{email}?subject={encodedSubject}&body={Uri.EscapeDataString(body)}";
                 }
             }
 
-            string body = sb.ToString();
-            string mailtoUrl = $"mailto:{email}?subject={Uri.EscapeDataString(subject)}&body={Uri.EscapeDataString(body)}";
+            if (mailtoUrl.Length > MaxMailtoLength)
+            {
+                // Still too long (very long user message): truncate body directly preserving valid encoding
+                body = body.Substring(0, Math.Min(body.Length, 900));
+                mailtoUrl = $"mailto:{email}?subject={encodedSubject}&body={Uri.EscapeDataString(body)}";
+                while (mailtoUrl.Length > MaxMailtoLength && body.Length > 64)
+                {
+                    body = body.Substring(0, (int)(body.Length * 0.8));
+                    mailtoUrl = $"mailto:{email}?subject={encodedSubject}&body={Uri.EscapeDataString(body + "\n...[truncated]")}";
+                }
+            }
 
             Process.Start(new ProcessStartInfo
             {
                 FileName = mailtoUrl,
                 UseShellExecute = true
             });
+            return true;
         }
         catch (Exception ex)
         {
+            error = ex.Message;
             AppLogger.LogError("OpenDefaultMailClient failed", ex);
+            return false;
         }
     }
 
@@ -133,8 +167,8 @@ public class FeedbackService : IFeedbackService
     {
         var sb = new StringBuilder();
         sb.AppendLine("================================================================================");
-        sb.AppendLine($"STOKENDRA KULLANICI GERİ BİLDİRİM RAPORU");
-        sb.AppendLine($"Uygulama Sürümü: v{AppInfo.VersionString}");
+        sb.AppendLine("STOKENDRA KULLANICI GERİ BİLDİRİM RAPORU");
+        sb.AppendLine($"Uygulama Sürümü: {AppInfo.VersionString}");
         sb.AppendLine($"Tarih / Saat    : {report.CreatedAt:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine($"Bildirim Türü   : {report.Type}");
         sb.AppendLine($"Konu            : {report.Subject}");
@@ -155,7 +189,7 @@ public class FeedbackService : IFeedbackService
 
             sb.AppendLine("================================================================================");
             sb.AppendLine("[SON HATA GÜNLÜKLERİ (error.log)]");
-            sb.AppendLine(string.IsNullOrWhiteSpace(report.RecentLogs) ? "Kayıtlı hata logu yok." : report.RecentLogs);
+            sb.AppendLine(string.IsNullOrWhiteSpace(report.RecentLogs) ? "No error logs recorded." : report.RecentLogs);
             sb.AppendLine("================================================================================");
         }
 

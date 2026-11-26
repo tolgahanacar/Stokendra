@@ -87,7 +87,7 @@ public partial class StockMovementsViewModel : ViewModelBase
 
     private void OnDataChanged(DataDomain domain)
     {
-        if (domain == DataDomain.Movements)
+        if (domain is DataDomain.Movements or DataDomain.Departments)
         {
             _isLoaded = false;
         }
@@ -113,12 +113,20 @@ public partial class StockMovementsViewModel : ViewModelBase
     {
         try
         {
-            _allCards = await _stockCards.GetChildCardsAsync();
             int previousIndex = SelectedStockIndex;
+            int? previousCardId = (previousIndex > 0 && previousIndex - 1 < _allCards.Count)
+                ? _allCards[previousIndex - 1].Id
+                : null;
+
+            _allCards = await _stockCards.GetChildCardsAsync();
             StockItems.Clear();
             StockItems.Add(LocalizationManager.L("all"));
             foreach (var k in _allCards) StockItems.Add($"{k.Code} - {k.Name}");
-            SelectedStockIndex = previousIndex < StockItems.Count ? previousIndex : 0;
+
+            int restoredIndex = previousCardId.HasValue
+                ? _allCards.FindIndex(c => c.Id == previousCardId.Value)
+                : -1;
+            SelectedStockIndex = restoredIndex >= 0 ? restoredIndex + 1 : 0;
         }
         catch (Exception ex)
         {
@@ -150,13 +158,14 @@ public partial class StockMovementsViewModel : ViewModelBase
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
             string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate.Date, endDate: EndDate.Date.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate.Date, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
 
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate.Date, endDate: EndDate.Date.AddDays(1), department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate.Date, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
 
             token.ThrowIfCancellationRequested();
 
@@ -173,17 +182,21 @@ public partial class StockMovementsViewModel : ViewModelBase
             AppLogger.LogError("LoadMovements error", ex);
             StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; 
         }
-        finally { IsLoading = false; }
+        finally
+        {
+            if (token == _cts?.Token)
+                IsLoading = false;
+        }
     }
 
     [RelayCommand]
     public async Task ClearFiltersAsync()
     {
-        _searchCts?.Cancel();
         _cts?.Cancel();
         StartDate          = new DateTime(2024, 1, 1);
         EndDate            = DateTime.Today;
         SearchText         = "";
+        _searchCts?.Cancel();
         SelectedStockIndex = 0;
         SelectedTypeIndex  = 0;
         CurrentPage        = 1;
@@ -219,6 +232,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteMovementAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (SelectedMovements.Count >= 2)
         {
             int count = SelectedMovements.Count;
@@ -274,6 +288,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task AddMovementAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         var vm = new AddMovementViewModel(_stockCards, _departments);
         if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
         {
@@ -295,6 +310,7 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditMovementAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         if (SelectedMovements.Count == 0) return;
         
         if (SelectedMovements.Count == 1)
@@ -355,7 +371,8 @@ public partial class StockMovementsViewModel : ViewModelBase
             int? cardId = SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count ? _allCards[SelectedStockIndex - 1].Id : null;
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
 
-            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate.Date, EndDate.Date.AddDays(1), null, type, null, null);
+            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate.Date, safeEnd, null, type, null, null);
             if (recordsToExport.Count == 0)
             {
                 recordsToExport = Movements.ToList();
@@ -400,12 +417,19 @@ public partial class StockMovementsViewModel : ViewModelBase
     [RelayCommand]
     public async Task ImportXlsxAsync()
     {
+        if (!EnsureCanEditForSession()) return;
         string? path = await _dialogService.OpenFileAsync(LocalizationManager.L("import_excel"), "Excel File (*.xlsx)|*.xlsx");
         if (string.IsNullOrEmpty(path)) return;
 
         try
         {
             StatusText = LocalizationManager.L("loading");
+            if (_cardsDirty || _allCards.Count == 0)
+            {
+                await ReloadCardsAsync();
+                _cardsDirty = false;
+            }
+            var cardsSnapshot = _allCards.ToList();
             int count = 0;
             await Task.Run(async () => 
             {
@@ -431,20 +455,22 @@ public partial class StockMovementsViewModel : ViewModelBase
                     string code = col["code"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["code"])) : "";
                     if (string.IsNullOrEmpty(code)) return null;
 
-                    var card = _allCards.FirstOrDefault(c => c.Code == code);
+                    var card = cardsSnapshot.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
                     if (card == null) return null;
 
                     string typeRaw = col["type"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["type"])) : "";
                     string lowerType = typeRaw.ToTurkishLower();
                     string type;
-                    if (typeRaw.Contains("[G]") || lowerType.Contains("giri") || lowerType.Contains("giris") || lowerType.Contains("entry"))
+                    if (typeRaw.Contains("[G]") || typeRaw.Contains("[E]") || lowerType.Contains("giri") || lowerType.Contains("giris") || lowerType.Contains("entry"))
                         type = "Entry";
-                    else if (typeRaw.Contains("[B]") || lowerType.Contains("bo") || lowerType.Contains("blank"))
+                    else if (typeRaw.Contains("[B]") || lowerType.Contains("boş") || lowerType.Contains("bos") || lowerType.Contains("blank"))
                         type = "Blank";
                     else
                         type = "Exit";
 
                     double qty = col["quantity"] > 0 ? ExcelImportHelper.ParseCellDouble(row.Cell(col["quantity"]), 1.0) : 1.0;
+                    if (double.IsNaN(qty) || double.IsInfinity(qty) || qty < 0 || qty > 1_000_000_000 || (type != "Blank" && qty <= 0))
+                        return null;
                     string department = col["department"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["department"])) : "";
                     string recipient = col["recipient"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["recipient"])) : "";
                     
@@ -478,7 +504,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         }
         catch (Exception ex) { 
             AppLogger.LogError("Import error", ex);
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("import_error")}: {ex.Message}");
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), LocalizationManager.L("import_error", ex.Message));
         }
     }
 

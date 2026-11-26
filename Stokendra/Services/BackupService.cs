@@ -103,7 +103,7 @@ public class BackupService : IBackupService
     public async Task<string> PerformBackupAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Backup_{timestamp}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Backup_{timestamp}_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -132,7 +132,7 @@ public class BackupService : IBackupService
     public async Task<string> ExportAllExcelAsync(string destFolder)
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
-        string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Excel_{timestamp}");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"Stokendra_Excel_{timestamp}_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
 
         try
@@ -145,7 +145,7 @@ public class BackupService : IBackupService
             await ExportBirimlerAsync(tempDir);
             await ExportAuditLogAsync(tempDir);
 
-            string zipFile = Path.Combine(destFolder, $"Stokendra_ExcelExport_{timestamp}.zip");
+            string zipFile = Path.Combine(destFolder, $"Stokendra_ExcelExport_{timestamp}_{Guid.NewGuid():N}.zip");
             if (File.Exists(zipFile)) File.Delete(zipFile);
             
             await Task.Run(() => ZipFile.CreateFromDirectory(tempDir, zipFile, CompressionLevel.Fastest, false));
@@ -159,9 +159,13 @@ public class BackupService : IBackupService
 
     private void CopyDatabase(string tempDir)
     {
-        string dbPath = string.IsNullOrWhiteSpace(_settings.DbPath)
-            ? AppPaths.DefaultDatabasePath
-            : _settings.DbPath;
+        string? liveDbPath = null;
+        if (AppServices.TryGetCurrent(out var app) && app != null)
+            liveDbPath = app.Database.DatabasePath;
+
+        string dbPath = !string.IsNullOrWhiteSpace(liveDbPath)
+            ? liveDbPath
+            : (!string.IsNullOrWhiteSpace(_settings.DbPath) ? _settings.DbPath : AppPaths.DefaultDatabasePath);
 
         if (!File.Exists(dbPath)) return;
 
