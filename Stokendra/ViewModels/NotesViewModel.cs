@@ -42,7 +42,16 @@ public partial class NotesViewModel : ViewModelBase
 
         DataEvents.DataChanged += OnDataChanged;
 
-        SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
+        SelectedNotes.CollectionChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(HasSelection));
+            if (_isLoaded)
+            {
+                StatusText = SelectedNotes.Count > 0
+                    ? LocalizationManager.L("records_info", Notes.Count, SelectedNotes.Count)
+                    : LocalizationManager.L("records_info", Notes.Count, 0).Split('•')[0].Trim();
+            }
+        };
     }
 
     private bool _isLoaded;

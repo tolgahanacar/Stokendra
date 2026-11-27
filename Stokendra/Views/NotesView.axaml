@@ -6,10 +6,10 @@
              Background="#0C0E14"
              x:CompileBindings="False">
 
-    <Grid ColumnDefinitions="320,*">
+    <Grid ColumnDefinitions="440,4,*">
 
         <!-- Left: Notes List -->
-        <Border Grid.Column="0" Background="#0E1119" BorderBrush="#1E2535" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" MinWidth="320" Background="#0E1119" BorderBrush="#1E2535" BorderThickness="0,0,1,0">
             <Grid RowDefinitions="Auto,Auto,*">
 
                 <!-- Title and Status -->
@@ -60,8 +60,7 @@
                     <ListBox Name="NotesGrid"
                              Margin="12,0"
                              ItemsSource="{Binding Notes}"
-                             SelectedItem="{Binding SelectedNote}"
-                             SelectionMode="Multiple, Toggle"
+                             SelectionMode="Multiple"
                              Background="Transparent"
                              BorderThickness="0">
                         <ListBox.KeyBindings>
@@ -134,8 +133,11 @@
             </Grid>
         </Border>
 
+        <!-- Splitter -->
+        <GridSplitter Grid.Column="1" Background="#1E2535" ResizeDirection="Columns"/>
+
         <!-- Right: Detail / Edit -->
-        <Grid Grid.Column="1" Background="#0C0E14" RowDefinitions="*,Auto">
+        <Grid Grid.Column="2" MinWidth="200" Background="#0C0E14" RowDefinitions="*,Auto">
 
             <!-- View Mode -->
             <ScrollViewer Grid.Row="0" IsVisible="{Binding !IsEditing}">
@@ -144,8 +146,8 @@
                                IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNull}}"
                                Foreground="#64748B" FontSize="14"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               TextWrapping="Wrap" Margin="40"/>
-                    <StackPanel Margin="40,32" Spacing="20"
+                               TextWrapping="Wrap" Margin="32"/>
+                    <StackPanel Margin="32,28" Spacing="20"
                                 IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}">
                     
                     <StackPanel Spacing="8">

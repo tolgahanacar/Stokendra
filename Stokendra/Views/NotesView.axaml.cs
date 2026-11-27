@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Stokendra.Models;
 using Stokendra.ViewModels;
+using System.Linq;
 
 namespace Stokendra.Views;
 
@@ -10,6 +11,15 @@ public partial class NotesView : UserControl
     public NotesView()
     {
         InitializeComponent();
+
+        Unloaded += (s, e) =>
+        {
+            if (DataContext is NotesViewModel vm)
+            {
+                vm.SelectedNotes.Clear();
+                vm.SelectedNote = null;
+            }
+        };
 
         var listBox = this.FindControl<ListBox>("NotesGrid");
         if (listBox != null)
@@ -36,6 +46,10 @@ public partial class NotesView : UserControl
                         if (e.AddedItems.Count > 0 && e.AddedItems[e.AddedItems.Count - 1] is Note lastClicked)
                         {
                             vm.SelectedNote = lastClicked;
+                        }
+                        else if (vm.SelectedNote == null || !vm.SelectedNotes.Contains(vm.SelectedNote))
+                        {
+                            vm.SelectedNote = vm.SelectedNotes[^1];
                         }
                     }
                     else if (vm.SelectedNotes.Count == 0)

@@ -213,4 +213,44 @@ public class PerformanceAndUiImprovementsTests : IDisposable
         var styleKey = styleKeyProp!.GetValue(picker) as Type;
         Assert.Equal(typeof(Avalonia.Controls.CalendarDatePicker), styleKey);
     }
+
+    [Fact]
+    public void Test_NotesListBox_SupportsShiftRangeAndCtrlMultiSelect()
+    {
+        var notes = Enumerable.Range(1, 5)
+            .Select(i => new Note { Id = i, Title = $"Not {i}" })
+            .ToList();
+
+        var listBox = new Avalonia.Controls.ListBox
+        {
+            ItemsSource = notes,
+            SelectionMode = Avalonia.Controls.SelectionMode.Multiple
+        };
+
+        var updateMethod = typeof(Avalonia.Controls.Primitives.SelectingItemsControl).GetMethod(
+            "UpdateSelection",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            null,
+            new[] { typeof(int), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) },
+            null);
+        Assert.NotNull(updateMethod);
+
+        // Plain click on index 1 -> only index 1 selected
+        updateMethod!.Invoke(listBox, new object[] { 1, true, false, false, false, false });
+        Assert.Single(listBox.SelectedItems!);
+
+        // Shift+Click on index 4 -> range [1..4] selected (4 items)
+        updateMethod.Invoke(listBox, new object[] { 4, true, true, false, false, false });
+        Assert.Equal(4, listBox.SelectedItems!.Count);
+        Assert.Equal(new[] { 2, 3, 4, 5 }, listBox.SelectedItems.OfType<Note>().Select(n => n.Id).OrderBy(x => x).ToArray());
+
+        // Ctrl+Click on index 0 -> adds index 0 to selection (5 items total)
+        updateMethod.Invoke(listBox, new object[] { 0, true, false, true, false, false });
+        Assert.Equal(5, listBox.SelectedItems!.Count);
+
+        // Plain click on index 2 -> collapses back to single item (index 2)
+        updateMethod.Invoke(listBox, new object[] { 2, true, false, false, false, false });
+        Assert.Single(listBox.SelectedItems!);
+        Assert.Equal(3, listBox.SelectedItems!.OfType<Note>().First().Id);
+    }
 }
