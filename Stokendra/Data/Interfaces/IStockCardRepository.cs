@@ -78,4 +78,7 @@ public interface IStockCardRepository
 
     /// <summary>Gets the total count of stock cards matching search and type filters.</summary>
     Task<int> GetCountAsync(string? searchTerm, string? cardType = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets total, low-stock, and depleted counts for child stock cards matching an optional search term.</summary>
+    Task<(int TotalCount, int LowStockCount, int DepletedCount)> GetChildStockSummaryAsync(string? searchTerm, int fallbackThreshold = 3, CancellationToken cancellationToken = default);
 }

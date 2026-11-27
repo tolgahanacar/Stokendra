@@ -42,9 +42,21 @@ public partial class StockCardsViewModel : ViewModelBase
     public BulkObservableCollection<StockCard> Cards { get; } = new();
     public BulkObservableCollection<StockCard> SelectedCards { get; } = new();
 
-    private List<StockCard> _allCards = new();
-    private readonly SearchIndex<StockCard> _searchIndex;
+    private const int PageSize = 50;
+    private int _totalCount;
     private bool _isLoaded;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
 
     // For Debounce
     private CancellationTokenSource? _filterCts;
@@ -60,16 +72,14 @@ public partial class StockCardsViewModel : ViewModelBase
         _departments = departments;
         _dialogService = dialogService;
 
-        _searchIndex = new SearchIndex<StockCard>(
-            k => new[] { k.Code, k.Name, k.Category, k.Description },
-            (k, term) => k.MatchesSearch(term));
-
         DataEvents.DataChanged += OnDataChanged;
 
         SelectedCards.CollectionChanged += (s, e) => {
             IsMultipleSelected = SelectedCards.Count >= 2;
             OnPropertyChanged(nameof(IsCardSelected));
             OnPropertyChanged(nameof(IsSingleCardSelected));
+            if (_isLoaded)
+                UpdateStatusText();
         };
     }
 
@@ -100,10 +110,18 @@ public partial class StockCardsViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            _allCards = await _stockCards.GetAllAsync(token);
-            _searchIndex.Build(_allCards);
+            string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            _totalCount = await _stockCards.GetCountAsync(term, null, token);
+            TotalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
+
+            var data = await _stockCards.GetPagedAsync(CurrentPage, PageSize, term, null, token);
+            token.ThrowIfCancellationRequested();
+
+            Cards.ReplaceAll(data);
             _isLoaded = true;
-            ApplySearch();
+            UpdateStatusText();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) 
@@ -118,6 +136,20 @@ public partial class StockCardsViewModel : ViewModelBase
         }
     }
 
+    private void UpdateStatusText()
+    {
+        string pageInfo = LocalizationManager.L("total_records_page", _totalCount, CurrentPage, TotalPages);
+        if (SelectedCards.Count > 0)
+        {
+            string selectedPart = LocalizationManager.L("records_info", _totalCount, SelectedCards.Count).Split('•').LastOrDefault()?.Trim() ?? "";
+            StatusText = string.IsNullOrEmpty(selectedPart) ? pageInfo : $"{pageInfo}  •  {selectedPart}";
+        }
+        else
+        {
+            StatusText = pageInfo;
+        }
+    }
+
     partial void OnSearchTextChanged(string value) => ScheduleFilter();
 
     private async void ScheduleFilter()
@@ -128,8 +160,9 @@ public partial class StockCardsViewModel : ViewModelBase
         var token = _filterCts.Token;
         try
         {
-            await Task.Delay(25, token);
-            ApplySearch();
+            await Task.Delay(120, token);
+            CurrentPage = 1;
+            await LoadAsync();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -138,11 +171,24 @@ public partial class StockCardsViewModel : ViewModelBase
         }
     }
 
-    private void ApplySearch()
+    [RelayCommand(CanExecute = nameof(CanNextPage))]
+    public async Task NextPageAsync()
     {
-        var data = _searchIndex.Search(SearchText);
-        Cards.ReplaceAll(data);
-        StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPrevPage))]
+    public async Task PrevPageAsync()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadAsync();
+        }
     }
 
     [RelayCommand]
@@ -357,11 +403,30 @@ public partial class StockCardsViewModel : ViewModelBase
         }
     }
 
+    private async Task<List<StockCard>> FetchAllMatchingCardsAsync()
+    {
+        if (_totalCount <= Cards.Count && Cards.Count > 0)
+            return Cards.ToList();
+
+        string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+        var all = new List<StockCard>();
+        const int batchSize = 5000;
+        int page = 1;
+        while (true)
+        {
+            var batch = await _stockCards.GetPagedAsync(page, batchSize, term, null);
+            if (batch == null || batch.Count == 0) break;
+            all.AddRange(batch);
+            if (batch.Count < batchSize) break;
+            page++;
+        }
+        return all.Count > 0 ? all : Cards.ToList();
+    }
+
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        var snapshot = Cards.ToList();
-        if (snapshot.Count == 0)
+        if (_totalCount == 0 && Cards.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -375,6 +440,8 @@ public partial class StockCardsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("loading");
+            var snapshot = await FetchAllMatchingCardsAsync();
+            if (snapshot.Count == 0) return;
             await Task.Run(() => {
                 var headers = new[] { 
                     LocalizationManager.L("code_no"), 
@@ -403,8 +470,7 @@ public partial class StockCardsViewModel : ViewModelBase
     [RelayCommand]
     public async Task PrintAsync()
     {
-        var snapshot = Cards.ToList();
-        if (snapshot.Count == 0)
+        if (_totalCount == 0 && Cards.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -413,6 +479,8 @@ public partial class StockCardsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("preparing_print");
+            var snapshot = await FetchAllMatchingCardsAsync();
+            if (snapshot.Count == 0) return;
             string title = LocalizationManager.L("stock_cards");
             string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
             string footer = LocalizationManager.L("total_records_page", snapshot.Count, 1, 1);

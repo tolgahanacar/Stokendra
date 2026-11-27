@@ -65,16 +65,34 @@ public class ReportsViewModelTests
         vm.SelectedDepartment = "Sicil";
         vm.SelectedStockCard = new StockCardReportItem(42, "CRG-725");
 
-        _movementsMock.GetPagedAsync(
-            1, 5000,
+        _movementsMock.GetConsumptionSummaryAsync(
             stockCardId: 42,
-            startDate: Arg.Any<DateTime>(),
-            endDate: Arg.Any<DateTime>(),
+            startDate: Arg.Any<DateTime?>(),
+            endDate: Arg.Any<DateTime?>(),
             department: "Sicil",
             movementType: "Exit",
-            category: null,
-            searchTerm: null,
-            recipient: null,
+            category: Arg.Any<string?>(),
+            searchTerm: Arg.Is<string?>(s => s == null),
+            recipient: Arg.Any<string?>(),
+            fallbackLabel: Arg.Any<string>(),
+            topN: 10,
+            cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(new ConsumptionReportSummary(
+                TotalConsumption: 8,
+                UniqueItemCount: 1,
+                TotalRowCount: 2,
+                ChartData: new System.Collections.Generic.List<(string Name, double Total)> { ("Sicil", 8) })));
+
+        _movementsMock.GetPagedAsync(
+            1, 100,
+            stockCardId: 42,
+            startDate: Arg.Any<DateTime?>(),
+            endDate: Arg.Any<DateTime?>(),
+            department: "Sicil",
+            movementType: "Exit",
+            category: Arg.Any<string?>(),
+            searchTerm: Arg.Is<string?>(s => s == null),
+            recipient: Arg.Any<string?>(),
             cancellationToken: Arg.Any<System.Threading.CancellationToken>())
             .Returns(Task.FromResult(new System.Collections.Generic.List<Stokendra.Models.StockMovement>
             {

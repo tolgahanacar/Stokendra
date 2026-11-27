@@ -10,7 +10,7 @@
 
         <!-- Left: Notes List -->
         <Border Grid.Column="0" MinWidth="320" Background="#0E1119" BorderBrush="#1E2535" BorderThickness="0,0,1,0">
-            <Grid RowDefinitions="Auto,Auto,*">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
 
                 <!-- Title and Status -->
                 <StackPanel Grid.Row="0" Margin="24,32,24,0" Spacing="4">
@@ -130,6 +130,17 @@
                                    TextWrapping="Wrap" Margin="20"/>
                     </Border>
                 </Grid>
+
+                <!-- Pagination -->
+                <Border Grid.Row="3" Background="#0B0E15" Padding="16,8" BorderBrush="#1E2535" BorderThickness="0,1,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                        <Button Content="◀" Command="{Binding PrevPageCommand}" Classes="Secondary" Padding="8,2"/>
+                        <TextBlock Text="{Binding CurrentPage}" Foreground="#F1F5F9" VerticalAlignment="Center" FontWeight="Bold"/>
+                        <TextBlock Text="/" Foreground="#475569" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalPages}" Foreground="#475569" VerticalAlignment="Center"/>
+                        <Button Content="▶" Command="{Binding NextPageCommand}" Classes="Secondary" Padding="8,2"/>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Border>
 

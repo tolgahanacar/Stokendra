@@ -8,11 +8,13 @@ using Stokendra.Data.Interfaces;
 using Stokendra.Data.Repositories;
 using Stokendra.Infrastructure;
 using Stokendra.Models;
+using Stokendra.Services;
 using Stokendra.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -252,5 +254,330 @@ public class PerformanceAndUiImprovementsTests : IDisposable
         updateMethod.Invoke(listBox, new object[] { 2, true, false, false, false, false });
         Assert.Single(listBox.SelectedItems!);
         Assert.Equal(3, listBox.SelectedItems!.OfType<Note>().First().Id);
+    }
+
+    [Fact]
+    public async Task Test_MovementRepository_GetConsumptionSummaryAsync_And_Last30DaysTotals()
+    {
+        var cardsRepo = new StockCardRepository(_connectionFactory);
+        var movRepo = new MovementRepository(_connectionFactory);
+
+        var c1 = new StockCard { Code = "T01", Name = "Toner A", CardType = "Child" };
+        var c2 = new StockCard { Code = "T02", Name = "Toner B", CardType = "Child" };
+        await cardsRepo.AddAsync(c1);
+        await cardsRepo.AddAsync(c2);
+
+        DateTime now = DateTime.Now;
+        await movRepo.AddAsync(new StockMovement { StockCardId = c1.Id, Type = "Entry", Quantity = 20, Date = now.AddDays(-10), Department = "Depo", Recipient = "Ali" });
+        await movRepo.AddAsync(new StockMovement { StockCardId = c1.Id, Type = "Entry", Quantity = 50, Date = now.AddDays(-45), Department = "Depo", Recipient = "Ali" });
+        await movRepo.AddAsync(new StockMovement { StockCardId = c2.Id, Type = "Entry", Quantity = 10, Date = now.AddDays(-15), Department = "Depo", Recipient = "Ali" });
+        await movRepo.AddAsync(new StockMovement { StockCardId = c1.Id, Type = "Exit", Quantity = 6, Date = now.AddDays(-5), Department = "IT", Recipient = "Veli" });
+        await movRepo.AddAsync(new StockMovement { StockCardId = c1.Id, Type = "Exit", Quantity = 4, Date = now.AddDays(-2), Department = "IK", Recipient = "Ayşe" });
+        await movRepo.AddAsync(new StockMovement { StockCardId = c2.Id, Type = "Exit", Quantity = 3, Date = now.AddDays(-1), Department = "IT", Recipient = "Can" });
+
+        var summaryAll = await movRepo.GetConsumptionSummaryAsync(
+            startDate: now.AddDays(-20),
+            endDate: now.AddDays(1),
+            movementType: "Exit",
+            fallbackLabel: "Tümü");
+
+        Assert.Equal(13, summaryAll.TotalConsumption);
+        Assert.Equal(2, summaryAll.UniqueItemCount);
+        Assert.Equal(3, summaryAll.TotalRowCount);
+        Assert.Equal(2, summaryAll.ChartData.Count);
+        Assert.Equal("T01 - Toner A", summaryAll.ChartData[0].Name);
+        Assert.Equal(10, summaryAll.ChartData[0].Total);
+
+        var summaryByCard = await movRepo.GetConsumptionSummaryAsync(
+            stockCardId: c1.Id,
+            startDate: now.AddDays(-20),
+            endDate: now.AddDays(1),
+            movementType: "Exit",
+            fallbackLabel: "Tümü");
+
+        Assert.Equal(10, summaryByCard.TotalConsumption);
+        Assert.Equal(1, summaryByCard.UniqueItemCount);
+        Assert.Equal(2, summaryByCard.TotalRowCount);
+        Assert.Equal("IT", summaryByCard.ChartData[0].Name);
+        Assert.Equal(6, summaryByCard.ChartData[0].Total);
+
+        var (entry30, exit30) = await movRepo.GetCardLast30DaysTotalsAsync(c1.Id);
+        Assert.Equal(20, entry30);
+        Assert.Equal(10, exit30);
+    }
+
+    [Fact]
+    public async Task Test_StockCardRepository_GetChildStockSummaryAsync_CountsAccurately()
+    {
+        var cardsRepo = new StockCardRepository(_connectionFactory);
+        var movRepo = new MovementRepository(_connectionFactory);
+
+        var parent = new StockCard { Code = "P1", Name = "Grup", CardType = "Parent" };
+        var depleted = new StockCard { Code = "C1", Name = "Kalem", CardType = "Child", MinStock = 5 };
+        var low = new StockCard { Code = "C2", Name = "Kagit", CardType = "Child", MinStock = 10 };
+        var healthy = new StockCard { Code = "C3", Name = "Dosya", CardType = "Child", MinStock = 2 };
+
+        await cardsRepo.AddAsync(parent);
+        await cardsRepo.AddAsync(depleted);
+        await cardsRepo.AddAsync(low);
+        await cardsRepo.AddAsync(healthy);
+
+        await movRepo.AddAsync(new StockMovement { StockCardId = low.Id, Type = "Entry", Quantity = 4 });
+        await movRepo.AddAsync(new StockMovement { StockCardId = healthy.Id, Type = "Entry", Quantity = 25 });
+
+        var summary = await cardsRepo.GetChildStockSummaryAsync(null, fallbackThreshold: 3);
+        Assert.Equal(3, summary.TotalCount);
+        Assert.Equal(1, summary.LowStockCount);
+        Assert.Equal(1, summary.DepletedCount);
+
+        var filtered = await cardsRepo.GetChildStockSummaryAsync("Kagit", fallbackThreshold: 3);
+        Assert.Equal(1, filtered.TotalCount);
+        Assert.Equal(1, filtered.LowStockCount);
+        Assert.Equal(0, filtered.DepletedCount);
+    }
+
+    [Fact]
+    public async Task Test_NoteRepository_GetPagedAsync_And_GetCountAsync_ReturnsDistinctPages()
+    {
+        var repo = new NoteRepository(_connectionFactory);
+        for (int i = 1; i <= 65; i++)
+        {
+            await repo.AddAsync(new Note { Title = $"Not {i:D2}", Content = $"Icerik {i}" });
+        }
+
+        Assert.Equal(65, await repo.GetCountAsync());
+
+        var page1 = await repo.GetPagedAsync(1, 50);
+        var page2 = await repo.GetPagedAsync(2, 50);
+
+        Assert.Equal(50, page1.Count);
+        Assert.Equal(15, page2.Count);
+        Assert.Empty(page1.Select(x => x.Id).Intersect(page2.Select(x => x.Id)));
+    }
+
+    [Fact]
+    public void Test_ExcelService_ExportStreaming_ProducesValidWorkbook()
+    {
+        string xlsxPath = Path.Combine(Path.GetTempPath(), $"Stokendra_Stream_{Guid.NewGuid():N}.xlsx");
+        try
+        {
+            var rows = Enumerable.Range(1, 150).Select(i => new
+            {
+                Code = $"KOD-{i:D3}",
+                Name = i == 1 ? "Türkçe ŞĞÜÖÇİ ı" : $"Ürün {i}",
+                Qty = i,
+                Price = i * 1.5,
+                Note = i == 1 ? "Satir\u0001Temiz" : (string?)null
+            }).ToList();
+
+            ExcelService.ExportStreaming(
+                xlsxPath,
+                "TestSayfa",
+                new[] { "Kod", "Ad", "Miktar", "Fiyat", "Not" },
+                rows,
+                r => new object?[] { r.Code, r.Name, r.Qty, r.Price, r.Note });
+
+            Assert.True(File.Exists(xlsxPath));
+            using var wb = new ClosedXML.Excel.XLWorkbook(xlsxPath);
+            var ws = wb.Worksheet("TestSayfa");
+            Assert.Equal(151, ws.RowsUsed().Count());
+            Assert.Equal("Kod", ws.Cell(1, 1).GetString());
+            Assert.Equal("Türkçe ŞĞÜÖÇİ ı", ws.Cell(2, 2).GetString());
+            Assert.Equal(1, ws.Cell(2, 3).GetDouble());
+            Assert.Equal(1.5, ws.Cell(2, 4).GetDouble());
+            Assert.Equal("SatirTemiz", ws.Cell(2, 5).GetString());
+        }
+        finally
+        {
+            if (File.Exists(xlsxPath)) try { File.Delete(xlsxPath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Test_BackupService_PerformBackupAsync_ProducesReadableZipAndExcels()
+    {
+        var cardsRepo = new StockCardRepository(_connectionFactory);
+        var movRepo = new MovementRepository(_connectionFactory);
+        var notesRepo = new NoteRepository(_connectionFactory);
+        var card = new StockCard { Code = "B01", Name = "Yedek Ürün", CardType = "Child" };
+        await cardsRepo.AddAsync(card);
+        await movRepo.AddAsync(new StockMovement { StockCardId = card.Id, Type = "Entry", Quantity = 7, Department = "IT", Recipient = "Admin" });
+        await notesRepo.AddAsync(new Note { Title = "Yedek Not", Content = "Test icerigi" });
+
+        string backupDir = Path.Combine(Path.GetTempPath(), $"Stokendra_BkpDir_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(backupDir);
+        try
+        {
+            var settings = new AppSettings { Language = "tr", DbPath = _dbPath };
+            var backupSvc = new BackupService(
+                settings,
+                new ConfigRepository(_connectionFactory),
+                new ReportRepository(_connectionFactory),
+                cardsRepo,
+                movRepo,
+                new ServiceRecordRepository(_connectionFactory),
+                notesRepo,
+                new DepartmentRepository(_connectionFactory),
+                _connectionFactory);
+
+            string zipPath = await backupSvc.PerformBackupAsync(backupDir);
+            Assert.True(File.Exists(zipPath));
+
+            using var archive = ZipFile.OpenRead(zipPath);
+            Assert.Contains(archive.Entries, e => e.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase));
+
+            var notesEntry = archive.Entries.FirstOrDefault(e => e.Name.Contains("Notlar", StringComparison.OrdinalIgnoreCase) || e.Name.Contains("Notes", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(notesEntry);
+
+            using var ms = new MemoryStream();
+            using (var es = notesEntry!.Open())
+                await es.CopyToAsync(ms);
+            ms.Position = 0;
+
+            using var wb = new ClosedXML.Excel.XLWorkbook(ms);
+            Assert.True(wb.Worksheets.First().RowsUsed().Count() >= 2);
+        }
+        finally
+        {
+            if (Directory.Exists(backupDir)) try { Directory.Delete(backupDir, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Test_ViewModels_ServerSidePagination_NavigatesPagesCorrectly()
+    {
+        var settings = new AppSettings { Language = "tr", DbPath = _dbPath, LowStockThreshold = 3 };
+        using var app = new AppServices(settings, _database);
+        app.BeginSession("admin", "admin");
+
+        var cardsMock = Substitute.For<IStockCardRepository>();
+        var movMock = Substitute.For<IMovementRepository>();
+        var deptMock = Substitute.For<IDepartmentRepository>();
+        var notesMock = Substitute.For<INoteRepository>();
+        var dialogMock = Substitute.For<IDialogService>();
+
+        // StockCardsViewModel pagination (75 items, page size 50)
+        cardsMock.GetCountAsync(null, null, Arg.Any<System.Threading.CancellationToken>()).Returns(Task.FromResult(75));
+        cardsMock.GetPagedAsync(1, 50, null, null, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(1, 50).Select(i => new StockCard { Id = i, Code = $"K{i}" }).ToList()));
+        cardsMock.GetPagedAsync(2, 50, null, null, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(51, 25).Select(i => new StockCard { Id = i, Code = $"K{i}" }).ToList()));
+
+        var cardsVm = new StockCardsViewModel(cardsMock, movMock, deptMock, dialogMock);
+        await cardsVm.LoadAsync();
+        Assert.Equal(2, cardsVm.TotalPages);
+        Assert.Equal(50, cardsVm.Cards.Count);
+        Assert.True(cardsVm.CanNextPage);
+
+        await cardsVm.NextPageAsync();
+        Assert.Equal(2, cardsVm.CurrentPage);
+        Assert.Equal(25, cardsVm.Cards.Count);
+        Assert.False(cardsVm.CanNextPage);
+
+        // StocksViewModel pagination (75 child cards, page size 50)
+        cardsMock.GetChildStockSummaryAsync(null, 3, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult((TotalCount: 75, LowStockCount: 4, DepletedCount: 2)));
+        cardsMock.GetPagedAsync(1, 50, null, "Child", Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(1, 50).Select(i => new StockCard { Id = i, Code = $"S{i}", CardType = "Child" }).ToList()));
+        cardsMock.GetPagedAsync(2, 50, null, "Child", Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(51, 25).Select(i => new StockCard { Id = i, Code = $"S{i}", CardType = "Child" }).ToList()));
+
+        var stocksVm = new StocksViewModel(cardsMock, dialogMock);
+        await stocksVm.LoadAsync();
+        Assert.Equal(2, stocksVm.TotalPages);
+        Assert.Equal(50, stocksVm.Stocks.Count);
+        await stocksVm.NextPageAsync();
+        Assert.Equal(2, stocksVm.CurrentPage);
+        Assert.Equal(25, stocksVm.Stocks.Count);
+
+        // NotesViewModel pagination (75 notes, page size 50)
+        notesMock.GetCountAsync(Arg.Any<System.Threading.CancellationToken>()).Returns(Task.FromResult(75));
+        notesMock.GetPagedAsync(1, 50, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(1, 50).Select(i => new Note { Id = i, Title = $"N{i}" }).ToList()));
+        notesMock.GetPagedAsync(2, 50, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(51, 25).Select(i => new Note { Id = i, Title = $"N{i}" }).ToList()));
+
+        var notesVm = new NotesViewModel(notesMock, dialogMock);
+        await notesVm.LoadAsync();
+        Assert.Equal(2, notesVm.TotalPages);
+        Assert.Equal(50, notesVm.Notes.Count);
+        await notesVm.NextPageAsync();
+        Assert.Equal(25, notesVm.Notes.Count);
+
+        // StockCardDetailViewModel pagination (75 movements, page size 50)
+        cardsMock.GetByIdAsync(10).Returns(Task.FromResult<StockCard?>(new StockCard { Id = 10, Code = "D10", Name = "Detay" }));
+        movMock.GetCountAsync(stockCardId: 10, startDate: null, endDate: null, department: null, movementType: null, category: null, searchTerm: null, recipient: null, cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(75));
+        movMock.GetPagedAsync(1, 50, stockCardId: 10, startDate: null, endDate: null, department: null, movementType: null, category: null, searchTerm: null, recipient: null, cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(1, 50).Select(i => new StockMovement { Id = i, StockCardId = 10 }).ToList()));
+        movMock.GetPagedAsync(2, 50, stockCardId: 10, startDate: null, endDate: null, department: null, movementType: null, category: null, searchTerm: null, recipient: null, cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(51, 25).Select(i => new StockMovement { Id = i, StockCardId = 10 }).ToList()));
+        movMock.GetCardLast30DaysTotalsAsync(10, Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult((12.0, 5.0)));
+
+        var detailVm = new StockCardDetailViewModel(10, cardsMock, movMock, deptMock, dialogMock);
+        await detailVm.LoadDataAsync();
+        Assert.Equal(2, detailVm.TotalPages);
+        Assert.Equal(50, detailVm.Movements.Count);
+        Assert.Equal(12.0, detailVm.TotalEntryLast30);
+        Assert.Equal(5.0, detailVm.TotalExitLast30);
+        await detailVm.NextPageAsync();
+        Assert.Equal(2, detailVm.CurrentPage);
+        Assert.Equal(25, detailVm.Movements.Count);
+
+        // ReportsViewModel pagination (150 items, page size 100)
+        var repMovMock = Substitute.For<IMovementRepository>();
+        repMovMock.GetConsumptionSummaryAsync(
+            stockCardId: null,
+            startDate: Arg.Any<DateTime?>(),
+            endDate: Arg.Any<DateTime?>(),
+            department: Arg.Any<string?>(),
+            movementType: "Exit",
+            category: Arg.Any<string?>(),
+            searchTerm: Arg.Is<string?>(s => s == null),
+            recipient: Arg.Any<string?>(),
+            fallbackLabel: Arg.Any<string>(),
+            topN: 10,
+            cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(new ConsumptionReportSummary(300, 3, 150, new List<(string Name, double Total)> { ("Genel", 300) })));
+
+        repMovMock.GetPagedAsync(
+            1, 100,
+            stockCardId: null,
+            startDate: Arg.Any<DateTime?>(),
+            endDate: Arg.Any<DateTime?>(),
+            department: Arg.Any<string?>(),
+            movementType: "Exit",
+            category: Arg.Any<string?>(),
+            searchTerm: Arg.Is<string?>(s => s == null),
+            recipient: Arg.Any<string?>(),
+            cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(1, 100).Select(i => new StockMovement { Id = i, Quantity = 2 }).ToList()));
+
+        repMovMock.GetPagedAsync(
+            2, 100,
+            stockCardId: null,
+            startDate: Arg.Any<DateTime?>(),
+            endDate: Arg.Any<DateTime?>(),
+            department: Arg.Any<string?>(),
+            movementType: "Exit",
+            category: Arg.Any<string?>(),
+            searchTerm: Arg.Is<string?>(s => s == null),
+            recipient: Arg.Any<string?>(),
+            cancellationToken: Arg.Any<System.Threading.CancellationToken>())
+            .Returns(Task.FromResult(Enumerable.Range(101, 50).Select(i => new StockMovement { Id = i, Quantity = 2 }).ToList()));
+
+        var reportsVm = new ReportsViewModel(repMovMock, deptMock, cardsMock, dialogMock);
+        await reportsVm.GenerateReportCommand.ExecuteAsync(null);
+        Assert.Equal(2, reportsVm.TotalPages);
+        Assert.Equal(100, reportsVm.ReportRows.Count);
+        Assert.Equal(300, reportsVm.TotalConsumption);
+        Assert.True(reportsVm.CanNextPage);
+
+        await reportsVm.NextPageCommand.ExecuteAsync(null);
+        Assert.Equal(2, reportsVm.CurrentPage);
+        Assert.Equal(50, reportsVm.ReportRows.Count);
+        Assert.Equal(300, reportsVm.TotalConsumption);
+        Assert.False(reportsVm.CanNextPage);
     }
 }

@@ -33,6 +33,21 @@ public partial class NotesViewModel : ViewModelBase
     public BulkObservableCollection<Note> Notes { get; } = new();
     public BulkObservableCollection<Note> SelectedNotes { get; } = new();
 
+    private const int PageSize = 50;
+    private int _totalCount;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
+
     public bool HasSelection => SelectedNotes.Count > 0 || SelectedNote != null;
 
     public NotesViewModel(INoteRepository notes, IDialogService dialogService)
@@ -46,12 +61,22 @@ public partial class NotesViewModel : ViewModelBase
         {
             OnPropertyChanged(nameof(HasSelection));
             if (_isLoaded)
-            {
-                StatusText = SelectedNotes.Count > 0
-                    ? LocalizationManager.L("records_info", Notes.Count, SelectedNotes.Count)
-                    : LocalizationManager.L("records_info", Notes.Count, 0).Split('•')[0].Trim();
-            }
+                UpdateStatusText();
         };
+    }
+
+    private void UpdateStatusText()
+    {
+        string pageInfo = LocalizationManager.L("total_records_page", _totalCount, CurrentPage, TotalPages);
+        if (SelectedNotes.Count > 0)
+        {
+            string selectedPart = LocalizationManager.L("records_info", _totalCount, SelectedNotes.Count).Split('•').LastOrDefault()?.Trim() ?? "";
+            StatusText = string.IsNullOrEmpty(selectedPart) ? pageInfo : $"{pageInfo}  •  {selectedPart}";
+        }
+        else
+        {
+            StatusText = pageInfo;
+        }
     }
 
     private bool _isLoaded;
@@ -77,10 +102,15 @@ public partial class NotesViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            var data = await _notes.GetAllAsync();
+            _totalCount = await _notes.GetCountAsync();
+            TotalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
+
+            var data = await _notes.GetPagedAsync(CurrentPage, PageSize);
             Notes.ReplaceAll(data);
             _isLoaded = true;
-            StatusText = LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim();
+            UpdateStatusText();
         }
         catch (Exception ex) 
         { 
@@ -88,6 +118,26 @@ public partial class NotesViewModel : ViewModelBase
             StatusText = LocalizationManager.L("error"); 
         }
         finally { IsLoading = false; }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNextPage))]
+    public async Task NextPageAsync()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPrevPage))]
+    public async Task PrevPageAsync()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadAsync();
+        }
     }
 
     [RelayCommand]
@@ -224,8 +274,7 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
-        var snapshot = Notes.ToList();
-        if (snapshot.Count == 0)
+        if (_totalCount == 0 && Notes.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -244,6 +293,10 @@ public partial class NotesViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("loading");
+            var snapshot = await _notes.GetAllAsync();
+            if (snapshot.Count == 0 && Notes.Count > 0)
+                snapshot = Notes.ToList();
+            if (snapshot.Count == 0) return;
             await Task.Run(() => {
                 var headers = new[] { 
                     "ID", 

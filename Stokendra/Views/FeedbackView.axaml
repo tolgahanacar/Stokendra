@@ -102,9 +102,8 @@
                     </Border>
 
                     <!-- Action Buttons -->
-                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,8,0,0">
-                        <Button Grid.Column="0"
-                                Content="{infra:L feedback_send_btn}"
+                    <WrapPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="{infra:L feedback_send_btn}"
                                 Command="{Binding SendFeedbackCommand}"
                                 IsEnabled="{Binding !IsSending}"
                                 Classes="Primary"
@@ -115,26 +114,25 @@
                                 Foreground="White"
                                 CornerRadius="8"
                                 Cursor="Hand"
-                                Margin="0,0,10,0"/>
+                                Margin="0,0,10,6"/>
 
-                        <Button Grid.Column="1"
-                                Content="{infra:L feedback_mailclient_btn}"
+                        <Button Content="{infra:L feedback_mailclient_btn}"
                                 Command="{Binding OpenMailClientCommand}"
                                 Classes="Secondary"
                                 Padding="16,10"
                                 FontSize="13"
                                 CornerRadius="8"
-                                Cursor="Hand"/>
+                                Cursor="Hand"
+                                Margin="0,0,12,6"/>
 
                         <!-- Sending Progress / Status -->
-                        <ProgressBar Grid.Column="2"
-                                     IsIndeterminate="True"
+                        <ProgressBar IsIndeterminate="True"
                                      IsVisible="{Binding IsSending}"
                                      Width="120"
                                      Height="4"
-                                     HorizontalAlignment="Right"
+                                     Margin="0,0,0,6"
                                      VerticalAlignment="Center"/>
-                    </Grid>
+                    </WrapPanel>
 
                 </StackPanel>
             </Border>
@@ -155,6 +153,7 @@
                         <TextBox Text="{Binding SystemInfoPreview}"
                                  IsReadOnly="True"
                                  AcceptsReturn="True"
+                                 TextWrapping="Wrap"
                                  Height="140"
                                  FontFamily="Consolas, Cascadia Code, Courier New, monospace"
                                  FontSize="11"
@@ -179,6 +178,7 @@
                         <TextBox Text="{Binding RecentLogsPreview}"
                                  IsReadOnly="True"
                                  AcceptsReturn="True"
+                                 TextWrapping="Wrap"
                                  Height="140"
                                  FontFamily="Consolas, Cascadia Code, Courier New, monospace"
                                  FontSize="11"

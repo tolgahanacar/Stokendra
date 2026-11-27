@@ -101,4 +101,30 @@ public interface IMovementRepository
         string? searchTerm = null,
         string? recipient = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Gets aggregated consumption totals and top grouped chart items via SQL without loading all rows.</summary>
+    Task<ConsumptionReportSummary> GetConsumptionSummaryAsync(
+        int? stockCardId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        string? department = null,
+        string? movementType = null,
+        string? category = null,
+        string? searchTerm = null,
+        string? recipient = null,
+        string fallbackLabel = "All",
+        int topN = 10,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Gets total Entry and Exit quantities for a specific stock card over the last 30 days.</summary>
+    Task<(double TotalEntry, double TotalExit)> GetCardLast30DaysTotalsAsync(
+        int stockCardId,
+        CancellationToken cancellationToken = default);
 }
+
+/// <summary>Aggregated summary result for consumption reports computed directly in SQL.</summary>
+public sealed record ConsumptionReportSummary(
+    double TotalConsumption,
+    int UniqueItemCount,
+    int TotalRowCount,
+    List<(string Name, double Total)> ChartData);

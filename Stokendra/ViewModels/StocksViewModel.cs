@@ -27,9 +27,23 @@ public partial class StocksViewModel : ViewModelBase
     public bool IsNotLoading => !IsLoading;
 
     public BulkObservableCollection<StockCard> Stocks { get; } = new();
-    private List<StockCard> _allStocks = new();
-    private readonly SearchIndex<StockCard> _searchIndex;
+    private const int PageSize = 50;
+    private int _totalCount;
+    private int _lowStockCount;
+    private int _depletedCount;
     private bool _isLoaded;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
 
     // For Debounce
     private CancellationTokenSource? _filterCts;
@@ -38,10 +52,6 @@ public partial class StocksViewModel : ViewModelBase
     {
         _stockCards = stockCards;
         _dialogService = dialogService;
-
-        _searchIndex = new SearchIndex<StockCard>(
-            k => new[] { k.Code, k.Name, k.Category, k.Description },
-            (k, term) => k.MatchesSearch(term));
 
         DataEvents.DataChanged += OnDataChanged;
     }
@@ -73,10 +83,24 @@ public partial class StocksViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            _allStocks = await _stockCards.GetChildCardsAsync(null, token);
-            _searchIndex.Build(_allStocks);
+            string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            int threshold = AppServices.TryGetCurrent(out var app) ? app!.Settings.LowStockThreshold : 3;
+
+            var summary = await _stockCards.GetChildStockSummaryAsync(term, threshold, token);
+            _totalCount = summary.TotalCount;
+            _lowStockCount = summary.LowStockCount;
+            _depletedCount = summary.DepletedCount;
+
+            TotalPages = Math.Max(1, (int)Math.Ceiling(_totalCount / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
+
+            var data = await _stockCards.GetPagedAsync(CurrentPage, PageSize, term, "Child", token);
+            token.ThrowIfCancellationRequested();
+
+            Stocks.ReplaceAll(data);
             _isLoaded = true;
-            ApplyFilter();
+            StatusText = $"{LocalizationManager.L("total_records_page", _totalCount, CurrentPage, TotalPages)} | ⚠ {_lowStockCount} {LocalizationManager.L("low_stock")} | ❌ {_depletedCount} {LocalizationManager.L("depleted")}";
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; }
@@ -97,8 +121,9 @@ public partial class StocksViewModel : ViewModelBase
         var token = _filterCts.Token;
         try
         {
-            await Task.Delay(25, token);
-            ApplyFilter();
+            await Task.Delay(120, token);
+            CurrentPage = 1;
+            await LoadAsync();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -107,17 +132,44 @@ public partial class StocksViewModel : ViewModelBase
         }
     }
 
-    private void ApplyFilter()
+    [RelayCommand(CanExecute = nameof(CanNextPage))]
+    public async Task NextPageAsync()
     {
-        var data = _searchIndex.Search(SearchText);
-        Stocks.ReplaceAll(data);
-        
-        int threshold = AppServices.TryGetCurrent(out var app) ? app!.Settings.LowStockThreshold : 3;
-        int lowStockCount = data.Count(k => k.CurrentStock > 0 && k.CurrentStock <= (k.MinStock > 0 ? k.MinStock : threshold));
-        int depletedCount = data.Count(k => k.CurrentStock <= 0);
-        
-        // Localized status text
-        StatusText = $"{LocalizationManager.L("records_info", data.Count, 0).Split('•')[0].Trim()} | ⚠ {lowStockCount} {LocalizationManager.L("low_stock")} | ❌ {depletedCount} {LocalizationManager.L("depleted")}";
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPrevPage))]
+    public async Task PrevPageAsync()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task<List<StockCard>> FetchAllMatchingStocksAsync()
+    {
+        if (_totalCount <= Stocks.Count && Stocks.Count > 0)
+            return Stocks.ToList();
+
+        string? term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+        var all = new List<StockCard>();
+        const int batchSize = 5000;
+        int page = 1;
+        while (true)
+        {
+            var batch = await _stockCards.GetPagedAsync(page, batchSize, term, "Child");
+            if (batch == null || batch.Count == 0) break;
+            all.AddRange(batch);
+            if (batch.Count < batchSize) break;
+            page++;
+        }
+        return all.Count > 0 ? all : Stocks.ToList();
     }
 
     [RelayCommand(CanExecute = nameof(IsNotLoading))]
@@ -129,8 +181,7 @@ public partial class StocksViewModel : ViewModelBase
     [RelayCommand]
     public async Task Export()
     {
-        var snapshot = Stocks.ToList();
-        if (snapshot.Count == 0)
+        if (_totalCount == 0 && Stocks.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -144,6 +195,8 @@ public partial class StocksViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("loading");
+            var snapshot = await FetchAllMatchingStocksAsync();
+            if (snapshot.Count == 0) return;
             await Task.Run(() => 
             {
                 string[] headers = { 
@@ -178,8 +231,7 @@ public partial class StocksViewModel : ViewModelBase
     [RelayCommand]
     public async Task Print()
     {
-        var snapshot = Stocks.ToList();
-        if (snapshot.Count == 0)
+        if (_totalCount == 0 && Stocks.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
@@ -188,6 +240,12 @@ public partial class StocksViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("preparing_print");
+            var snapshot = await FetchAllMatchingStocksAsync();
+            if (snapshot.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                return;
+            }
             string title = LocalizationManager.L("stock_status_report");
             string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
 

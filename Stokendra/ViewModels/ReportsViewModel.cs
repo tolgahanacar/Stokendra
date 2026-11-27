@@ -34,6 +34,27 @@ public partial class ReportsViewModel : ViewModelBase
     [ObservableProperty] private int _uniqueItemCount;
     [ObservableProperty] private string _statusText = "";
 
+    private const int PageSize = 100;
+    private DateTime _activeStartDate;
+    private DateTime _activeEndDate;
+    private string? _activeDept;
+    private string? _activeCat;
+    private string? _activeUser;
+    private int? _activeCardId;
+    private int _totalRowCount;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
+
     public ObservableCollection<string> Departments { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Categories { get; } = new() { LocalizationManager.L("all") };
     public ObservableCollection<string> Users { get; } = new() { LocalizationManager.L("all") };
@@ -151,84 +172,66 @@ public partial class ReportsViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            string? dept = SelectedDepartment == LocalizationManager.L("all") ? null : SelectedDepartment;
-            string? cat = SelectedCategory == LocalizationManager.L("all") ? null : SelectedCategory;
-            string? user = SelectedUser == LocalizationManager.L("all") ? null : SelectedUser;
-            int? cardId = SelectedStockCard?.Id;
+            string allLabel = LocalizationManager.L("all");
+            _activeDept = SelectedDepartment == allLabel ? null : SelectedDepartment;
+            _activeCat = SelectedCategory == allLabel ? null : SelectedCategory;
+            _activeUser = SelectedUser == allLabel ? null : SelectedUser;
+            _activeCardId = SelectedStockCard?.Id;
 
-            // Büyük veri setlerinde bellek baskısını önlemek için sayfalı yükleme
-            const int batchSize = 5000;
-            int page = 1;
-            var allMovements = new List<StockMovement>();
+            _activeStartDate = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            _activeEndDate = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+            CurrentPage = 1;
 
-            while (true)
-            {
-                token.ThrowIfCancellationRequested();
-                DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
-                DateTime endVal = (EndDate ?? DateTime.Today).Date;
-                DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
-                var batch = await _movements.GetPagedAsync(
-                    page, batchSize,
-                    stockCardId: cardId,
-                    startDate: safeStart,
-                    endDate: safeEnd,
-                    department: dept,
-                    movementType: "Exit",
-                    category: cat,
-                    searchTerm: null,
-                    recipient: user,
-                    cancellationToken: token);
+            var summaryTask = _movements.GetConsumptionSummaryAsync(
+                stockCardId: _activeCardId,
+                startDate: _activeStartDate,
+                endDate: _activeEndDate,
+                department: _activeDept,
+                movementType: "Exit",
+                category: _activeCat,
+                searchTerm: null,
+                recipient: _activeUser,
+                fallbackLabel: allLabel,
+                topN: 10,
+                cancellationToken: token);
 
-                if (batch.Count == 0) break;
-                allMovements.AddRange(batch);
-                if (batch.Count < batchSize) break;
-                page++;
-            }
+            var pageTask = _movements.GetPagedAsync(
+                CurrentPage, PageSize,
+                stockCardId: _activeCardId,
+                startDate: _activeStartDate,
+                endDate: _activeEndDate,
+                department: _activeDept,
+                movementType: "Exit",
+                category: _activeCat,
+                searchTerm: null,
+                recipient: _activeUser,
+                cancellationToken: token);
 
+            await Task.WhenAll(summaryTask, pageTask);
             token.ThrowIfCancellationRequested();
 
-            var rowsList = new List<StockMovement>();
-            double total = 0;
-            var uniqueIds = new HashSet<int>();
-            var totalsGrouped = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            var summary = await summaryTask;
+            var pageRows = await pageTask ?? new List<StockMovement>();
 
-            foreach (var m in allMovements)
+            if (summary != null)
             {
-                rowsList.Add(m);
-                total += m.Quantity;
-                uniqueIds.Add(m.StockCardId);
-                
-                string groupKey;
-                if (cardId.HasValue)
-                {
-                    // Belirli bir stok kartı seçildiyse grafiği Birim/Departman (veya Departman seçiliyse Teslim Alan) kırılımında grupla
-                    if (!string.IsNullOrEmpty(dept))
-                        groupKey = !string.IsNullOrWhiteSpace(m.Recipient) ? m.Recipient : LocalizationManager.L("all");
-                    else
-                        groupKey = !string.IsNullOrWhiteSpace(m.Department) ? m.Department : LocalizationManager.L("all");
-                }
-                else
-                {
-                    groupKey = !string.IsNullOrWhiteSpace(m.StockCardCode)
-                        ? $"{m.StockCardCode} - {m.StockCardName}"
-                        : m.StockCardName;
-                }
-
-                if (totalsGrouped.ContainsKey(groupKey))
-                    totalsGrouped[groupKey] += m.Quantity;
-                else
-                    totalsGrouped[groupKey] = m.Quantity;
+                _totalRowCount = summary.TotalRowCount;
+                TotalConsumption = summary.TotalConsumption;
+                UniqueItemCount = summary.UniqueItemCount;
+                ChartData = summary.ChartData;
+            }
+            else
+            {
+                _totalRowCount = pageRows.Count;
+                TotalConsumption = pageRows.Sum(m => m.Quantity);
+                UniqueItemCount = pageRows.Select(m => m.StockCardId).Distinct().Count();
+                ChartData = BuildFallbackChartData(pageRows, _activeCardId, _activeDept, allLabel);
             }
 
-            ReportRows = rowsList;
-
-            TotalConsumption = total;
-            UniqueItemCount = uniqueIds.Count;
-            StatusText = string.Format(LocalizationManager.L("records_found"), allMovements.Count);
-
-            ChartData = totalsGrouped.OrderByDescending(x => x.Value).Take(10)
-                .Select(x => (x.Key, x.Value)).ToList();
-            
+            TotalPages = Math.Max(1, (int)Math.Ceiling(_totalRowCount / (double)PageSize));
+            ReportRows = pageRows;
+            StatusText = LocalizationManager.L("total_records_page", _totalRowCount, CurrentPage, TotalPages);
             OnPropertyChanged(nameof(ChartData));
         }
         catch (OperationCanceledException)
@@ -247,19 +250,119 @@ public partial class ReportsViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanNextPage))]
+    public async Task NextPageAsync()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadPageAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPrevPage))]
+    public async Task PrevPageAsync()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadPageAsync();
+        }
+    }
+
+    private async Task LoadPageAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new System.Threading.CancellationTokenSource();
+        var token = _cts.Token;
+
+        IsLoading = true;
+        try
+        {
+            var pageRows = await _movements.GetPagedAsync(
+                CurrentPage, PageSize,
+                stockCardId: _activeCardId,
+                startDate: _activeStartDate,
+                endDate: _activeEndDate,
+                department: _activeDept,
+                movementType: "Exit",
+                category: _activeCat,
+                searchTerm: null,
+                recipient: _activeUser,
+                cancellationToken: token);
+
+            token.ThrowIfCancellationRequested();
+            ReportRows = pageRows ?? new List<StockMovement>();
+            StatusText = LocalizationManager.L("total_records_page", _totalRowCount, CurrentPage, TotalPages);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Report page load error", ex);
+            StatusText = $"{LocalizationManager.L("error")}: {ex.Message}";
+        }
+        finally
+        {
+            if (token == _cts?.Token)
+                IsLoading = false;
+        }
+    }
+
+    private static List<(string Name, double Total)> BuildFallbackChartData(
+        List<StockMovement> movements, int? cardId, string? dept, string fallbackLabel)
+    {
+        var totalsGrouped = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in movements)
+        {
+            string groupKey = cardId.HasValue
+                ? (!string.IsNullOrEmpty(dept)
+                    ? (!string.IsNullOrWhiteSpace(m.Recipient) ? m.Recipient : fallbackLabel)
+                    : (!string.IsNullOrWhiteSpace(m.Department) ? m.Department : fallbackLabel))
+                : (!string.IsNullOrWhiteSpace(m.StockCardCode) ? $"{m.StockCardCode} - {m.StockCardName}" : m.StockCardName);
+
+            totalsGrouped[groupKey] = totalsGrouped.TryGetValue(groupKey, out double cur) ? cur + m.Quantity : m.Quantity;
+        }
+        return totalsGrouped.OrderByDescending(x => x.Value).Take(10).Select(x => (x.Key, x.Value)).ToList();
+    }
+
+    private async Task<List<StockMovement>> FetchAllFilteredMovementsAsync()
+    {
+        if (_totalRowCount <= ReportRows.Count && ReportRows.Count > 0)
+            return ReportRows.ToList();
+
+        var all = new List<StockMovement>();
+        DateTime start = _activeStartDate != default ? _activeStartDate : (StartDate ?? new DateTime(2024, 1, 1)).Date;
+        DateTime endVal = (EndDate ?? DateTime.Today).Date;
+        DateTime end = _activeEndDate != default ? _activeEndDate : (endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1));
+        const int batchSize = 5000;
+        int page = 1;
+        while (true)
+        {
+            var batch = await _movements.GetPagedAsync(
+                page, batchSize,
+                stockCardId: _activeCardId,
+                startDate: start,
+                endDate: end,
+                department: _activeDept,
+                movementType: "Exit",
+                category: _activeCat,
+                searchTerm: null,
+                recipient: _activeUser);
+            if (batch == null || batch.Count == 0) break;
+            all.AddRange(batch);
+            if (batch.Count < batchSize) break;
+            page++;
+        }
+        return all.Count > 0 ? all : ReportRows.ToList();
+    }
+
     [RelayCommand]
     public async Task Export()
     {
-        if (ReportRows.Count == 0)
+        if (_totalRowCount == 0 && ReportRows.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("no_data_to_export"));
-            return;
-        }
-
-        var snapshot = ReportRows.ToList();
-        if (snapshot.Count == 0)
-        {
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
             return;
         }
 
@@ -271,6 +374,13 @@ public partial class ReportsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("loading");
+            var snapshot = await FetchAllFilteredMovementsAsync();
+            if (snapshot.Count == 0)
+            {
+                await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+                return;
+            }
+
             await Task.Run(() => 
             {
                 string[] headers = { 
@@ -307,7 +417,7 @@ public partial class ReportsViewModel : ViewModelBase
     [RelayCommand]
     public async Task Print()
     {
-        if (ReportRows.Count == 0)
+        if (_totalRowCount == 0 && ReportRows.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("no_data_to_print"));
             return;
@@ -316,7 +426,7 @@ public partial class ReportsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("reports_print_preparing");
-            var rowsSnapshot = ReportRows.ToList();
+            var rowsSnapshot = await FetchAllFilteredMovementsAsync();
             double totalConsumption = TotalConsumption;
             int uniqueItemCount = UniqueItemCount;
             string dateRange = $"{(StartDate ?? new DateTime(2024, 1, 1)):dd.MM.yyyy} - {(EndDate ?? DateTime.Today):dd.MM.yyyy}";

@@ -25,6 +25,25 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         return result.ToList();
     }
 
+    public async Task<List<Note>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        const string sql = "SELECT Id, Date, Title, Content, CreatedAt, UpdatedAt FROM Notes ORDER BY CreatedAt DESC, Id DESC LIMIT @Limit OFFSET @Offset";
+        var result = await conn.QueryAsync<Note>(new CommandDefinition(
+            sql,
+            new { Limit = pageSize, Offset = Math.Max(0, (page - 1) * pageSize) },
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+        return result.ToList();
+    }
+
+    public async Task<int> GetCountAsync(CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        return await conn.ExecuteScalarAsync<int>(new CommandDefinition(
+            "SELECT COUNT(*) FROM Notes",
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     public async Task AddAsync(Note note, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(note.Title)) throw new InvalidOperationException(LocalizationManager.L("title_required"));

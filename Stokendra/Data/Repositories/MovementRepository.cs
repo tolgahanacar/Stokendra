@@ -748,4 +748,83 @@ public sealed class MovementRepository(IDbConnectionFactory connectionFactory)
         string sql = BuildQuery("SELECT COUNT(*) FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
         return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
     }
+
+    public async Task<ConsumptionReportSummary> GetConsumptionSummaryAsync(
+        int? stockCardId = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        string? department = null,
+        string? movementType = null,
+        string? category = null,
+        string? searchTerm = null,
+        string? recipient = null,
+        string fallbackLabel = "All",
+        int topN = 10,
+        CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        var @params = new DynamicParameters();
+        string fromAndWhere = BuildQuery("FROM StockMovements h JOIN StockCards s ON h.StockCardId = s.Id", stockCardId, startDate, endDate, department, movementType, category, searchTerm, recipient, @params);
+
+        string summarySql = $"""
+            SELECT
+                CAST(COALESCE(SUM(h.Quantity), 0) AS REAL) AS TotalConsumption,
+                COUNT(DISTINCT h.StockCardId) AS UniqueItemCount,
+                COUNT(*) AS TotalRowCount
+            {fromAndWhere}
+            """;
+
+        var totals = await conn.QuerySingleAsync<(double TotalConsumption, int UniqueItemCount, int TotalRowCount)>(
+            new CommandDefinition(summarySql, @params, cancellationToken: cancellationToken)).ConfigureAwait(false);
+
+        string groupExpr;
+        if (stockCardId.HasValue)
+        {
+            groupExpr = !string.IsNullOrEmpty(department)
+                ? "CASE WHEN h.Recipient IS NOT NULL AND TRIM(h.Recipient) <> '' THEN TRIM(h.Recipient) ELSE @FallbackLabel END"
+                : "CASE WHEN h.Department IS NOT NULL AND TRIM(h.Department) <> '' THEN TRIM(h.Department) ELSE @FallbackLabel END";
+        }
+        else
+        {
+            groupExpr = "CASE WHEN s.Code IS NOT NULL AND TRIM(s.Code) <> '' THEN s.Code || ' - ' || s.Name ELSE s.Name END";
+        }
+
+        @params.Add("FallbackLabel", fallbackLabel ?? "All");
+        @params.Add("TopN", topN);
+
+        string chartSql = $"""
+            SELECT {groupExpr} AS Name, CAST(COALESCE(SUM(h.Quantity), 0) AS REAL) AS Total
+            {fromAndWhere}
+            GROUP BY {groupExpr}
+            ORDER BY Total DESC
+            LIMIT @TopN
+            """;
+
+        var chartRows = (await conn.QueryAsync<(string Name, double Total)>(
+            new CommandDefinition(chartSql, @params, cancellationToken: cancellationToken)).ConfigureAwait(false)).ToList();
+
+        return new ConsumptionReportSummary(
+            totals.TotalConsumption,
+            totals.UniqueItemCount,
+            totals.TotalRowCount,
+            chartRows);
+    }
+
+    public async Task<(double TotalEntry, double TotalExit)> GetCardLast30DaysTotalsAsync(
+        int stockCardId,
+        CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        string startStr = DateTime.Now.AddDays(-30).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        const string sql = """
+            SELECT
+                CAST(COALESCE(SUM(CASE WHEN Type IN ('Entry', 'Giris', 'Giriş') THEN Quantity ELSE 0 END), 0) AS REAL) AS TotalEntry,
+                CAST(COALESCE(SUM(CASE WHEN Type IN ('Exit', 'Cikis', 'Çıkış') THEN Quantity ELSE 0 END), 0) AS REAL) AS TotalExit
+            FROM StockMovements
+            WHERE StockCardId = @CardId AND Date >= @StartDate
+            """;
+
+        return await conn.QuerySingleAsync<(double TotalEntry, double TotalExit)>(
+            new CommandDefinition(sql, new { CardId = stockCardId, StartDate = startStr }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
 }

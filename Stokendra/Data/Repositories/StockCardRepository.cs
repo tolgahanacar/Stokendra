@@ -517,6 +517,46 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         return await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, @params, cancellationToken: cancellationToken));
     }
 
+    public async Task<(int TotalCount, int LowStockCount, int DepletedCount)> GetChildStockSummaryAsync(string? searchTerm, int fallbackThreshold = 3, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        var @params = new DynamicParameters();
+        @params.Add("Fallback", fallbackThreshold);
+
+        string searchFilter = "";
+        string parentJoin = "";
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            parentJoin = "LEFT JOIN StockCards u ON s.ParentId = u.Id";
+            searchFilter = " AND (s.Name LIKE @Search OR s.Code LIKE @Search OR s.Category LIKE @Search OR u.Name LIKE @Search)";
+            @params.Add("Search", $"%{searchTerm}%");
+        }
+
+        string sql = $"""
+            WITH FilteredBalances AS (
+                SELECT s.Id, s.MinStock,
+                       COALESCE(SUM(CASE
+                           WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity
+                           WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN -h.Quantity
+                           ELSE 0
+                       END), 0) AS Balance
+                FROM StockCards s
+                {parentJoin}
+                LEFT JOIN StockMovements h ON h.StockCardId = s.Id
+                WHERE s.CardType = 'Child' {searchFilter}
+                GROUP BY s.Id
+            )
+            SELECT
+                COUNT(*) AS TotalCount,
+                COALESCE(SUM(CASE WHEN Balance > 0 AND Balance <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END THEN 1 ELSE 0 END), 0) AS LowStockCount,
+                COALESCE(SUM(CASE WHEN Balance <= 0 THEN 1 ELSE 0 END), 0) AS DepletedCount
+            FROM FilteredBalances
+            """;
+
+        return await conn.QuerySingleAsync<(int TotalCount, int LowStockCount, int DepletedCount)>(
+            new CommandDefinition(sql, @params, cancellationToken: cancellationToken)).ConfigureAwait(false);
+    }
+
     private void ValidateCard(StockCard s, SqliteConnection conn, SqliteTransaction? trans = null)
     {
         if (string.IsNullOrWhiteSpace(s.Name)) throw new InvalidOperationException(LocalizationManager.L("name_required"));

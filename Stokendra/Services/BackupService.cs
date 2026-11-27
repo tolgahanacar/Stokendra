@@ -179,30 +179,42 @@ public class BackupService : IBackupService
         }
     }
 
+    private static IEnumerable<T> StreamPaged<T>(Func<int, int, List<T>> fetchPage, int pageSize = 5000)
+    {
+        int page = 1;
+        while (true)
+        {
+            var batch = fetchPage(page, pageSize);
+            if (batch == null || batch.Count == 0) yield break;
+            foreach (var item in batch)
+                yield return item;
+            if (batch.Count < pageSize) yield break;
+            page++;
+        }
+    }
+
     private async Task ExportStokKartlariAsync(string tempDir)
     {
-        var tumKartlar = await _stockCardRepository.GetAllAsync();
         string[] headers = { "KodNo", "Stok Adı", "Kategori", "Birim", "MinStok", "Açıklama" };
         string filePath = Path.Combine(tempDir, "StokKartlari.xlsx");
-        await Task.Run(() => ExcelService.ExportToExcel(
+        await Task.Run(() => ExcelService.ExportStreaming(
             filePath,
             "StokKartlari",
             headers,
-            tumKartlar,
+            StreamPaged((page, size) => _stockCardRepository.GetPagedAsync(page, size, null, null).GetAwaiter().GetResult()),
             k => new object?[] { k.Code, k.Name, k.Category, k.Unit, k.MinStock, k.Description }
         ));
     }
 
     private async Task ExportStokHareketleriAsync(string tempDir)
     {
-        var hareketler = await _movementRepository.GetAllAsync();
         string[] headers = { "Stok Kodu", "Stok Adı", "Teslim Edilen", "Tür ([G] Giriş / [Ç] Çıkış)", "Miktar", "Departman", "Tarih (dd.MM.yyyy)", "Açıklama" };
         string filePath = Path.Combine(tempDir, "StokHareketleri.xlsx");
-        await Task.Run(() => ExcelService.ExportToExcel(
+        await Task.Run(() => ExcelService.ExportStreaming(
             filePath,
             "StokHareketleri",
             headers,
-            hareketler,
+            StreamPaged((page, size) => _movementRepository.GetPagedAsync(page, size).GetAwaiter().GetResult()),
             h => new object?[] {
                 h.StockCardCode,
                 h.StockCardName,
@@ -223,14 +235,13 @@ public class BackupService : IBackupService
 
     private async Task ExportServisKayitlariAsync(string tempDir)
     {
-        var servisler = await _serviceRecordRepository.GetAllAsync();
         string[] headers = { "Bakım Tarihi", "Cihaz Adı", "Seri Numarası", "Firma", "Sorun", "Sonuç" };
         string filePath = Path.Combine(tempDir, "ServisKayitlari.xlsx");
-        await Task.Run(() => ExcelService.ExportToExcel(
+        await Task.Run(() => ExcelService.ExportStreaming(
             filePath,
             "ServisKayitlari",
             headers,
-            servisler,
+            StreamPaged((page, size) => _serviceRecordRepository.GetPagedAsync(page, size, null, null, null).GetAwaiter().GetResult()),
             s => new object?[] {
                 s.ServiceDate.ToString("dd.MM.yyyy"),
                 s.DeviceName,
@@ -244,15 +255,14 @@ public class BackupService : IBackupService
 
     private async Task ExportNotlarAsync(string tempDir)
     {
-        var notlar = await _noteRepository.GetAllAsync();
-        if (notlar.Count == 0) return;
+        if (await _noteRepository.GetCountAsync() == 0) return;
         string[] headers = { "ID", "Tarih", "Başlık", "İçerik" };
         string filePath = Path.Combine(tempDir, "Notlar.xlsx");
-        await Task.Run(() => ExcelService.ExportToExcel(
+        await Task.Run(() => ExcelService.ExportStreaming(
             filePath,
             "Notlar",
             headers,
-            notlar,
+            StreamPaged((page, size) => _noteRepository.GetPagedAsync(page, size).GetAwaiter().GetResult()),
             n => new object?[] {
                 n.Id,
                 n.CreatedAt.ToString("dd.MM.yyyy HH:mm"),
@@ -295,33 +305,40 @@ public class BackupService : IBackupService
     private async Task ExportAuditLogAsync(string tempDir)
     {
         using var conn = _connectionFactory.CreateConnection();
+        using var countCmd = conn.CreateCommand();
+        countCmd.CommandText = "SELECT EXISTS(SELECT 1 FROM AuditLog)";
+        if (Convert.ToInt32(await countCmd.ExecuteScalarAsync()) == 0) return;
 
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Id, Date, Action, TableName, RecordId, Details FROM AuditLog ORDER BY Id DESC LIMIT 10000";
-        
-        var rows = new List<(int Id, string Date, string Action, string TableName, int RecordId, string Details)>();
-        using var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
-        {
-            rows.Add((
-                reader.GetInt32(0),
-                reader.IsDBNull(1) ? "" : reader.GetString(1),
-                reader.IsDBNull(2) ? "" : reader.GetString(2),
-                reader.IsDBNull(3) ? "" : reader.GetString(3),
-                reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
-                reader.IsDBNull(5) ? "" : reader.GetString(5)
-            ));
-        }
-
-        if (rows.Count == 0) return;
         string[] headers = { "ID", "Tarih", "İşlem Tipi", "Tablo", "Kayıt ID", "Detay" };
         string filePath = Path.Combine(tempDir, "AuditLog.xlsx");
-        await Task.Run(() => ExcelService.ExportToExcel(
-            filePath,
-            "AuditLog",
-            headers,
-            rows,
-            r => new object?[] { r.Id, r.Date, r.Action, r.TableName, r.RecordId, r.Details }
-        ));
+        await Task.Run(() =>
+        {
+            static IEnumerable<(int Id, string Date, string Action, string TableName, int RecordId, string Details)> StreamAudit(IDbConnectionFactory factory)
+            {
+                using var c = factory.CreateConnection();
+                using var cmd = c.CreateCommand();
+                cmd.CommandText = "SELECT Id, Date, Action, TableName, RecordId, Details FROM AuditLog ORDER BY Id DESC LIMIT 10000";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    yield return (
+                        reader.GetInt32(0),
+                        reader.IsDBNull(1) ? "" : reader.GetString(1),
+                        reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        reader.IsDBNull(3) ? "" : reader.GetString(3),
+                        reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
+                        reader.IsDBNull(5) ? "" : reader.GetString(5)
+                    );
+                }
+            }
+
+            ExcelService.ExportStreaming(
+                filePath,
+                "AuditLog",
+                headers,
+                StreamAudit(_connectionFactory),
+                r => new object?[] { r.Id, r.Date, r.Action, r.TableName, r.RecordId, r.Details }
+            );
+        });
     }
 }

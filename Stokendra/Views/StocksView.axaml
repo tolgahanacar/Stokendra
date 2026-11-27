@@ -68,7 +68,16 @@
 
         <!-- Status Bar -->
         <Border Grid.Row="3" Background="#161B27" Padding="28,8">
-            <TextBlock Text="{Binding StatusText}" Foreground="#5A6987" FontSize="12"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StatusText}" Foreground="#5A6987" FontSize="12" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                    <Button Content="◀" Command="{Binding PrevPageCommand}" Classes="Secondary" Padding="8,2"/>
+                    <TextBlock Text="{Binding CurrentPage}" Foreground="#F1F5F9" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <TextBlock Text="/" Foreground="#5A6987" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalPages}" Foreground="#5A6987" VerticalAlignment="Center"/>
+                    <Button Content="▶" Command="{Binding NextPageCommand}" Classes="Secondary" Padding="8,2"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
     </Grid>

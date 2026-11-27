@@ -23,6 +23,22 @@ public partial class StockCardDetailViewModel : ViewModelBase
     [ObservableProperty] private double _totalEntryLast30;
     [ObservableProperty] private double _totalExitLast30;
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string _movementsStatusText = "";
+
+    private const int PageSize = 50;
+    private int _totalMovementCount;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
 
     public bool HasChanges { get; private set; }
     public bool CanAddMovement => CanEdit && Card != null && Card.CardTypeEnum != CardType.Parent;
@@ -60,16 +76,60 @@ public partial class StockCardDetailViewModel : ViewModelBase
             Card = await _stockCards.GetByIdAsync(_cardId);
             if (Card == null) return;
 
-            var all = await _movements.GetAllAsync(stockCardId: _cardId);
-            Movements.ReplaceAll(all.OrderByDescending(h => h.Date));
+            _totalMovementCount = await _movements.GetCountAsync(stockCardId: _cardId);
+            TotalPages = Math.Max(1, (int)Math.Ceiling(_totalMovementCount / (double)PageSize));
+            if (CurrentPage > TotalPages) CurrentPage = TotalPages;
+            if (CurrentPage < 1) CurrentPage = 1;
 
-            var son30 = all.Where(h => h.Date >= DateTime.Now.AddDays(-30)).ToList();
-            TotalEntryLast30 = son30.Where(h => h.IsEntry).Sum(h => h.Quantity);
-            TotalExitLast30  = son30.Where(h => h.IsExit).Sum(h => h.Quantity);
+            var pagedTask = _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: _cardId);
+            var last30Task = _movements.GetCardLast30DaysTotalsAsync(_cardId);
+            await Task.WhenAll(pagedTask, last30Task);
+
+            Movements.ReplaceAll(await pagedTask ?? new());
+            var totals = await last30Task;
+            TotalEntryLast30 = totals.TotalEntry;
+            TotalExitLast30  = totals.TotalExit;
+            MovementsStatusText = LocalizationManager.L("total_movements_page", _totalMovementCount, CurrentPage, TotalPages);
         }
         catch (Exception ex)
         {
             AppLogger.LogError("Load detail error", ex);
+        }
+        finally { IsLoading = false; }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanNextPage))]
+    public async Task NextPageAsync()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await LoadMovementsPageAsync();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPrevPage))]
+    public async Task PrevPageAsync()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await LoadMovementsPageAsync();
+        }
+    }
+
+    private async Task LoadMovementsPageAsync()
+    {
+        IsLoading = true;
+        try
+        {
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: _cardId);
+            Movements.ReplaceAll(data ?? new());
+            MovementsStatusText = LocalizationManager.L("total_movements_page", _totalMovementCount, CurrentPage, TotalPages);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.LogError("Load detail page error", ex);
         }
         finally { IsLoading = false; }
     }
@@ -108,7 +168,10 @@ public partial class StockCardDetailViewModel : ViewModelBase
         try
         {
             var cardSnapshot = Card;
-            var movementsSnapshot = Movements.ToList();
+            var allMovements = await _movements.GetAllAsync(stockCardId: _cardId);
+            var movementsSnapshot = (allMovements != null && allMovements.Count > 0)
+                ? allMovements.OrderByDescending(h => h.Date).ToList()
+                : Movements.ToList();
             double entryLast30 = TotalEntryLast30;
             double exitLast30 = TotalExitLast30;
             string reportTitle = LocalizationManager.L("detail_report");

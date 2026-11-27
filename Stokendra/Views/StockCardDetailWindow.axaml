@@ -108,8 +108,23 @@
                             Background="#1E2D45"
                             Padding="16,10"
                             CornerRadius="10,10,0,0">
-                        <TextBlock Text="{infra:L movement_history}"
-                                   FontSize="12" FontWeight="Bold" Foreground="#94A3B8"/>
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{infra:L movement_history}"
+                                       FontSize="12" FontWeight="Bold" Foreground="#94A3B8"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding MovementsStatusText}"
+                                       FontSize="11" Foreground="#64748B"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                <Button Content="◀" Command="{Binding PrevPageCommand}" Classes="Secondary" Padding="8,2"/>
+                                <TextBlock Text="{Binding CurrentPage}" Foreground="#F1F5F9" VerticalAlignment="Center" FontWeight="Bold" FontSize="12"/>
+                                <TextBlock Text="/" Foreground="#64748B" VerticalAlignment="Center" FontSize="12"/>
+                                <TextBlock Text="{Binding TotalPages}" Foreground="#64748B" VerticalAlignment="Center" FontSize="12"/>
+                                <Button Content="▶" Command="{Binding NextPageCommand}" Classes="Secondary" Padding="8,2"/>
+                            </StackPanel>
+                        </Grid>
                     </Border>
                     <DataGrid Grid.Row="1"
                                ItemsSource="{Binding Movements}"

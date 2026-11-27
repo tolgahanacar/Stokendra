@@ -13,6 +13,12 @@ public interface INoteRepository
     /// <summary>Gets all notes asynchronously.</summary>
     Task<List<Note>> GetAllAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>Gets a single page of notes ordered by CreatedAt DESC, Id DESC.</summary>
+    Task<List<Note>> GetPagedAsync(int page, int pageSize, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets the total number of notes.</summary>
+    Task<int> GetCountAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Adds a new note asynchronously. The generated ID is assigned to note.Id.</summary>
     Task AddAsync(Note note, CancellationToken cancellationToken = default);
 
