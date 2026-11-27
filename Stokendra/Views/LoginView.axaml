@@ -33,7 +33,8 @@
         </Border>
 
         <!-- Form -->
-        <Border Grid.Row="1" Padding="40,24,40,24">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <Border Padding="40,24,40,24">
             <StackPanel Spacing="0">
                 <!-- Giriş Formu -->
                 <StackPanel IsVisible="{Binding !IsForgotMode}" Spacing="0">
@@ -59,7 +60,7 @@
                     <Button Content="{infra:L login_btn}"
                             Classes="Primary"
                             Command="{Binding DoLoginCommand}"
-                            IsDefault="True"
+                            IsDefault="{Binding !IsForgotMode}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
                             Height="44"
@@ -93,6 +94,7 @@
                     <Button Content="{infra:L reset_password_btn}"
                             Classes="Success"
                             Command="{Binding DoResetPasswordCommand}"
+                            IsDefault="{Binding IsForgotMode}"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center"
                             Height="44"/>
@@ -100,14 +102,15 @@
                     <Button Content="{infra:L back_to_login}"
                             Classes="MenuButton"
                             Command="{Binding ToggleForgotModeCommand}"
+                            IsCancel="{Binding IsForgotMode}"
                             HorizontalAlignment="Center"
                             FontSize="11"
                             Margin="0,8,0,0"/>
                 </StackPanel>
 
-                <!-- Hata mesajı -->
+                <!-- Hata / başarı mesajı -->
                 <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="#FF4B4B"
+                           Foreground="{Binding IsSuccess, Converter={StaticResource SuccessColorConverter}}"
                            FontSize="11"
                            HorizontalAlignment="Center"
                            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
@@ -115,6 +118,7 @@
                            TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
+        </ScrollViewer>
 
         <!-- Footer -->
         <TextBlock Grid.Row="2"

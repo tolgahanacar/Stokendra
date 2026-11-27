@@ -21,6 +21,9 @@ public partial class LoginViewModel : ViewModelBase
     private string _errorMessage = "";
 
     [ObservableProperty]
+    private bool _isSuccess;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(DoLoginCommand))]
     private bool _isBusy = false;
 
@@ -44,6 +47,7 @@ public partial class LoginViewModel : ViewModelBase
     private async Task DoLoginAsync()
     {
         ErrorMessage = "";
+        IsSuccess = false;
         IsBusy = true;
 
         try
@@ -139,11 +143,13 @@ public partial class LoginViewModel : ViewModelBase
         }
 
         IsBusy = true;
+        IsSuccess = false;
         try
         {
             bool ok = await _userRepository.ResetPasswordAsync(Username.Trim(), NewPassword);
             if (ok)
             {
+                IsSuccess = true;
                 ErrorMessage = LocalizationManager.L("password_reset_success");
                 IsForgotMode = false;
                 Password = "";

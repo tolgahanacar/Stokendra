@@ -2,10 +2,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Stokendra.ViewModels"
         xmlns:infra="using:Stokendra.Infrastructure"
+        xmlns:views="using:Stokendra.Views"
         x:Class="Stokendra.Views.BulkMovementView"
         Title="{infra:L bulk_movement}"
-        Width="1100" Height="700"
-        MinWidth="900" MinHeight="500"
+        Width="1060" Height="640"
+        MinWidth="820" MinHeight="500"
         MaxHeight="960"
         WindowStartupLocation="CenterOwner"
         Background="#0C0E14"
@@ -30,7 +31,7 @@
                  BorderBrush="#1E2D45"
                  BorderThickness="0,0,0,1">
             <StackPanel Spacing="12">
-                <Grid ColumnDefinitions="130,180,*,220,220">
+                <Grid ColumnDefinitions="120,165,*,160,180">
                     <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="{infra:L operation_type}" FontSize="11" Foreground="#94A3B8"/>
                         <ComboBox SelectedIndex="{Binding SelectedTypeIndex}" HorizontalAlignment="Stretch">
@@ -50,7 +51,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="3" Spacing="4" Margin="0,0,12,0">
                         <TextBlock Text="{infra:L date_label}" FontSize="11" Foreground="#94A3B8"/>
-                        <CalendarDatePicker SelectedDate="{Binding Date}" 
+                        <views:SafeCalendarDatePicker SelectedDate="{Binding Date}"
                                              HorizontalAlignment="Stretch"
                                              Watermark="{infra:L date_label}"/>
                     </StackPanel>
@@ -101,6 +102,13 @@
             <ProgressBar IsIndeterminate="True"
                           VerticalAlignment="Top"
                           IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Items.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
         </Grid>
 
         <!-- Footer -->
@@ -110,8 +118,8 @@
                 BorderBrush="#1E2D45"
                 BorderThickness="0,1,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                <Button Content="{infra:L cancel}"     Classes="Secondary" Command="{Binding CancelCommand}" Width="90"  MinHeight="36"/>
-                <Button Content="{infra:L save}" Classes="Primary"   Command="{Binding SaveCommand}"   Width="110" MinHeight="36"/>
+                <Button Content="{infra:L cancel}" Classes="Secondary" IsCancel="True"  Command="{Binding CancelCommand}" Width="90"  MinHeight="36"/>
+                <Button Content="{infra:L save}"   Classes="Primary"   IsDefault="True" IsEnabled="{Binding CanSave}" Command="{Binding SaveCommand}" Width="110" MinHeight="36"/>
             </StackPanel>
         </Border>
 

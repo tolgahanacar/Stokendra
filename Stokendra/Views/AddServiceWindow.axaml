@@ -12,10 +12,6 @@
         Background="#161B27"
         x:CompileBindings="False">
 
-    <Design.DataContext>
-        <vm:AddServiceViewModel/>
-    </Design.DataContext>
-
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Header -->
@@ -69,10 +65,6 @@
                              Height="75" AcceptsReturn="True" TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <TextBlock Text="{Binding ErrorMessage}"
-                           Foreground="#FF5B5B" FontSize="12"
-                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
             </StackPanel>
         </ScrollViewer>
 
@@ -82,11 +74,20 @@
                 Padding="20,14,20,14"
                 BorderBrush="#252D3D"
                 BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
-                <Button Content="{infra:L cancel}"  Classes="Secondary" Command="{Binding CancelCommand}" Width="90" MinHeight="36"/>
-                <Button Content="{infra:L save}" Classes="Primary"   Command="{Binding SaveCommand}"   Width="90" MinHeight="36"
-                        IsEnabled="{Binding DeviceName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding ErrorMessage}"
+                           Foreground="#EF4444"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,0,12,0"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <Button Content="{infra:L cancel}" Classes="Secondary" IsCancel="True" Command="{Binding CancelCommand}" Width="90" MinHeight="36"/>
+                    <Button Content="{infra:L save}"   Classes="Primary"   IsDefault="True" Command="{Binding SaveCommand}"  Width="90" MinHeight="36"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
     </Grid>

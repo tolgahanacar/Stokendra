@@ -23,6 +23,9 @@ public interface IServiceRecordRepository
     /// <summary>Updates an existing service record.</summary>
     Task UpdateAsync(ServiceRecord record, CancellationToken cancellationToken = default);
 
+    /// <summary>Updates multiple service records in bulk under a single transaction.</summary>
+    Task UpdateBulkAsync(IEnumerable<ServiceRecord> records, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes the service record with the specified ID.</summary>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 

@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using System.Threading.Tasks;
 
 namespace Stokendra.Views;
@@ -8,6 +9,13 @@ public partial class MessageBoxWindow : Window
     public MessageBoxWindow()
     {
         InitializeComponent();
+        KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                Close();
+            }
+        };
     }
 
     public static async Task Show(Window parent, string title, string message)

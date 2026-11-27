@@ -623,5 +623,11 @@
   "guide_tag_dev_folders": "PROJECT HIERARCHY",
   "guide_tag_dev_lang": "MULTI-LANGUAGE",
   "guide_tag_dev_db": "DATABASE & MIGRATIONS",
-  "guide_tag_dev_excel": "EXCEL ENGINE"
+  "guide_tag_dev_excel": "EXCEL ENGINE",
+  "default_unit": "Piece",
+  "bulk_checked_missing_quantity": "{0} selected row(s) are missing a valid quantity. Please enter a quantity for all selected rows.",
+  "print_preview_truncated": "Preview text truncated for display performance; full report will open in browser",
+  "stock_cards_subtitle": "Manage all stock cards, groups, and minimum stock thresholds",
+  "no_records_found": "No records found.",
+  "notes_select_hint": "Select a note on the left to view it, or click 'New Note' to create one."
 }

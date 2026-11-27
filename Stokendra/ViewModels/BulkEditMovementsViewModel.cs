@@ -18,6 +18,11 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    public bool CanSave => !IsSaving;
 
     // Bulk Apply Fields
     [ObservableProperty] private bool _isApplyDepartment;
@@ -124,9 +129,11 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         // causing Avalonia DataGrid to recycle all row containers, which detached ComboBoxes and wiped their selection.
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
+        if (IsSaving) return;
+        IsSaving = true;
         ErrorMessage = "";
         try
         {
@@ -163,6 +170,10 @@ public partial class BulkEditMovementsViewModel : ViewModelBase
         {
             AppLogger.LogError("Bulk edit save error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

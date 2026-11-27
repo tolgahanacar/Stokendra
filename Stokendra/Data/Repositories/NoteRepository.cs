@@ -44,7 +44,7 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
             UpdatedAt = note.UpdatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
         }, cancellationToken: cancellationToken));
         
-        LogAudit("Insert", "Notes", note.Id, $"Title: {note.Title}");
+        LogAudit(conn, null, "Insert", "Notes", note.Id, $"Title: {note.Title}");
     }
 
     public async Task UpdateAsync(Note note, CancellationToken cancellationToken = default)
@@ -64,14 +64,50 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
             note.Id
         }, cancellationToken: cancellationToken));
         
-        LogAudit("Update", "Notes", note.Id, $"Title: {note.Title}");
+        LogAudit(conn, null, "Update", "Notes", note.Id, $"Title: {note.Title}");
+    }
+
+    public async Task UpdateBulkAsync(IEnumerable<Note> notes, CancellationToken cancellationToken = default)
+    {
+        var list = notes.ToList();
+        if (list.Count == 0) return;
+
+        foreach (var n in list)
+        {
+            if (string.IsNullOrWhiteSpace(n.Title))
+                throw new ArgumentException(LocalizationManager.L("title_required"));
+        }
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            string nowStr = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            var sql = "UPDATE Notes SET Date=@Date, Title=@Title, Content=@Content, CreatedAt=@CreatedAt, UpdatedAt=@UpdatedAt WHERE Id=@Id";
+            var payload = list.Select(n => new {
+                Date = n.Date.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Title = n.Title.Trim(),
+                Content = n.Content ?? "",
+                CreatedAt = n.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                UpdatedAt = nowStr,
+                n.Id
+            });
+            await conn.ExecuteAsync(new CommandDefinition(sql, payload, transaction: trans, cancellationToken: cancellationToken)).ConfigureAwait(false);
+            LogAudit(conn, (SqliteTransaction)trans, "Update", "Notes", 0, $"Bulk Note Update ({list.Count})");
+            await trans.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
         await conn.ExecuteAsync(new CommandDefinition("DELETE FROM Notes WHERE Id=@Id", new { Id = id }, cancellationToken: cancellationToken));
-        LogAudit("Delete", "Notes", id, "");
+        LogAudit(conn, null, "Delete", "Notes", id, "");
     }
 
     public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
@@ -83,8 +119,8 @@ public sealed class NoteRepository : RepositoryBase, INoteRepository
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try {
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM Notes WHERE Id IN @Ids", new { Ids = idList }, trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Delete", "Notes", 0, "Bulk Note Delete");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Delete", "Notes", 0, "Bulk Note Delete");
         } catch { await trans.RollbackAsync(cancellationToken); throw; }
     }
 

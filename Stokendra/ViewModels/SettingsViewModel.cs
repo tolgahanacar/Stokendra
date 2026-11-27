@@ -33,7 +33,7 @@ public partial class SettingsViewModel : ViewModelBase
     
     // New detailed & smart properties
     [ObservableProperty] private string _selectedLanguage = "Türkçe";
-    [ObservableProperty] private int _lowStockThreshold = 3;
+    [ObservableProperty] private int? _lowStockThreshold = 3;
     [ObservableProperty] private string _masterSecurityCode = "";
     [ObservableProperty] private string _databaseSize = "";
 
@@ -110,16 +110,14 @@ public partial class SettingsViewModel : ViewModelBase
             return;
         }
 
-        if (LowStockThreshold < 0)
-        {
-            LowStockThreshold = 0;
-        }
+        int normalizedThreshold = Math.Max(0, LowStockThreshold ?? 0);
+        LowStockThreshold = normalizedThreshold;
 
         var settings = AppServices.Current.Settings;
         int previousThreshold = settings.LowStockThreshold;
         settings.CompanyName = (CompanyName ?? "").Trim();
         settings.AutoBackupPath = (AutoBackupPath ?? "").Trim();
-        settings.LowStockThreshold = LowStockThreshold;
+        settings.LowStockThreshold = normalizedThreshold;
         settings.MasterSecurityCode = MasterSecurityCode.Trim();
         
         string newLang = SelectedLanguage == "English" ? "en" : "tr";
@@ -138,12 +136,27 @@ public partial class SettingsViewModel : ViewModelBase
         {
             try
             {
-                _config.SetConfig("CompanyName", settings.CompanyName);
-                _config.SetConfig("AutoBackupPath", settings.AutoBackupPath);
-                _config.SetConfig("DbPath", settings.DbPath);
-                _config.SetConfig("LowStockThreshold", settings.LowStockThreshold.ToString());
-                _config.SetConfig("MasterSecurityCode", settings.MasterSecurityCode);
-                _config.SetConfig("LastSettingsUpdated", DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
+                if (_config is Stokendra.Data.Repositories.ConfigRepository concreteConfig)
+                {
+                    await concreteConfig.SetConfigsAsync(new Dictionary<string, string>
+                    {
+                        { "CompanyName", settings.CompanyName },
+                        { "AutoBackupPath", settings.AutoBackupPath },
+                        { "DbPath", settings.DbPath },
+                        { "LowStockThreshold", settings.LowStockThreshold.ToString() },
+                        { "MasterSecurityCode", settings.MasterSecurityCode },
+                        { "LastSettingsUpdated", DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture) }
+                    });
+                }
+                else
+                {
+                    _config.SetConfig("CompanyName", settings.CompanyName);
+                    _config.SetConfig("AutoBackupPath", settings.AutoBackupPath);
+                    _config.SetConfig("DbPath", settings.DbPath);
+                    _config.SetConfig("LowStockThreshold", settings.LowStockThreshold.ToString());
+                    _config.SetConfig("MasterSecurityCode", settings.MasterSecurityCode);
+                    _config.SetConfig("LastSettingsUpdated", DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture));
+                }
                 _config.WriteAuditLog("Update", "AppConfig", 0, $"Settings updated. Company: {settings.CompanyName}, BackupPath: {settings.AutoBackupPath}");
             }
             catch (Exception ex)

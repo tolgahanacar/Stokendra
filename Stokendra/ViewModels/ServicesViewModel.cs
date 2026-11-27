@@ -18,18 +18,30 @@ public partial class ServicesViewModel : ViewModelBase
     private System.Threading.CancellationTokenSource? _searchCts;
 
     [ObservableProperty] private string      _searchText  = "";
-    [ObservableProperty] private DateTime    _startDate   = new DateTime(2024, 1, 1);
-    [ObservableProperty] private DateTime    _endDate     = DateTime.Today;
+    [ObservableProperty] private DateTime?   _startDate   = new DateTime(2024, 1, 1);
+    [ObservableProperty] private DateTime?   _endDate     = DateTime.Today;
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     private bool        _isLoading;
     [ObservableProperty] private string      _statusText  = "";
     [ObservableProperty] private ServiceRecord? _selectedRecord;
     
     public bool IsNotLoading => !IsLoading;
 
-    [ObservableProperty] private int _currentPage = 1;
-    [ObservableProperty] private int _totalPages = 1;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
     private const int PageSize = 20;
 
     public bool IsRecordSelected => SelectedRecord != null || SelectedRecords.Count > 0;
@@ -48,10 +60,6 @@ public partial class ServicesViewModel : ViewModelBase
         SelectedRecords.CollectionChanged += (s, e) => {
             OnPropertyChanged(nameof(IsRecordSelected));
         };
-
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private bool _isLoaded;
@@ -82,15 +90,17 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
             
-            var totalCount = await _services.GetCountAsync(StartDate.Date, safeEnd, term, token);
+            var totalCount = await _services.GetCountAsync(safeStart, safeEnd, term, token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
             
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _services.GetPagedAsync(CurrentPage, PageSize, StartDate.Date, safeEnd, term, token);
+            var data = await _services.GetPagedAsync(CurrentPage, PageSize, safeStart, safeEnd, term, token);
 
             token.ThrowIfCancellationRequested();
 
@@ -131,8 +141,8 @@ public partial class ServicesViewModel : ViewModelBase
             ex => { AppLogger.LogError("Services reload failed", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
-    [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadAsync(); } }
-    [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadAsync(); } }
+    [RelayCommand(CanExecute = nameof(CanNextPage))] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadAsync(); } }
+    [RelayCommand(CanExecute = nameof(CanPrevPage))] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadAsync(); } }
 
     partial void OnSearchTextChanged(string value) => ScheduleSearch();
 
@@ -282,8 +292,10 @@ public partial class ServicesViewModel : ViewModelBase
         {
             StatusText = LocalizationManager.L("svc_excel_saving");
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
-            var allRecords = await _services.GetAllAsync(StartDate.Date, safeEnd, term);
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+            var allRecords = await _services.GetAllAsync(safeStart, safeEnd, term) ?? new List<ServiceRecord>();
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();
@@ -388,8 +400,10 @@ public partial class ServicesViewModel : ViewModelBase
         try
         {
             var term = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
-            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
-            var allRecords = await _services.GetAllAsync(StartDate.Date, safeEnd, term);
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+            var allRecords = await _services.GetAllAsync(safeStart, safeEnd, term) ?? new List<ServiceRecord>();
             if (allRecords.Count == 0)
             {
                 allRecords = Records.ToList();
@@ -402,37 +416,44 @@ public partial class ServicesViewModel : ViewModelBase
             }
 
             StatusText = LocalizationManager.L("svc_print_preparing");
-            var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("maintenance_date")}</th>");
-            sbHeaders.Append($"<th style='width: 18%; text-align: left;'>{LocalizationManager.L("device_name")}</th>");
-            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("serial_number")}</th>");
-            sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("company")}</th>");
-            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("problem")}</th>");
-            sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("result")}</th>");
-            
-            var sbBody = new System.Text.StringBuilder();
-            foreach (var r in allRecords)
+            string title = LocalizationManager.L("services");
+            string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
+            string footer = LocalizationManager.L("total_records_page", allRecords.Count, 1, 1);
+
+            string html = await Task.Run(() =>
             {
-                sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.DeviceName)}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.SerialNumber)}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Company)}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Issue)}</td>");
-                sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Result)}</td>");
-                sbBody.Append("</tr>");
-            }
+                var sbHeaders = new System.Text.StringBuilder();
+                sbHeaders.Append($"<th style='width: 12%;'>{LocalizationManager.L("maintenance_date")}</th>");
+                sbHeaders.Append($"<th style='width: 18%; text-align: left;'>{LocalizationManager.L("device_name")}</th>");
+                sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("serial_number")}</th>");
+                sbHeaders.Append($"<th style='width: 15%; text-align: left;'>{LocalizationManager.L("company")}</th>");
+                sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("problem")}</th>");
+                sbHeaders.Append($"<th style='width: 20%; text-align: left;'>{LocalizationManager.L("result")}</th>");
+
+                var sbBody = new System.Text.StringBuilder(allRecords.Count * 180);
+                foreach (var r in allRecords)
+                {
+                    sbBody.Append("<tr>");
+                    sbBody.Append($"<td class='num'>{r.ServiceDate:dd.MM.yyyy}</td>");
+                    sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.DeviceName)}</td>");
+                    sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.SerialNumber)}</td>");
+                    sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Company)}</td>");
+                    sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Issue)}</td>");
+                    sbBody.Append($"<td style='text-align: left;'>{PrintTemplateBuilder.Escape(r.Result)}</td>");
+                    sbBody.Append("</tr>");
+                }
+
+                return PrintTemplateBuilder.BuildReportHtml(
+                    title: title,
+                    headerTitle: title.ToUpper(),
+                    dateInfo: dateInfo,
+                    tableHeadersHtml: sbHeaders.ToString(),
+                    tableBodyHtml: sbBody.ToString(),
+                    footerHtml: footer
+                );
+            });
             
-            string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("services"),
-                headerTitle: LocalizationManager.L("services").ToUpper(),
-                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
-                tableHeadersHtml: sbHeaders.ToString(),
-                tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", allRecords.Count, 1, 1)
-            );
-            
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("services"), html);
+            var previewVm = new PrintPreviewViewModel(title, html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("svc_print_done");

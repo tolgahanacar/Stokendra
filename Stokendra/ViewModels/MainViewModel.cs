@@ -46,7 +46,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty] private string _updateMessage = "";
     [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] private int _downloadProgress;
-    [ObservableProperty] private string _downloadStatusText = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDownloadStatus))]
+    private string _downloadStatusText = "";
+    public bool HasDownloadStatus => !string.IsNullOrEmpty(DownloadStatusText);
     [ObservableProperty] private bool _downloadComplete;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]

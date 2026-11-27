@@ -16,6 +16,10 @@
         <converters:RoleBackgroundConverter x:Key="RoleBackgroundConverter"/>
         <converters:RoleTextConverter x:Key="RoleTextConverter"/>
         <converters:FirstLetterConverter x:Key="FirstLetterConverter"/>
+        <converters:SuccessColorConverter x:Key="SuccessColorConverter"/>
+        <converters:SuccessIconConverter x:Key="SuccessIconConverter"/>
+        <converters:SafeDoubleConverter x:Key="SafeDoubleConverter"/>
+        <converters:ZeroToBoolConverter x:Key="ZeroToBoolConverter"/>
     </Application.Resources>
 
     <Application.Styles>

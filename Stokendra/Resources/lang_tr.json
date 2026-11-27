@@ -623,5 +623,11 @@
   "guide_tag_dev_folders": "PROJE HİYERARŞİSİ",
   "guide_tag_dev_lang": "ÇOKLU DİL",
   "guide_tag_dev_db": "VERİTABANI & GÖÇ",
-  "guide_tag_dev_excel": "EXCEL MOTORU"
+  "guide_tag_dev_excel": "EXCEL MOTORU",
+  "default_unit": "Adet",
+  "bulk_checked_missing_quantity": "Seçili {0} satırda miktar girilmemiş veya geçersiz. Lütfen tüm seçili satırlar için miktar giriniz.",
+  "print_preview_truncated": "Önizleme metni boyut sınırı nedeniyle kısaltıldı; 'Tarayıcıda Aç ve Yazdır' ile tam çıktı alınacaktır",
+  "stock_cards_subtitle": "Tüm stok kartlarını, grupları ve asgari stok eşiklerini yönetin",
+  "no_records_found": "Kayıt bulunamadı.",
+  "notes_select_hint": "Görüntülemek için soldan bir not seçin veya 'Yeni Not' ile yeni bir not oluşturun."
 }

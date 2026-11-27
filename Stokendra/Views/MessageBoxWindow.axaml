@@ -41,11 +41,13 @@
                 <Button Name="CancelBtn"
                         Content="{infra:L cancel}"
                         Classes="Secondary"
+                        IsCancel="True"
                         Width="90" MinHeight="36"
                         IsVisible="False"/>
                 <Button Name="OkBtn"
                         Content="{infra:L ok}"
                         Classes="Primary"
+                        IsDefault="True"
                         Width="90" MinHeight="36"/>
             </StackPanel>
 

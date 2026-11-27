@@ -47,7 +47,7 @@ public sealed partial class Database : IDisposable
         {
             DataSource = _databasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
+            Cache = SqliteCacheMode.Default,
             Pooling = true,
             ForeignKeys = true,
             DefaultTimeout = 15
@@ -110,10 +110,12 @@ public sealed partial class Database : IDisposable
         cmdBegin.CommandText = "BEGIN IMMEDIATE";
         cmdBegin.ExecuteNonQuery();
 
+        bool shouldValidate = false;
         try
         {
             int version = GetSchemaVersion(connection, null);
             bool hasLegacyTables = TableExists(connection, null, "StokKartlari") || TableExists(connection, null, "StockCards");
+            shouldValidate = !hasLegacyTables || version < CurrentSchemaVersion;
 
             // V1–V12 migrations are no-ops (legacy, already folded into V13)
             if (hasLegacyTables)
@@ -150,8 +152,11 @@ public sealed partial class Database : IDisposable
             ExecutePragma(connection, "foreign_keys", "ON");
         }
 
-        // Validate database integrity and foreign key constraints
-        ValidateDatabase(connection, null);
+        // Validate database integrity and foreign key constraints only on creation or schema migration
+        if (shouldValidate)
+        {
+            ValidateDatabase(connection, null);
+        }
 
         using var optimize = connection.CreateCommand();
         optimize.CommandText = "PRAGMA journal_size_limit = 67108864; PRAGMA optimize;";

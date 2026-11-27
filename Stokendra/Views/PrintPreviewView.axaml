@@ -4,15 +4,15 @@
         xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.PrintPreviewView"
         Title="{Binding Title}"
-        Width="900" Height="700"
+        Width="880" Height="640"
+        MinWidth="680" MinHeight="460"
         WindowStartupLocation="CenterOwner"
         Background="#0C0E14"
-        TransparencyLevelHint="AcrylicBlur"
-        ExtendClientAreaToDecorationsHint="True" x:CompileBindings="False">
+        x:CompileBindings="False">
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20">
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="0,20,0,20" Spacing="4">
+        <StackPanel Grid.Row="0" Margin="0,0,0,14" Spacing="4">
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" Foreground="#3B82F6"/>
             <TextBlock Text="{infra:L print_preview_desc}" FontSize="12" Foreground="#94A3B8"/>
         </StackPanel>
@@ -35,8 +35,8 @@
             <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="#64748B" FontSize="11"/>
             
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12">
-                <Button Content="{infra:L cancel}" Classes="Secondary" Command="{Binding CancelCommand}" Width="100"/>
-                <Button Content="{infra:L open_browser_and_print}" Classes="Primary" Command="{Binding OpenInBrowserCommand}" Width="220"/>
+                <Button Content="{infra:L cancel}" Classes="Secondary" IsCancel="True" Command="{Binding CancelCommand}" Width="100"/>
+                <Button Content="{infra:L open_browser_and_print}" Classes="Primary" IsDefault="True" Command="{Binding OpenInBrowserCommand}" Width="220"/>
             </StackPanel>
         </Grid>
     </Grid>

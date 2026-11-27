@@ -12,10 +12,6 @@
         Background="#161B27"
         x:CompileBindings="False">
 
-    <Design.DataContext>
-        <vm:AddMovementViewModel/>
-    </Design.DataContext>
-
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Header -->
@@ -115,12 +111,13 @@
                     <Button Content="{infra:L cancel}"
                              Classes="Secondary"
                              Command="{Binding CancelCommand}"
+                             IsCancel="True"
                              Width="90" MinHeight="36"/>
                     <Button Content="{infra:L save}"
                              Classes="Primary"
                              Command="{Binding SaveCommand}"
-                             IsEnabled="{Binding SelectedCard,
-                                 Converter={x:Static ObjectConverters.IsNotNull}}"
+                             IsDefault="True"
+                             IsEnabled="{Binding CanSave}"
                              Width="90" MinHeight="36"/>
                 </StackPanel>
             </Grid>

@@ -14,19 +14,6 @@ namespace Stokendra.Data.Repositories;
 public sealed class StockCardRepository(IDbConnectionFactory connectionFactory) 
     : RepositoryBase(connectionFactory), IStockCardRepository
 {
-    private const string StockBalancesCte = """
-        WITH StockBalances AS (
-            SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
-                   u.Name as ParentName,
-                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
-                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit
-            FROM StockCards s
-            LEFT JOIN StockCards u ON s.ParentId = u.Id
-            LEFT JOIN StockMovements h ON h.StockCardId = s.Id
-            GROUP BY s.Id
-        )
-        """;
-
     public List<StockCard> GetAll() => GetStockCards(null, null, null);
     public async Task<List<StockCard>> GetAllAsync(CancellationToken cancellationToken = default) => await GetStockCardsAsync(null, null, null, cancellationToken);
     public List<StockCard> GetParentCards() => GetStockCards("Parent", null, null);
@@ -37,12 +24,23 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
     public async Task<List<StockCard>> GetLowStockCardsAsync(int limit, int fallbackThreshold = 3, CancellationToken cancellationToken = default)
     {
         using var conn = ConnectionFactory.CreateConnection();
-        var sql = StockBalancesCte + """
-
-            SELECT *, (TotalEntry - TotalExit) as CurrentStock
-            FROM StockBalances
-            WHERE CardType = 'Child' AND CurrentStock <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END
-            ORDER BY CurrentStock ASC, Code ASC
+        var sql = """
+            SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
+                   u.Name as ParentName,
+                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
+                   CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit,
+                   CAST(COALESCE(SUM(CASE
+                       WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity
+                       WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN -h.Quantity
+                       ELSE 0
+                   END), 0) AS REAL) as CurrentStock
+            FROM StockCards s
+            LEFT JOIN StockCards u ON s.ParentId = u.Id
+            LEFT JOIN StockMovements h ON h.StockCardId = s.Id
+            WHERE s.CardType = 'Child'
+            GROUP BY s.Id
+            HAVING CurrentStock <= CASE WHEN s.MinStock > 0 THEN s.MinStock ELSE @Fallback END
+            ORDER BY CurrentStock ASC, s.Code ASC
             LIMIT @Limit
             """;
 
@@ -78,8 +76,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 SELECT last_insert_rowid();
                 """;
             stockCard.Id = conn.ExecuteScalar<int>(sql, stockCard, transaction: trans);
+            LogAudit(conn, trans, "Insert", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
             trans.Commit();
-            LogAudit("Insert", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
         } 
         catch 
         { 
@@ -102,8 +100,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 """;
             stockCard.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 sql, stockCard, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Insert", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Insert", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
         } 
         catch 
         { 
@@ -127,8 +125,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 WHERE Id=@Id
                 """;
             conn.Execute(sql, stockCard, transaction: trans);
+            LogAudit(conn, trans, "Update", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
             trans.Commit();
-            LogAudit("Update", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
         } 
         catch 
         { 
@@ -152,8 +150,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 WHERE Id=@Id
                 """;
             await conn.ExecuteAsync(new CommandDefinition(sql, stockCard, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Update", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Update", "StockCards", stockCard.Id, $"Code: {stockCard.Code}, Name: {stockCard.Name}");
         } 
         catch 
         { 
@@ -176,8 +174,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
 
             conn.Execute("DELETE FROM StockCards WHERE Id=@Id", new { Id = id }, transaction: trans);
+            LogAudit(conn, trans, "Delete", "StockCards", id, "");
             trans.Commit();
-            LogAudit("Delete", "StockCards", id, "");
         } 
         catch 
         { 
@@ -201,8 +199,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
 
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockCards WHERE Id=@Id", new { Id = id }, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Delete", "StockCards", id, "");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Delete", "StockCards", id, "");
         } 
         catch 
         { 
@@ -229,8 +227,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 throw new InvalidOperationException(LocalizationManager.L("parent_card_has_children"));
 
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM StockCards WHERE Id IN @Ids", new { Ids = idList }, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Delete", "StockCards", 0, "Bulk StockCard Delete");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Delete", "StockCards", 0, "Bulk StockCard Delete");
         } 
         catch 
         { 
@@ -248,6 +246,67 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         return (max + 1).ToString("D3", CultureInfo.InvariantCulture);
     }
 
+    public async Task<string> GetNextCodeAsync(CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        var result = await conn.ExecuteScalarAsync<object?>(new CommandDefinition(
+            "SELECT MAX(CAST(Code AS INTEGER)) FROM StockCards WHERE Code GLOB '[0-9]*' AND Code NOT GLOB '*[^0-9]*' AND LENGTH(Code) <= 9",
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
+        long max = (result != null && result != DBNull.Value) ? Convert.ToInt64(result) : 0;
+        if (max >= int.MaxValue) max = 0;
+        return (max + 1).ToString("D3", CultureInfo.InvariantCulture);
+    }
+
+    public async Task<List<StockCard>> GetCardLookupsAsync(string? cardType = null, CancellationToken cancellationToken = default)
+    {
+        using var conn = ConnectionFactory.CreateConnection();
+        string where = string.IsNullOrEmpty(cardType) ? "" : "WHERE CardType = @CardType";
+        var sql = $"SELECT Id, Code, Name, CardType, ParentId, Category, Unit, MinStock, Description FROM StockCards {where} ORDER BY Code";
+        var result = await conn.QueryAsync<StockCard>(new CommandDefinition(sql, new { CardType = cardType }, cancellationToken: cancellationToken)).ConfigureAwait(false);
+        return result.ToList();
+    }
+
+    private static void ValidateBulkCardsForInsert(List<StockCard> list, SqliteConnection conn, SqliteTransaction trans)
+    {
+        var existingRows = conn.Query<(int Id, string Code, string CardType, int? ParentId)>(
+            "SELECT Id, Code, CardType, ParentId FROM StockCards", transaction: trans).ToList();
+
+        var existingCodes = new HashSet<string>(existingRows.Select(r => r.Code), StringComparer.OrdinalIgnoreCase);
+        var parentMap = existingRows.ToDictionary(r => r.Id, r => (r.CardType, r.ParentId));
+
+        foreach (var s in list)
+        {
+            if (string.IsNullOrWhiteSpace(s.Name)) throw new InvalidOperationException(LocalizationManager.L("name_required"));
+            if (string.IsNullOrWhiteSpace(s.Code)) throw new InvalidOperationException(LocalizationManager.L("code_required"));
+
+            s.Name = s.Name.Trim();
+            s.Code = s.Code.Trim();
+            s.CardType = s.CardTypeEnum.ToDbString();
+            if (s.MinStock < 0) s.MinStock = 0;
+
+            if (!existingCodes.Add(s.Code))
+                throw new InvalidOperationException(LocalizationManager.L("stock_code_exists"));
+
+            if (s.ParentId.HasValue)
+            {
+                if (s.ParentId == s.Id)
+                    throw new InvalidOperationException(LocalizationManager.L("parent_card_self"));
+
+                if (!parentMap.TryGetValue(s.ParentId.Value, out var parentInfo) || parentInfo.CardType.ToCardType() != CardType.Parent)
+                    throw new InvalidOperationException(LocalizationManager.L("parent_card_not_found"));
+
+                int? currId = s.ParentId;
+                var visited = new HashSet<int> { s.Id };
+                while (currId.HasValue)
+                {
+                    if (!visited.Add(currId.Value))
+                        throw new InvalidOperationException(LocalizationManager.L("parent_card_loop"));
+                    currId = parentMap.TryGetValue(currId.Value, out var node) ? node.ParentId : null;
+                }
+            }
+        }
+    }
+
     public void AddBulk(IEnumerable<StockCard> stockCards)
     {
         var list = stockCards.ToList();
@@ -257,6 +316,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         using var trans = conn.BeginTransaction();
         try
         {
+            ValidateBulkCardsForInsert(list, conn, trans);
             var sql = """
                 INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
                 VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
@@ -264,7 +324,6 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 """;
             foreach (var card in list)
             {
-                ValidateCard(card, conn, trans);
                 card.Id = conn.ExecuteScalar<int>(sql, card, transaction: trans);
                 LogAudit(conn, trans, "Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
             }
@@ -286,6 +345,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         using var trans = await conn.BeginTransactionAsync(cancellationToken);
         try
         {
+            ValidateBulkCardsForInsert(list, conn, (SqliteTransaction)trans);
             var sql = """
                 INSERT INTO StockCards (Code, Name, CardType, ParentId, Category, Unit, MinStock, Description)
                 VALUES (@Code, @Name, @CardType, @ParentId, @Category, @Unit, @MinStock, @Description);
@@ -293,7 +353,6 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
                 """;
             foreach (var card in list)
             {
-                ValidateCard(card, conn, (SqliteTransaction)trans);
                 card.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                     sql, card, transaction: trans, cancellationToken: cancellationToken));
                 LogAudit(conn, (SqliteTransaction)trans, "Insert", "StockCards", card.Id, $"Code: {card.Code}, Name: {card.Name}");
@@ -306,6 +365,24 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             throw;
         }
     }
+
+    private static string BuildStockBalancesSql(string where) => $"""
+        SELECT s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
+               u.Name as ParentName,
+               CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalEntry,
+               CAST(COALESCE(SUM(CASE WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN h.Quantity ELSE 0 END), 0) AS REAL) as TotalExit,
+               CAST(COALESCE(SUM(CASE
+                   WHEN h.Type IN ('Entry', 'Giris', 'Giriş') THEN h.Quantity
+                   WHEN h.Type IN ('Exit', 'Cikis', 'Çıkış') THEN -h.Quantity
+                   ELSE 0
+               END), 0) AS REAL) as CurrentStock
+        FROM StockCards s
+        LEFT JOIN StockCards u ON s.ParentId = u.Id
+        LEFT JOIN StockMovements h ON h.StockCardId = s.Id
+        WHERE {where}
+        GROUP BY s.Id
+        ORDER BY s.Code
+        """;
 
     private List<StockCard> GetStockCards(string? type, int? parentId, int? id)
     {
@@ -328,8 +405,7 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             @params.Add("Id", id.Value);
         }
 
-        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances s WHERE {where} ORDER BY s.Code";
-        return conn.Query<StockCard>(sql, @params).ToList();
+        return conn.Query<StockCard>(BuildStockBalancesSql(where), @params).ToList();
     }
 
     private async Task<List<StockCard>> GetStockCardsAsync(string? type, int? parentId, int? id, CancellationToken cancellationToken = default)
@@ -353,10 +429,8 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
             @params.Add("Id", id.Value);
         }
 
-        var sql = StockBalancesCte + $"\nSELECT *, (TotalEntry - TotalExit) as CurrentStock FROM StockBalances s WHERE {where} ORDER BY s.Code";
-
         var result = await conn.QueryAsync<StockCard>(new CommandDefinition(
-            sql, @params, cancellationToken: cancellationToken));
+            BuildStockBalancesSql(where), @params, cancellationToken: cancellationToken)).ConfigureAwait(false);
         return result.ToList();
     }
 
@@ -378,32 +452,33 @@ public sealed class StockCardRepository(IDbConnectionFactory connectionFactory)
         }
         
         var sql = $"""
-            SELECT 
-                s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
-                u.Name as ParentName,
-                CAST(COALESCE(entry.TotalEntry, 0) AS REAL) as TotalEntry,
-                CAST(COALESCE(exit.TotalExit, 0) AS REAL) as TotalExit,
-                CAST(COALESCE(entry.TotalEntry, 0) - COALESCE(exit.TotalExit, 0) AS REAL) as CurrentStock
-            FROM (
+            WITH paged AS MATERIALIZED (
                 SELECT s.Id
                 FROM StockCards s
                 LEFT JOIN StockCards u ON s.ParentId = u.Id
                 WHERE {where}
                 ORDER BY s.Code ASC
                 LIMIT @Limit OFFSET @Offset
-            ) paged
+            )
+            SELECT 
+                s.Id, s.Code, s.Name, s.CardType, s.ParentId, s.Category, s.Unit, s.MinStock, s.Description,
+                u.Name as ParentName,
+                CAST(COALESCE(entry.TotalEntry, 0) AS REAL) as TotalEntry,
+                CAST(COALESCE(exit.TotalExit, 0) AS REAL) as TotalExit,
+                CAST(COALESCE(entry.TotalEntry, 0) - COALESCE(exit.TotalExit, 0) AS REAL) as CurrentStock
+            FROM paged
             INNER JOIN StockCards s ON paged.Id = s.Id
             LEFT JOIN StockCards u ON s.ParentId = u.Id
             LEFT JOIN (
                 SELECT StockCardId, SUM(Quantity) as TotalEntry
                 FROM StockMovements
-                WHERE Type IN ('Entry', 'Giris', 'Giriş')
+                WHERE StockCardId IN (SELECT Id FROM paged) AND Type IN ('Entry', 'Giris', 'Giriş')
                 GROUP BY StockCardId
             ) entry ON s.Id = entry.StockCardId
             LEFT JOIN (
                 SELECT StockCardId, SUM(Quantity) as TotalExit
                 FROM StockMovements
-                WHERE Type IN ('Exit', 'Cikis', 'Çıkış')
+                WHERE StockCardId IN (SELECT Id FROM paged) AND Type IN ('Exit', 'Cikis', 'Çıkış')
                 GROUP BY StockCardId
             ) exit ON s.Id = exit.StockCardId
             ORDER BY s.Code ASC

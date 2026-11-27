@@ -19,6 +19,8 @@ public partial class StocksViewModel : ViewModelBase
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     private bool _isLoading;
     [ObservableProperty] private string _statusText = "";
 
@@ -42,10 +44,6 @@ public partial class StocksViewModel : ViewModelBase
             (k, term) => k.MatchesSearch(term));
 
         DataEvents.DataChanged += OnDataChanged;
-
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private void OnDataChanged(DataDomain domain)
@@ -190,48 +188,53 @@ public partial class StocksViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("preparing_print");
-            
-            double grandTotalIn = snapshot.Sum(s => s.TotalEntry);
-            double grandTotalOut = snapshot.Sum(s => s.TotalExit);
-            double grandTotalResult = grandTotalIn - grandTotalOut;
+            string title = LocalizationManager.L("stock_status_report");
+            string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
 
-            var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th style='width: 18%;'>{LocalizationManager.L("code_no")}</th>");
-            sbHeaders.Append($"<th style='width: 34%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
-            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("entry")}</th>");
-            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("exit")}</th>");
-            sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
-            
-            var sbBody = new System.Text.StringBuilder();
-            foreach (var s in snapshot)
+            string html = await Task.Run(() =>
             {
-                sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(s.Code)}</td>");
-                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(s.Name)}</td>");
-                sbBody.Append($"<td class='num'>{s.TotalEntry}</td>");
-                sbBody.Append($"<td class='num'>{s.TotalExit}</td>");
-                sbBody.Append($"<td class='num bold'>{s.CurrentStock}</td>");
+                double grandTotalIn = snapshot.Sum(s => s.TotalEntry);
+                double grandTotalOut = snapshot.Sum(s => s.TotalExit);
+                double grandTotalResult = grandTotalIn - grandTotalOut;
+
+                var sbHeaders = new System.Text.StringBuilder();
+                sbHeaders.Append($"<th style='width: 18%;'>{LocalizationManager.L("code_no")}</th>");
+                sbHeaders.Append($"<th style='width: 34%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
+                sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("entry")}</th>");
+                sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("exit")}</th>");
+                sbHeaders.Append($"<th style='width: 16%;'>{LocalizationManager.L("current_stock")}</th>");
+
+                var sbBody = new System.Text.StringBuilder(snapshot.Count * 160);
+                foreach (var s in snapshot)
+                {
+                    sbBody.Append("<tr>");
+                    sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(s.Code)}</td>");
+                    sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(s.Name)}</td>");
+                    sbBody.Append($"<td class='num'>{s.TotalEntry}</td>");
+                    sbBody.Append($"<td class='num'>{s.TotalExit}</td>");
+                    sbBody.Append($"<td class='num bold'>{s.CurrentStock}</td>");
+                    sbBody.Append("</tr>");
+                }
+
+                // Grand Total Row
+                sbBody.Append("<tr class='footer-row'>");
+                sbBody.Append($"<td colspan='2' style='text-align: right; padding-right: 15px;'>{LocalizationManager.L("grand_total")}</td>");
+                sbBody.Append($"<td class='num'>{grandTotalIn}</td>");
+                sbBody.Append($"<td class='num'>{grandTotalOut}</td>");
+                sbBody.Append($"<td class='num'>{grandTotalResult}</td>");
                 sbBody.Append("</tr>");
-            }
+
+                return PrintTemplateBuilder.BuildReportHtml(
+                    title: title,
+                    headerTitle: title.ToUpper(),
+                    dateInfo: dateInfo,
+                    tableHeadersHtml: sbHeaders.ToString(),
+                    tableBodyHtml: sbBody.ToString(),
+                    footerHtml: ""
+                );
+            });
             
-            // Grand Total Row
-            sbBody.Append("<tr class='footer-row'>");
-            sbBody.Append($"<td colspan='2' style='text-align: right; padding-right: 15px;'>{LocalizationManager.L("grand_total")}</td>");
-            sbBody.Append($"<td class='num'>{grandTotalIn}</td>");
-            sbBody.Append($"<td class='num'>{grandTotalOut}</td>");
-            sbBody.Append($"<td class='num'>{grandTotalResult}</td>");
-            sbBody.Append("</tr>");
-            
-            string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("stock_status_report"),
-                headerTitle: LocalizationManager.L("stock_status_report").ToUpper(),
-                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
-                tableHeadersHtml: sbHeaders.ToString(),
-                tableBodyHtml: sbBody.ToString(),
-                footerHtml: ""
-            );
-            
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("stock_status_report"), html);
+            var previewVm = new PrintPreviewViewModel(title, html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("printing_finished");

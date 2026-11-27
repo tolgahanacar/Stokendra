@@ -9,80 +9,98 @@
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="40,40,40,0" Spacing="8">
-            <TextBlock Text="{infra:L stock_cards}" FontSize="32" FontWeight="Black" Foreground="#F8FAFC"/>
-            <TextBlock Text="{infra:L dashboard_subtitle}" FontSize="14" Foreground="#94A3B8"/>
+        <StackPanel Grid.Row="0" Margin="40,32,40,0" Spacing="6">
+            <TextBlock Text="{infra:L stock_cards}" FontSize="30" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="{infra:L stock_cards_subtitle}" FontSize="13" Foreground="#94A3B8"/>
         </StackPanel>
 
         <!-- Search -->
         <Border Grid.Row="1" Background="#161B27" Margin="28,16,28,0" CornerRadius="10" Padding="16,12">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <WrapPanel Orientation="Horizontal">
                 <TextBox Text="{Binding SearchText}"
                           Watermark="{infra:L search_placeholder}"
-                          Width="320"/>
+                          Width="280" Margin="0,0,10,4"/>
                 <Button Content="{infra:L clear_filter}" Classes="Secondary"
-                        Command="{Binding ClearSearchCommand}"/>
-            </StackPanel>
+                        Command="{Binding ClearSearchCommand}"
+                        Margin="0,0,0,4"/>
+            </WrapPanel>
         </Border>
 
         <!-- Toolbar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="28,12,28,0">
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="28,12,28,0">
             <Button Content="{infra:L new_card}" Classes="Primary"
                     Command="{Binding AddCardCommand}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
             
             <Button Content="{infra:L edit}" Classes="Secondary"
                     Command="{Binding EditCardCommand}"
                     IsEnabled="{Binding IsSingleCardSelected}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
             
             <Button Content="{infra:L delete}" Classes="Danger"
                     Command="{Binding DeleteCardCommand}"
                     IsEnabled="{Binding IsCardSelected}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
 
-            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0" IsVisible="{Binding CanEdit}"/>
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="0,0,8,6" VerticalAlignment="Center" IsVisible="{Binding CanEdit}"/>
 
             <Button Content="{infra:L detail}" Classes="Success"
                     Command="{Binding ShowDetailCommand}"
-                    IsEnabled="{Binding IsCardSelected}"/>
+                    IsEnabled="{Binding IsSingleCardSelected}"
+                    Margin="0,0,8,6"/>
 
-            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="4,0"/>
+            <Rectangle Width="1" Height="24" Fill="#30384C" Margin="0,0,8,6" VerticalAlignment="Center"/>
 
             <Button Content="{infra:L export_excel}" Classes="Secondary"
-                    Command="{Binding ExportExcelCommand}"/>
+                    Command="{Binding ExportExcelCommand}"
+                    Margin="0,0,8,6"/>
             
             <Button Content="{infra:L print}" Classes="Success"
-                    Command="{Binding PrintCommand}"/>
+                    Command="{Binding PrintCommand}"
+                    Margin="0,0,8,6"/>
 
             <Button Content="{infra:L import_excel}" Classes="Secondary"
                     Command="{Binding ImportExcelCommand}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,0,6"/>
             
-        </StackPanel>
+        </WrapPanel>
 
         <!-- Grid -->
-        <DataGrid Grid.Row="3"
-                  x:Name="CardsGrid"
-                  Margin="28,16,28,16"
-                  ItemsSource="{Binding Cards}"
-                  SelectedItem="{Binding SelectedCard}"
-                  IsReadOnly="True"
-                  SelectionMode="Extended"
-                  CanUserResizeColumns="True"
-                  HorizontalScrollBarVisibility="Visible"
-                  SelectionChanged="CardsGrid_SelectionChanged">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"        Width="80"  MinWidth="60"/>
-                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"        Width="2*"  MinWidth="120"/>
-                <DataGridTextColumn Header="{infra:L card_type}"     Binding="{Binding CardTypeDisplay}" Width="100" MinWidth="80"/>
-                <DataGridTextColumn Header="{infra:L parent_card}"   Binding="{Binding ParentName}"  Width="*"   MinWidth="150"/>
-                <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"    Width="*"   MinWidth="80"/>
-                <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding CurrentStock}" Width="100" MinWidth="80"/>
-                <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}"     Width="100" MinWidth="80"/>
-                <DataGridTextColumn Header="{infra:L unit}"          Binding="{Binding Unit}"         Width="100" MinWidth="70"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="3">
+            <DataGrid x:Name="CardsGrid"
+                      Margin="28,12,28,16"
+                      ItemsSource="{Binding Cards}"
+                      SelectedItem="{Binding SelectedCard}"
+                      IsReadOnly="True"
+                      SelectionMode="Extended"
+                      CanUserResizeColumns="True"
+                      HorizontalScrollBarVisibility="Auto"
+                      DoubleTapped="CardsGrid_DoubleTapped"
+                      SelectionChanged="CardsGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"        Width="80"  MinWidth="60"/>
+                    <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"        Width="2*"  MinWidth="120"/>
+                    <DataGridTextColumn Header="{infra:L card_type}"     Binding="{Binding CardTypeDisplay}" Width="95" MinWidth="75"/>
+                    <DataGridTextColumn Header="{infra:L parent_card}"   Binding="{Binding ParentName}"  Width="*"   MinWidth="120"/>
+                    <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"    Width="*"   MinWidth="80"/>
+                    <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding CurrentStock}" Width="95" MinWidth="75"/>
+                    <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}"     Width="95" MinWidth="75"/>
+                    <DataGridTextColumn Header="{infra:L unit}"          Binding="{Binding Unit}"         Width="85" MinWidth="65"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Cards.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
+        </Grid>
 
         <!-- Status -->
         <Border Grid.Row="4" Background="#161B27" Padding="28,8">

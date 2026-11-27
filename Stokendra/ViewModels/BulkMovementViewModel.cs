@@ -36,8 +36,28 @@ public partial class BulkMovementViewModel : ViewModelBase
     [ObservableProperty] private DateTime? _date = DateTime.Now;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _isLoading;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
 
-    partial void OnSearchTextChanged(string value) => UpdateVisibleItems();
+    public bool CanSave => !IsSaving;
+    private System.Threading.CancellationTokenSource? _searchCts;
+
+    partial void OnSearchTextChanged(string value) => ScheduleSearch();
+
+    private async void ScheduleSearch()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = new System.Threading.CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(120, token);
+            UpdateVisibleItems();
+        }
+        catch (OperationCanceledException) { }
+    }
 
     public ObservableCollection<string> Departments { get; } = new();
     public BulkObservableCollection<BulkMovementItemViewModel> Items { get; } = new();
@@ -97,18 +117,29 @@ public partial class BulkMovementViewModel : ViewModelBase
     [RelayCommand]
     public void DeselectAll() { foreach (var i in Items) i.IsSelected = false; }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     public async Task SaveAsync()
     {
-        if (!EnsureCanEditForSession()) return;
+        if (IsSaving || !EnsureCanEditForSession()) return;
 
-        var selected = _allItemViewModels.Where(i => i.IsSelected && i.Quantity.HasValue && i.Quantity > 0).ToList();
+        var selectedChecked = _allItemViewModels.Where(i => i.IsSelected).ToList();
+        var missingQtyCount = selectedChecked.Count(i => !i.Quantity.HasValue || i.Quantity <= 0);
+        if (missingQtyCount > 0)
+        {
+            await _dialogService.ShowMessageAsync(
+                LocalizationManager.L("warning"),
+                LocalizationManager.L("bulk_checked_missing_quantity", missingQtyCount));
+            return;
+        }
+
+        var selected = selectedChecked.Where(i => i.Quantity.HasValue && i.Quantity > 0).ToList();
         if (selected.Count == 0)
         {
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("bulk_no_save"));
             return;
         }
 
+        IsSaving = true;
         try
         {
             foreach (var item in selected)
@@ -161,6 +192,10 @@ public partial class BulkMovementViewModel : ViewModelBase
         {
             AppLogger.LogError("Bulk movement save error", ex);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("error"), $"{LocalizationManager.L("error")}: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

@@ -64,14 +64,17 @@ public static class ExcelService
             range.Style.Border.OutsideBorderColor = BorderColor;
             range.Style.Border.InsideBorderColor = XLColor.FromArgb(220, 220, 220);
 
-            for (int r = 2; r <= rowCount + 1; r++)
+            if (rowCount <= 2500)
             {
-                if (r % 2 == 0)
+                for (int r = 2; r <= rowCount + 1; r += 2)
+                {
                     worksheet.Range(r, 1, r, headers.Length).Style.Fill.BackgroundColor = ZebraRowBg;
+                }
             }
         }
 
-        worksheet.Columns().AdjustToContents();
+        int adjustRows = Math.Max(1, Math.Min(rowCount + 1, 150));
+        worksheet.Columns().AdjustToContents(1, adjustRows);
         customizeSheet?.Invoke(worksheet);
 
         try

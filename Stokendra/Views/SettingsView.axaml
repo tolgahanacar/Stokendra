@@ -6,8 +6,9 @@
              Background="#0C0E14"
              x:DataType="vm:SettingsViewModel">
 
-    <ScrollViewer>
-        <StackPanel Margin="28,24,28,24" Spacing="24">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="28,24,28,24" Spacing="24">
             
             <!-- Başlık -->
             <StackPanel Spacing="4">
@@ -28,12 +29,12 @@
                             
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{infra:L company_name_label}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding CompanyName}" Watermark="{infra:L company_name_hint}"/>
+                                <TextBox Text="{Binding CompanyName}" Watermark="{infra:L company_name_hint}" IsEnabled="{Binding CanEdit}"/>
                             </StackPanel>
 
                             <StackPanel Spacing="6">
                                 <TextBlock Text="{infra:L language_label}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" HorizontalAlignment="Stretch"/>
+                                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" IsEnabled="{Binding CanEdit}" HorizontalAlignment="Stretch"/>
                             </StackPanel>
                             
                             <StackPanel Spacing="6">
@@ -82,7 +83,6 @@
                             
                             <Button Content="{infra:L change_password_btn}" Classes="Success"
                                     Command="{Binding ChangePasswordCommand}"
-                                    IsEnabled="{Binding CanEdit}"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Height="38" Margin="0,8,0,0"/>
                         </StackPanel>
@@ -222,19 +222,26 @@
 
             </Grid>
 
-            <!-- Durum mesajı -->
-            <Border Background="#161B27" CornerRadius="8" Padding="16,12" BorderBrush="#1E2D45" BorderThickness="1"
-                    IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                    HorizontalAlignment="Left" MinWidth="400">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="ℹ" Foreground="#38AEFF" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding StatusMessage}"
-                               FontSize="13"
-                               Foreground="#D0D8F0"
-                               TextWrapping="Wrap"/>
-                </StackPanel>
-            </Border>
-
         </StackPanel>
     </ScrollViewer>
+
+        <!-- Pinned Status Banner -->
+        <Border Grid.Row="1"
+                Background="#161B27"
+                Padding="28,12"
+                BorderBrush="{Binding IsSuccess, Converter={StaticResource SuccessColorConverter}}"
+                BorderThickness="0,2,0,0"
+                IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding IsSuccess, Converter={StaticResource SuccessIconConverter}}"
+                           Foreground="{Binding IsSuccess, Converter={StaticResource SuccessColorConverter}}"
+                           FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusMessage}"
+                           FontSize="13"
+                           Foreground="#F1F5F9"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

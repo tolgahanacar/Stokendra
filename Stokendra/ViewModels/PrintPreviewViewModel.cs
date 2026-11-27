@@ -9,6 +9,9 @@ namespace Stokendra.ViewModels;
 
 public partial class PrintPreviewViewModel : ViewModelBase
 {
+    private const int MaxPreviewChars = 80000;
+    private readonly string _fullHtml;
+
     [ObservableProperty] private string _title;
     [ObservableProperty] private string _content;
     [ObservableProperty] private string _statusText = LocalizationManager.L("print_preview_status");
@@ -18,7 +21,10 @@ public partial class PrintPreviewViewModel : ViewModelBase
     public PrintPreviewViewModel(string title, string content)
     {
         _title = title;
-        _content = content;
+        _fullHtml = content ?? "";
+        _content = _fullHtml.Length > MaxPreviewChars
+            ? _fullHtml.Substring(0, MaxPreviewChars) + $"\n\n<!-- ... {LocalizationManager.L("print_preview_truncated")} ({_fullHtml.Length:N0} chars) ... -->"
+            : _fullHtml;
     }
 
     [RelayCommand]
@@ -34,7 +40,7 @@ public partial class PrintPreviewViewModel : ViewModelBase
             if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Report";
             if (safeTitle.Length > 40) safeTitle = safeTitle.Substring(0, 40);
             string tempPath = Path.Combine(Path.GetTempPath(), $"Stokendra_{safeTitle}_{DateTime.Now:yyyyMMdd_HHmmss}_{Guid.NewGuid().ToString("N")[..6]}.html");
-            await File.WriteAllTextAsync(tempPath, Content);
+            await Task.Run(() => File.WriteAllTextAsync(tempPath, _fullHtml));
             
             var psi = new System.Diagnostics.ProcessStartInfo { FileName = tempPath, UseShellExecute = true };
             System.Diagnostics.Process.Start(psi);

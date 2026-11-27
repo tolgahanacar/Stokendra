@@ -444,11 +444,17 @@ public sealed partial class Database
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Covering_Balance ON StockMovements(StockCardId, Type, Quantity)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Department_Date ON StockMovements(Department, Date DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Date ON StockMovements(Date DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Date_Id ON StockMovements(Date DESC, Id DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_StockCardId_Date_Id ON StockMovements(StockCardId, Date DESC, Id DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Type_Date_Id ON StockMovements(Type, Date DESC, Id DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Recipient ON StockMovements(Recipient)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Movements_Type_Qty ON StockMovements(Type, Quantity)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Notes_Date ON Notes(Date DESC)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_Notes_CreatedAt_Id ON Notes(CreatedAt DESC, Id DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_ParentId ON StockCards(ParentId)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_ServiceRecords_Date_Id ON ServiceRecords(ServiceDate DESC, Id DESC)");
         TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_CardType ON StockCards(CardType)");
+        TryAlter(connection, transaction, "CREATE INDEX IF NOT EXISTS IX_StockCards_CardType_Code ON StockCards(CardType, Code COLLATE NOCASE)");
         TryAlter(connection, transaction, "CREATE UNIQUE INDEX IF NOT EXISTS UX_StockCards_Code ON StockCards(Code COLLATE NOCASE)");
         TryAlter(connection, transaction, "DROP INDEX IF EXISTS IX_StockCards_Code");
     }

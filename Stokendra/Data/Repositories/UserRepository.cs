@@ -29,12 +29,12 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
         var user = await conn.QueryFirstOrDefaultAsync<UserDb>(new CommandDefinition(
             "SELECT PasswordHash, Salt, Role FROM Users WHERE Username = @Username COLLATE NOCASE",
             new { Username = username },
-            cancellationToken: cancellationToken));
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
 
         if (user == null)
         {
-            // Timing attack mitigation: compute dummy PBKDF2 hash to equalize execution time
-            HashV4(password, "dHVta2FsaWJhc2FsdDEyMzQ1Ng==");
+            // Timing attack mitigation: compute dummy PBKDF2 hash off the UI thread to equalize execution time
+            await Task.Run(() => HashV4(password, "dHVta2FsaWJhc2FsdDEyMzQ1Ng=="), cancellationToken).ConfigureAwait(false);
             return (false, "");
         }
 
@@ -42,10 +42,14 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
         string salt = user.Salt.Trim();
         string role = user.Role;
 
-        bool match = Verify(password, salt, storedHash, out bool upgrade);
+        var (match, upgrade) = await Task.Run(() =>
+        {
+            bool ok = Verify(password, salt, storedHash, out bool needsUpgrade);
+            return (ok, needsUpgrade);
+        }, cancellationToken).ConfigureAwait(false);
 
         if (match && upgrade)
-            await UpgradeAsync(username, password, conn, cancellationToken);
+            await UpgradeAsync(username, password, conn, cancellationToken).ConfigureAwait(false);
 
         return (match, role);
     }
@@ -126,12 +130,17 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
 
     private async Task UpgradeAsync(string user, string pass, SqliteConnection conn, CancellationToken cancellationToken = default)
     {
-        string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
-        string hash = HashV4(pass, salt);
+        var (salt, hash) = await Task.Run(() =>
+        {
+            string s = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+            string h = HashV4(pass, s);
+            return (s, h);
+        }, cancellationToken).ConfigureAwait(false);
+
         await conn.ExecuteAsync(new CommandDefinition(
             "UPDATE Users SET PasswordHash=@Hash, Salt=@Salt WHERE Username=@Username COLLATE NOCASE",
             new { Hash = hash, Salt = salt, Username = user.Trim() },
-            cancellationToken: cancellationToken));
+            cancellationToken: cancellationToken)).ConfigureAwait(false);
     }
 
     public async Task<bool> ResetPasswordAsync(string username, string newPassword, CancellationToken cancellationToken = default)
@@ -144,12 +153,12 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
                 new { Username = username },
-                cancellationToken: cancellationToken));
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
 
             if (count == 0) return false;
 
-            await UpgradeAsync(username, newPassword, conn, cancellationToken);
-            LogAudit("Update", "Users", 0, $"Password reset for user: {username}");
+            await UpgradeAsync(username, newPassword, conn, cancellationToken).ConfigureAwait(false);
+            LogAudit(conn, null, "Update", "Users", 0, $"Password reset for user: {username}");
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("ResetPasswordAsync failed", ex); return false; }
@@ -173,25 +182,30 @@ public sealed class UserRepository(IDbConnectionFactory connectionFactory)
             if (string.IsNullOrWhiteSpace(cleanUsername)) return false;
             if (ValidatePasswordPolicy(password, cleanUsername) != null) return false;
 
+            // Compute 600k-iteration PBKDF2 off the UI thread before opening write transaction
+            var (salt, hash) = await Task.Run(() =>
+            {
+                string s = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
+                string h = HashV4(password, s);
+                return (s, h);
+            }, cancellationToken).ConfigureAwait(false);
+
             using var conn = ConnectionFactory.CreateConnection();
-            using var trans = await conn.BeginTransactionAsync(cancellationToken);
+            using var trans = await conn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
             var count = await conn.ExecuteScalarAsync<int>(new CommandDefinition(
                 "SELECT COUNT(*) FROM Users WHERE Username = @Username COLLATE NOCASE",
                 new { Username = cleanUsername },
                 transaction: trans,
-                cancellationToken: cancellationToken));
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
             if (count > 0) return false;
-
-            string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
-            string hash = HashV4(password, salt);
 
             await conn.ExecuteAsync(new CommandDefinition(
                 "INSERT INTO Users (Username, PasswordHash, Salt, Role) VALUES (@Username, @PasswordHash, @Salt, @Role)",
                 new { Username = cleanUsername, PasswordHash = hash, Salt = salt, Role = cleanRole },
                 transaction: trans,
-                cancellationToken: cancellationToken));
+                cancellationToken: cancellationToken)).ConfigureAwait(false);
             LogAudit(conn, (SqliteTransaction)trans, "Insert", "Users", 0, $"Created user: {cleanUsername} ({cleanRole})");
-            await trans.CommitAsync(cancellationToken);
+            await trans.CommitAsync(cancellationToken).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex) { AppLogger.LogError("AddUserAsync failed", ex); return false; }

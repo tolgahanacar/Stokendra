@@ -17,6 +17,11 @@ public partial class BulkEditNotesViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    public bool CanSave => !IsSaving;
 
     // Bulk apply options
     [ObservableProperty] private bool _isApplyDate;
@@ -61,21 +66,18 @@ public partial class BulkEditNotesViewModel : ViewModelBase
     private void ApplyBulk()
     {
         ErrorMessage = "";
-        int updated = 0;
 
         foreach (var n in EditingNotes)
         {
             if (IsApplyDate && Date.HasValue)
             {
                 n.CreatedAt = Date.Value;
-                updated++;
             }
             if (IsApplyTitlePrefix && !string.IsNullOrWhiteSpace(TitlePrefix))
             {
                 if (!n.Title.StartsWith(TitlePrefix.Trim()))
                 {
                     n.Title = $"{TitlePrefix.Trim()} {n.Title}";
-                    updated++;
                 }
             }
             if (IsApplyContent && !string.IsNullOrWhiteSpace(ContentAppend))
@@ -87,21 +89,16 @@ public partial class BulkEditNotesViewModel : ViewModelBase
                     n.Content = string.IsNullOrWhiteSpace(n.Content)
                         ? trimmedAppend
                         : $"{n.Content}\n{trimmedAppend}";
-                    updated++;
                 }
             }
         }
-
-        if (updated > 0)
-        {
-            var temp = EditingNotes.ToList();
-            EditingNotes.ReplaceAll(temp);
-        }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
+        if (IsSaving) return;
+        IsSaving = true;
         ErrorMessage = "";
         ApplyBulk();
         try
@@ -115,11 +112,7 @@ public partial class BulkEditNotesViewModel : ViewModelBase
                 }
             }
 
-            foreach (var n in EditingNotes)
-            {
-                n.UpdatedAt = DateTime.Now;
-                await _notes.UpdateAsync(n);
-            }
+            await _notes.UpdateBulkAsync(EditingNotes);
 
             CloseAction?.Invoke(true);
         }
@@ -127,6 +120,10 @@ public partial class BulkEditNotesViewModel : ViewModelBase
         {
             AppLogger.LogError("Bulk notes edit error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

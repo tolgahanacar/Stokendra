@@ -107,53 +107,63 @@ public partial class StockCardDetailViewModel : ViewModelBase
 
         try
         {
-            var sb = new System.Text.StringBuilder();
-            sb.Append($"<html><head><meta charset='utf-8'><title>{LocalizationManager.L("detail_report")}</title>");
-            sb.Append("<style>");
-            sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; line-height: 1.4; } ");
-            sb.Append(".header { border-bottom: 2px solid #2563EB; padding-bottom: 10px; margin-bottom: 20px; } ");
-            sb.Append(".info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; } ");
-            sb.Append(".stat-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; } ");
-            sb.Append("table { width: 100%; border-collapse: collapse; font-size: 12px; } ");
-            sb.Append("th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; } ");
-            sb.Append("th { background: #f1f5f9; font-weight: bold; } ");
-            sb.Append(".green { color: #16a34a; font-weight: bold; } ");
-            sb.Append(".red { color: #dc2626; font-weight: bold; } ");
-            sb.Append("</style>");
-            sb.Append("<script>window.onload = function() { window.print(); }</script>");
-            sb.Append("</head><body>");
+            var cardSnapshot = Card;
+            var movementsSnapshot = Movements.ToList();
+            double entryLast30 = TotalEntryLast30;
+            double exitLast30 = TotalExitLast30;
+            string reportTitle = LocalizationManager.L("detail_report");
 
-            sb.Append("<div class='header'>");
-            sb.Append($"<h1>{PrintTemplateBuilder.Escape(Card.Name)}</h1>");
-            sb.Append($"<p>{LocalizationManager.L("code_no")}: <b>{PrintTemplateBuilder.Escape(Card.Code)}</b> | {LocalizationManager.L("category")}: <b>{PrintTemplateBuilder.Escape(Card.Category)}</b> | {LocalizationManager.L("date")}: {DateTime.Now:dd.MM.yyyy HH:mm}</p>");
-            sb.Append("</div>");
-
-            sb.Append("<div class='info-grid'>");
-            sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("current_stock")}:</b><br/><span style='font-size: 24px;'>{Card.CurrentStock} {PrintTemplateBuilder.Escape(Card.Unit)}</span></div>");
-            sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("last_30_days")}:</b><br/><span class='green'>▲ {LocalizationManager.L("entry")}: {TotalEntryLast30}</span><br/><span class='red'>▼ {LocalizationManager.L("exit")}: {TotalExitLast30}</span></div>");
-            sb.Append("</div>");
-
-            sb.Append("<table><thead><tr>");
-            sb.Append($"<th>{LocalizationManager.L("date")}</th><th>{LocalizationManager.L("type")}</th><th>{LocalizationManager.L("quantity")}</th><th>{LocalizationManager.L("department")}</th><th>{LocalizationManager.L("delivered_to")}</th><th>{LocalizationManager.L("description")}</th>");
-            sb.Append("</tr></thead><tbody>");
-
-            foreach (var h in Movements)
+            string html = await Task.Run(() =>
             {
-                string clr = h.IsEntry ? "green" : "red";
-                sb.Append("<tr>");
-                sb.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
-                sb.Append($"<td class='{clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
-                sb.Append($"<td class='{clr}'>{h.Quantity}</td>");
-                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
-                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
-                sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Description)}</td>");
-                sb.Append("</tr>");
-            }
+                var sb = new System.Text.StringBuilder(1024 + movementsSnapshot.Count * 160);
+                sb.Append($"<html><head><meta charset='utf-8'><title>{reportTitle}</title>");
+                sb.Append("<style>");
+                sb.Append("body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; line-height: 1.4; } ");
+                sb.Append(".header { border-bottom: 2px solid #2563EB; padding-bottom: 10px; margin-bottom: 20px; } ");
+                sb.Append(".info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; } ");
+                sb.Append(".stat-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; } ");
+                sb.Append("table { width: 100%; border-collapse: collapse; font-size: 12px; } ");
+                sb.Append("th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; } ");
+                sb.Append("th { background: #f1f5f9; font-weight: bold; } ");
+                sb.Append(".green { color: #16a34a; font-weight: bold; } ");
+                sb.Append(".red { color: #dc2626; font-weight: bold; } ");
+                sb.Append("</style>");
+                sb.Append("<script>window.onload = function() { window.print(); }</script>");
+                sb.Append("</head><body>");
 
-            sb.Append("</tbody></table>");
-            sb.Append("</body></html>");
+                sb.Append("<div class='header'>");
+                sb.Append($"<h1>{PrintTemplateBuilder.Escape(cardSnapshot.Name)}</h1>");
+                sb.Append($"<p>{LocalizationManager.L("code_no")}: <b>{PrintTemplateBuilder.Escape(cardSnapshot.Code)}</b> | {LocalizationManager.L("category")}: <b>{PrintTemplateBuilder.Escape(cardSnapshot.Category)}</b> | {LocalizationManager.L("date")}: {DateTime.Now:dd.MM.yyyy HH:mm}</p>");
+                sb.Append("</div>");
 
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("detail_report"), sb.ToString());
+                sb.Append("<div class='info-grid'>");
+                sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("current_stock")}:</b><br/><span style='font-size: 24px;'>{cardSnapshot.CurrentStock} {PrintTemplateBuilder.Escape(cardSnapshot.Unit)}</span></div>");
+                sb.Append($"<div class='stat-box'><b>{LocalizationManager.L("last_30_days")}:</b><br/><span class='green'>▲ {LocalizationManager.L("entry")}: {entryLast30}</span><br/><span class='red'>▼ {LocalizationManager.L("exit")}: {exitLast30}</span></div>");
+                sb.Append("</div>");
+
+                sb.Append("<table><thead><tr>");
+                sb.Append($"<th>{LocalizationManager.L("date")}</th><th>{LocalizationManager.L("type")}</th><th>{LocalizationManager.L("quantity")}</th><th>{LocalizationManager.L("department")}</th><th>{LocalizationManager.L("delivered_to")}</th><th>{LocalizationManager.L("description")}</th>");
+                sb.Append("</tr></thead><tbody>");
+
+                foreach (var h in movementsSnapshot)
+                {
+                    string clr = h.IsEntry ? "green" : "red";
+                    sb.Append("<tr>");
+                    sb.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
+                    sb.Append($"<td class='{clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
+                    sb.Append($"<td class='{clr}'>{h.Quantity}</td>");
+                    sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
+                    sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
+                    sb.Append($"<td>{PrintTemplateBuilder.Escape(h.Description)}</td>");
+                    sb.Append("</tr>");
+                }
+
+                sb.Append("</tbody></table>");
+                sb.Append("</body></html>");
+                return sb.ToString();
+            });
+
+            var previewVm = new PrintPreviewViewModel(reportTitle, html);
             await _dialogService.ShowDialogAsync(previewVm);
         }
         catch (Exception ex)

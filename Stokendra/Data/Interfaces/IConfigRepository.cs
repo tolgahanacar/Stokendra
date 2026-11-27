@@ -14,6 +14,9 @@ public interface IConfigRepository
     /// <summary>Saves or updates the configuration value for the specified key.</summary>
     void SetConfig(string key, string value);
 
+    /// <summary>Saves multiple configuration keys in a single transaction asynchronously.</summary>
+    System.Threading.Tasks.Task SetConfigsAsync(IEnumerable<KeyValuePair<string, string>> entries, System.Threading.CancellationToken cancellationToken = default);
+
     /// <summary>Gets all measurement units sorted alphabetically.</summary>
     List<Unit> GetUnits();
 

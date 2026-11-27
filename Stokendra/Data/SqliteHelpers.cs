@@ -9,14 +9,24 @@ namespace Stokendra.Data;
 public static class SqliteHelpers
 {
     private static readonly CultureInfo TurkishCulture = new("tr-TR");
+    private static readonly CompareInfo TurkishCompare = TurkishCulture.CompareInfo;
     private static readonly ConcurrentDictionary<string, Regex> RegexCache = new(StringComparer.Ordinal);
+
+    private enum LikeMatchMode
+    {
+        Exact = 0,
+        Contains = 1,
+        StartsWith = 2,
+        EndsWith = 3,
+        Regex = 4
+    }
 
     [ThreadStatic]
     private static string? _lastPattern;
     [ThreadStatic]
-    private static string? _lastPatternLower;
+    private static LikeMatchMode _lastMode;
     [ThreadStatic]
-    private static string? _lastRegexPattern;
+    private static string? _lastTerm;
     [ThreadStatic]
     private static Regex? _lastRegex;
 
@@ -29,79 +39,93 @@ public static class SqliteHelpers
     {
         if (input == null || pattern == null) return false;
 
-        // Caching lowercased pattern using thread-local fields
-        string patternLower;
-        if (pattern == _lastPattern)
+        if (!string.Equals(pattern, _lastPattern, StringComparison.Ordinal))
         {
-            patternLower = _lastPatternLower!;
-        }
-        else
-        {
-            patternLower = pattern.ToLower(TurkishCulture);
             _lastPattern = pattern;
-            _lastPatternLower = patternLower;
-        }
 
-        string inputLower = input.ToLower(TurkishCulture);
-
-        // 1. Optimize %term% (contains)
-        if (patternLower.StartsWith("%") && patternLower.EndsWith("%") && patternLower.Length >= 2)
-        {
-            string term = patternLower.Substring(1, patternLower.Length - 2);
-            if (!term.Contains("%") && !term.Contains("_"))
+            if (pattern.Length >= 2 && pattern.StartsWith('%') && pattern.EndsWith('%'))
             {
-                return inputLower.Contains(term);
+                string term = pattern.Substring(1, pattern.Length - 2);
+                if (!term.Contains('%') && !term.Contains('_'))
+                {
+                    _lastMode = LikeMatchMode.Contains;
+                    _lastTerm = term;
+                    _lastRegex = null;
+                }
+                else
+                {
+                    CompileRegex(pattern);
+                }
             }
-        }
-
-        // 2. Optimize term% (starts with)
-        if (!patternLower.StartsWith("%") && patternLower.EndsWith("%") && patternLower.Length >= 2)
-        {
-            string term = patternLower.Substring(0, patternLower.Length - 1);
-            if (!term.Contains("%") && !term.Contains("_"))
+            else if (pattern.Length >= 2 && !pattern.StartsWith('%') && pattern.EndsWith('%'))
             {
-                return inputLower.StartsWith(term);
+                string term = pattern.Substring(0, pattern.Length - 1);
+                if (!term.Contains('%') && !term.Contains('_'))
+                {
+                    _lastMode = LikeMatchMode.StartsWith;
+                    _lastTerm = term;
+                    _lastRegex = null;
+                }
+                else
+                {
+                    CompileRegex(pattern);
+                }
             }
-        }
-
-        // 3. Optimize %term (ends with)
-        if (patternLower.StartsWith("%") && !patternLower.EndsWith("%") && patternLower.Length >= 2)
-        {
-            string term = patternLower.Substring(1);
-            if (!term.Contains("%") && !term.Contains("_"))
+            else if (pattern.Length >= 2 && pattern.StartsWith('%') && !pattern.EndsWith('%'))
             {
-                return inputLower.EndsWith(term);
+                string term = pattern.Substring(1);
+                if (!term.Contains('%') && !term.Contains('_'))
+                {
+                    _lastMode = LikeMatchMode.EndsWith;
+                    _lastTerm = term;
+                    _lastRegex = null;
+                }
+                else
+                {
+                    CompileRegex(pattern);
+                }
             }
-        }
-
-        // 4. Optimize exact term (no wildcards)
-        if (!patternLower.Contains("%") && !patternLower.Contains("_"))
-        {
-            return inputLower == patternLower;
-        }
-
-        // 5. General SQL LIKE pattern matching via Regex
-        string regexPattern = "^" + Regex.Escape(patternLower)
-            .Replace("\\%", ".*")
-            .Replace("\\_", ".") + "$";
-
-        try
-        {
-            Regex regex;
-            if (regexPattern == _lastRegexPattern && _lastRegex != null)
+            else if (!pattern.Contains('%') && !pattern.Contains('_'))
             {
-                regex = _lastRegex;
+                _lastMode = LikeMatchMode.Exact;
+                _lastTerm = pattern;
+                _lastRegex = null;
             }
             else
             {
-                if (RegexCache.Count > 500)
-                    RegexCache.Clear();
-
-                regex = RegexCache.GetOrAdd(regexPattern, pat => new Regex(pat, RegexOptions.Singleline));
-                _lastRegexPattern = regexPattern;
-                _lastRegex = regex;
+                CompileRegex(pattern);
             }
-            return regex.IsMatch(inputLower);
+        }
+
+        return _lastMode switch
+        {
+            LikeMatchMode.Contains => TurkishCompare.IndexOf(input, _lastTerm!, CompareOptions.IgnoreCase) >= 0,
+            LikeMatchMode.StartsWith => TurkishCompare.IsPrefix(input, _lastTerm!, CompareOptions.IgnoreCase),
+            LikeMatchMode.EndsWith => TurkishCompare.IsSuffix(input, _lastTerm!, CompareOptions.IgnoreCase),
+            LikeMatchMode.Exact => TurkishCompare.Compare(input, _lastTerm!, CompareOptions.IgnoreCase) == 0,
+            _ => MatchRegex(input)
+        };
+    }
+
+    private static void CompileRegex(string pattern)
+    {
+        _lastMode = LikeMatchMode.Regex;
+        _lastTerm = pattern.ToLower(TurkishCulture);
+        string regexPattern = "^" + Regex.Escape(_lastTerm)
+            .Replace("\\%", ".*")
+            .Replace("\\_", ".") + "$";
+
+        if (RegexCache.Count > 500)
+            RegexCache.Clear();
+
+        _lastRegex = RegexCache.GetOrAdd(regexPattern, pat => new Regex(pat, RegexOptions.Singleline));
+    }
+
+    private static bool MatchRegex(string input)
+    {
+        try
+        {
+            return _lastRegex != null && _lastRegex.IsMatch(input.ToLower(TurkishCulture));
         }
         catch
         {
@@ -117,10 +141,11 @@ public static class SqliteHelpers
     {
         using var cmd = connection.CreateCommand();
         cmd.CommandText = @"
+            PRAGMA busy_timeout    = 5000;
             PRAGMA synchronous     = NORMAL;
             PRAGMA temp_store      = MEMORY;
-            PRAGMA cache_size      = -131072;
-            PRAGMA mmap_size       = 268435456;
+            PRAGMA cache_size      = -16384;
+            PRAGMA mmap_size       = 67108864;
         ";
         cmd.ExecuteNonQuery();
     }

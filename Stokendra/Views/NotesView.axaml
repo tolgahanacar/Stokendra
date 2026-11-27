@@ -6,13 +6,7 @@
              Background="#0C0E14"
              x:CompileBindings="False">
 
-    <UserControl.KeyBindings>
-        <KeyBinding Gesture="Delete" 
-                     Command="{Binding DeleteSelectedCommand}" 
-                     CommandParameter="{Binding #NotesGrid.SelectedItems}"/>
-    </UserControl.KeyBindings>
-
-    <Grid ColumnDefinitions="400,*">
+    <Grid ColumnDefinitions="320,*">
 
         <!-- Left: Notes List -->
         <Border Grid.Column="0" Background="#0E1119" BorderBrush="#1E2535" BorderThickness="0,0,1,0">
@@ -62,15 +56,20 @@
                 </StackPanel>
 
                 <!-- List -->
-                <ListBox Grid.Row="2"
-                          Name="NotesGrid"
-                          Margin="12,0"
-                          ItemsSource="{Binding Notes}"
-                          SelectedItem="{Binding SelectedNote}"
-                          SelectionMode="Multiple, Toggle"
-                          Background="Transparent"
-                          BorderThickness="0">
-                    <ListBox.Styles>
+                <Grid Grid.Row="2">
+                    <ListBox Name="NotesGrid"
+                             Margin="12,0"
+                             ItemsSource="{Binding Notes}"
+                             SelectedItem="{Binding SelectedNote}"
+                             SelectionMode="Multiple, Toggle"
+                             Background="Transparent"
+                             BorderThickness="0">
+                        <ListBox.KeyBindings>
+                            <KeyBinding Gesture="Delete"
+                                        Command="{Binding DeleteSelectedCommand}"
+                                        CommandParameter="{Binding #NotesGrid.SelectedItems}"/>
+                        </ListBox.KeyBindings>
+                        <ListBox.Styles>
                         <Style Selector="ListBoxItem">
                             <Setter Property="Padding" Value="0"/>
                             <Setter Property="Margin" Value="0,0,0,8"/>
@@ -123,16 +122,31 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+                    <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+                    <Border IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                        <TextBlock Text="{infra:L no_records_found}"
+                                   IsVisible="{Binding Notes.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                                   Foreground="#64748B" FontSize="13"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" Margin="20"/>
+                    </Border>
+                </Grid>
             </Grid>
         </Border>
 
         <!-- Right: Detail / Edit -->
         <Grid Grid.Column="1" Background="#0C0E14" RowDefinitions="*,Auto">
-            
+
             <!-- View Mode -->
             <ScrollViewer Grid.Row="0" IsVisible="{Binding !IsEditing}">
-                <StackPanel Margin="40,32" Spacing="20"
-                            IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Grid>
+                    <TextBlock Text="{infra:L notes_select_hint}"
+                               IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNull}}"
+                               Foreground="#64748B" FontSize="14"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextWrapping="Wrap" Margin="40"/>
+                    <StackPanel Margin="40,32" Spacing="20"
+                                IsVisible="{Binding SelectedNote, Converter={x:Static ObjectConverters.IsNotNull}}">
                     
                     <StackPanel Spacing="8">
                         <TextBlock Text="{Binding SelectedNote.Title}"
@@ -158,13 +172,17 @@
                     <TextBlock Text="{Binding SelectedNote.Content}"
                                FontSize="16" Foreground="#CBD5E1"
                                TextWrapping="Wrap" LineHeight="26"/>
-                </StackPanel>
+                    </StackPanel>
+                </Grid>
             </ScrollViewer>
 
             <!-- Edit Mode -->
             <ScrollViewer Grid.Row="0" IsVisible="{Binding IsEditing}">
+                <ScrollViewer.KeyBindings>
+                    <KeyBinding Gesture="Escape" Command="{Binding CancelEditCommand}"/>
+                </ScrollViewer.KeyBindings>
                 <StackPanel Margin="40,32" Spacing="20">
-                    <TextBlock Text="{infra:L note_edit_title}" FontSize="20" FontWeight="Bold" Foreground="#38AEFF"/>
+                    <TextBlock Text="{Binding NoteEditHeader}" FontSize="20" FontWeight="Bold" Foreground="#38AEFF"/>
                     
                     <StackPanel Spacing="8">
                         <TextBlock Text="{infra:L title}" FontSize="13" Foreground="#94A3B8" FontWeight="SemiBold"/>

@@ -67,12 +67,32 @@ public static class AppLogger
                 if (!File.Exists(logPath))
                     return "Kayıtlı hata günlüğü bulunmuyor.";
 
-                var lines = File.ReadAllLines(logPath);
-                if (lines.Length == 0)
+                using var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                if (fs.Length == 0)
                     return "Hata günlüğü boş.";
 
-                int take = Math.Min(lines.Length, maxLines);
-                return string.Join(Environment.NewLine, lines.Skip(lines.Length - take));
+                const int maxTailBytes = 128 * 1024;
+                long offset = Math.Max(0, fs.Length - maxTailBytes);
+                fs.Seek(offset, SeekOrigin.Begin);
+
+                using var reader = new StreamReader(fs, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                if (offset > 0)
+                {
+                    reader.ReadLine(); // Discard potentially partial first line when seeking mid-file
+                }
+
+                var tail = new System.Collections.Generic.Queue<string>(maxLines + 1);
+                while (reader.ReadLine() is { } line)
+                {
+                    tail.Enqueue(line);
+                    if (tail.Count > maxLines)
+                        tail.Dequeue();
+                }
+
+                if (tail.Count == 0)
+                    return "Hata günlüğü boş.";
+
+                return string.Join(Environment.NewLine, tail);
             }
             catch (Exception ex)
             {

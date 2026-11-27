@@ -61,6 +61,12 @@ public interface IStockCardRepository
     /// <summary>Generates the next sequential stock code (e.g. "042").</summary>
     string GetNextCode();
 
+    /// <summary>Generates the next sequential stock code asynchronously.</summary>
+    Task<string> GetNextCodeAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Gets lightweight card metadata without joining movements (for dropdowns and validations).</summary>
+    Task<List<StockCard>> GetCardLookupsAsync(string? cardType = null, CancellationToken cancellationToken = default);
+
     /// <summary>Adds multiple stock cards in a single transaction.</summary>
     void AddBulk(IEnumerable<StockCard> stockCards);
 

@@ -19,12 +19,17 @@ public partial class AddMovementViewModel : ViewModelBase
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private StockCard? _selectedCard;
     [ObservableProperty] private int _selectedTypeIndex = 0; // 0: Entry, 1: Exit, 2: Blank
-    [ObservableProperty] private double _quantity = 1;
+    [ObservableProperty] private double? _quantity = 1;
     [ObservableProperty] private string _deliveredTo = "";
     [ObservableProperty] private string _department = "";
     [ObservableProperty] private DateTimeOffset _date = DateTimeOffset.Now;
     [ObservableProperty] private string _description = "";
     [ObservableProperty] private string _errorMessage = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    public bool CanSave => !IsSaving;
 
     private readonly StockCard? _preSelectedCard;
     private Task? _initTask;
@@ -97,6 +102,13 @@ public partial class AddMovementViewModel : ViewModelBase
 
             var depts = await _departments.GetAllAsync();
             foreach (var d in depts) AllDepartments.Add(d);
+
+            if (_editingMovement != null &&
+                !string.IsNullOrWhiteSpace(_editingMovement.Department) &&
+                !AllDepartments.Any(d => string.Equals(d, _editingMovement.Department, StringComparison.OrdinalIgnoreCase)))
+            {
+                AllDepartments.Insert(0, _editingMovement.Department);
+            }
             
             if (_editingMovement == null)
             {
@@ -123,94 +135,110 @@ public partial class AddMovementViewModel : ViewModelBase
 
     public StockMovement? Result { get; private set; }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
-        ErrorMessage = "";
+        if (IsSaving) return;
+        IsSaving = true;
+        try
+        {
+            ErrorMessage = "";
 
-        if (_initTask is { IsCompleted: false })
-        {
-            await _initTask;
-        }
-
-        if (SelectedCard == null)
-        {
-            ErrorMessage = $"⚠️ {LocalizationManager.L("select_stock_card")}";
-            return;
-        }
-
-        if (SelectedCard.CardTypeEnum == CardType.Parent)
-        {
-            ErrorMessage = $"⚠️ {LocalizationManager.L("parent_card_movement_forbidden")}";
-            return;
-        }
-
-        if (double.IsNaN(Quantity) || double.IsInfinity(Quantity) || Quantity < 0 || Quantity > 1_000_000_000)
-        {
-            ErrorMessage = $"⚠️ {LocalizationManager.L("invalid_quantity")}";
-            return;
-        }
-        
-        string tur = SelectedTypeIndex switch { 0 => "Entry", 1 => "Exit", 2 => "Blank", _ => "Entry" };
-
-        if (Quantity <= 0 && tur != "Blank")
-        {
-            ErrorMessage = LocalizationManager.L("quantity_cannot_be_zero");
-            return;
-        }
-        
-        // Mathematically correct negative stock validation
-        double stockWithoutOld = SelectedCard.CurrentStock;
-        if (_editingMovement != null)
-        {
-            if (SelectedCard.Id == _editingMovement.StockCardId)
+            if (_initTask is { IsCompleted: false })
             {
-                if (_editingMovement.TypeEnum == MovementType.Exit)
-                    stockWithoutOld += _editingMovement.Quantity;
-                else if (_editingMovement.TypeEnum == MovementType.Entry)
-                    stockWithoutOld -= _editingMovement.Quantity;
+                await _initTask;
             }
-            else
+
+            if (SelectedCard == null)
             {
-                var originalCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StockCardId);
-                if (originalCard != null)
+                ErrorMessage = $"⚠️ {LocalizationManager.L("select_stock_card")}";
+                return;
+            }
+
+            if (SelectedCard.CardTypeEnum == CardType.Parent)
+            {
+                ErrorMessage = $"⚠️ {LocalizationManager.L("parent_card_movement_forbidden")}";
+                return;
+            }
+
+            if (!Quantity.HasValue)
+            {
+                ErrorMessage = $"⚠️ {LocalizationManager.L("quantity_cannot_be_zero")}";
+                return;
+            }
+
+            double qtyVal = Quantity.Value;
+            if (double.IsNaN(qtyVal) || double.IsInfinity(qtyVal) || qtyVal < 0 || qtyVal > 1_000_000_000)
+            {
+                ErrorMessage = $"⚠️ {LocalizationManager.L("invalid_quantity")}";
+                return;
+            }
+            
+            string tur = SelectedTypeIndex switch { 0 => "Entry", 1 => "Exit", 2 => "Blank", _ => "Entry" };
+
+            if (qtyVal <= 0 && tur != "Blank")
+            {
+                ErrorMessage = LocalizationManager.L("quantity_cannot_be_zero");
+                return;
+            }
+            
+            // Mathematically correct negative stock validation
+            double stockWithoutOld = SelectedCard.CurrentStock;
+            if (_editingMovement != null)
+            {
+                if (SelectedCard.Id == _editingMovement.StockCardId)
                 {
-                    double originalCardStockWithoutOld = originalCard.CurrentStock;
-                    if (_editingMovement.TypeEnum == MovementType.Entry)
+                    if (_editingMovement.TypeEnum == MovementType.Exit)
+                        stockWithoutOld += _editingMovement.Quantity;
+                    else if (_editingMovement.TypeEnum == MovementType.Entry)
+                        stockWithoutOld -= _editingMovement.Quantity;
+                }
+                else
+                {
+                    var originalCard = AllCards.FirstOrDefault(c => c.Id == _editingMovement.StockCardId);
+                    if (originalCard != null)
                     {
-                        originalCardStockWithoutOld -= _editingMovement.Quantity;
-                        if (originalCardStockWithoutOld < -1e-9)
+                        double originalCardStockWithoutOld = originalCard.CurrentStock;
+                        if (_editingMovement.TypeEnum == MovementType.Entry)
                         {
-                            ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({originalCard.Name}: {originalCard.CurrentStock})";
-                            return;
+                            originalCardStockWithoutOld -= _editingMovement.Quantity;
+                            if (originalCardStockWithoutOld < -1e-9)
+                            {
+                                ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({originalCard.Name}: {originalCard.CurrentStock})";
+                                return;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        double newImpact = tur switch { "Entry" => Quantity, "Exit" => -Quantity, _ => 0 };
-        if (stockWithoutOld + newImpact < -1e-9)
-        {
-            ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({LocalizationManager.L("current_stock")}: {SelectedCard.CurrentStock})";
-            return;
-        }
+            double newImpact = tur switch { "Entry" => qtyVal, "Exit" => -qtyVal, _ => 0 };
+            if (stockWithoutOld + newImpact < -1e-9)
+            {
+                ErrorMessage = $"⚠️ {LocalizationManager.L("stock_would_go_negative")} ({LocalizationManager.L("current_stock")}: {SelectedCard.CurrentStock})";
+                return;
+            }
 
-        Result = new StockMovement
+            Result = new StockMovement
+            {
+                Id = _editingMovement?.Id ?? 0,
+                StockCardId = SelectedCard.Id,
+                Type = tur,
+                Quantity = qtyVal,
+                Recipient = DeliveredTo ?? "",
+                Department = Department ?? "",
+                Date = Date.Date.Add(_editingMovement != null ? _editingMovement.Date.TimeOfDay : DateTime.Now.TimeOfDay),
+                Description = Description ?? "",
+                StockCardName = SelectedCard.Name,
+                StockCardCode = SelectedCard.Code
+            };
+            
+            CloseAction?.Invoke(true);
+        }
+        finally
         {
-            Id = _editingMovement?.Id ?? 0,
-            StockCardId = SelectedCard.Id,
-            Type = tur,
-            Quantity = Quantity,
-            Recipient = DeliveredTo ?? "",
-            Department = Department ?? "",
-            Date = Date.Date.Add(_editingMovement != null ? _editingMovement.Date.TimeOfDay : DateTime.Now.TimeOfDay),
-            Description = Description ?? "",
-            StockCardName = SelectedCard.Name,
-            StockCardCode = SelectedCard.Code
-        };
-        
-        CloseAction?.Invoke(true);
+            IsSaving = false;
+        }
     }
 
     [RelayCommand]

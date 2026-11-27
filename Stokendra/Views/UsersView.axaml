@@ -85,10 +85,10 @@
         </StackPanel>
 
         <!-- Body -->
-        <Grid Grid.Row="1" ColumnDefinitions="360,*">
+        <Grid Grid.Row="1" ColumnDefinitions="300,*">
             
             <!-- Left: Add User Form -->
-            <Border Grid.Column="0" Classes="Card" VerticalAlignment="Top" Margin="0,0,20,0">
+            <Border Grid.Column="0" Classes="Card" VerticalAlignment="Top" Margin="0,0,16,0">
                 <StackPanel Spacing="18">
                     <!-- Form Header with Icon -->
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,6">
@@ -110,7 +110,13 @@
 
                     <StackPanel Spacing="6">
                         <TextBlock Text="{infra:L role}" FontSize="12" Foreground="#8A9BBF" FontWeight="SemiBold"/>
-                        <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding NewRole}" HorizontalAlignment="Stretch"/>
+                        <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding NewRole}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding ., Converter={StaticResource RoleTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
 
                     <Button Content="{infra:L add_user_btn}" Classes="Primary"
@@ -134,9 +140,10 @@
                         </Border>
                     </StackPanel>
                     
-                    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+                    <Grid Grid.Row="1">
                         <ListBox ItemsSource="{Binding Users}"
                                  SelectedItem="{Binding SelectedUser}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  Background="Transparent"
                                  BorderThickness="0">
                             <ListBox.Styles>
@@ -200,38 +207,45 @@
                                             </StackPanel>
                                             
                                             <!-- Actions (Modern Outlined Buttons) -->
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <WrapPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                 <Button Content="{infra:L change_password}" Classes="ActionPassword"
+                                                        Margin="0,2,6,2"
                                                         Command="{Binding DataContext.ResetPasswordCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"/>
                                                 <Button Content="{infra:L toggle_role_btn}" Classes="ActionRole"
+                                                        Margin="0,2,6,2"
                                                         Command="{Binding DataContext.ChangeRoleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         IsVisible="{Binding IsEditable}"/>
                                                 <Button Content="{infra:L delete}" Classes="ActionDelete"
+                                                        Margin="0,2,0,2"
                                                         Command="{Binding DataContext.DeleteUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}"
                                                         IsVisible="{Binding IsEditable}"/>
-                                            </StackPanel>
+                                            </WrapPanel>
                                             
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                    </ScrollViewer>
+                        <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+                    </Grid>
                 </Grid>
             </Border>
 
         </Grid>
 
         <!-- Status Bar Alert -->
-        <Border Grid.Row="2" Background="#161B27" CornerRadius="8" Padding="16,12" BorderBrush="#1E2D45" BorderThickness="1"
+        <Border Grid.Row="2" Background="#161B27" CornerRadius="8" Padding="16,12"
+                BorderBrush="{Binding IsSuccess, Converter={StaticResource SuccessColorConverter}}" BorderThickness="1.5"
                 IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                HorizontalAlignment="Left" MinWidth="400" Margin="0,16,0,0">
+                HorizontalAlignment="Left" MinWidth="360" Margin="0,16,0,0">
             <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="ℹ" Foreground="#38AEFF" FontWeight="Bold"/>
-                <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="#D0D8F0" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding IsSuccess, Converter={StaticResource SuccessIconConverter}}"
+                           Foreground="{Binding IsSuccess, Converter={StaticResource SuccessColorConverter}}"
+                           FontWeight="Bold" FontSize="14"/>
+                <TextBlock Text="{Binding StatusMessage}" FontSize="13" Foreground="#F1F5F9" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 

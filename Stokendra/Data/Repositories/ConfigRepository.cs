@@ -27,6 +27,27 @@ public sealed class ConfigRepository(IDbConnectionFactory connectionFactory)
             new { Key = key, Value = value ?? "" });
     }
 
+    public async System.Threading.Tasks.Task SetConfigsAsync(IEnumerable<KeyValuePair<string, string>> entries, System.Threading.CancellationToken cancellationToken = default)
+    {
+        var list = entries.ToList();
+        if (list.Count == 0) return;
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            const string sql = "INSERT INTO AppConfig (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value=@Value";
+            var payload = list.Select(kv => new { kv.Key, Value = kv.Value ?? "" });
+            await conn.ExecuteAsync(new CommandDefinition(sql, payload, transaction: trans, cancellationToken: cancellationToken)).ConfigureAwait(false);
+            await trans.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+    }
+
     public List<Unit> GetUnits()
     {
         using var conn = ConnectionFactory.CreateConnection();

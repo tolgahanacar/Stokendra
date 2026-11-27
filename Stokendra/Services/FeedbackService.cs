@@ -21,7 +21,7 @@ public class FeedbackService : IFeedbackService
     {
         get
         {
-            var settings = AppSettings.Load();
+            var settings = AppServices.TryGetCurrent(out var app) ? app!.Settings : AppSettings.Load();
             return !string.IsNullOrWhiteSpace(settings.FeedbackEmail)
                 ? settings.FeedbackEmail.Trim()
                 : "2005.tolgahan@gmail.com";
@@ -32,7 +32,7 @@ public class FeedbackService : IFeedbackService
     {
         try
         {
-            var settings = AppSettings.Load();
+            var settings = AppServices.TryGetCurrent(out var app) ? app!.Settings : AppSettings.Load();
             string fullReport = BuildFullReportText(report);
 
             // 1. Webhook veya Form API tanımlıysa HTTP POST ile doğrudan gönder

@@ -68,6 +68,13 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+                <Border Grid.Row="1" IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                    <TextBlock Text="{infra:L no_records_found}"
+                               IsVisible="{Binding Departments.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                               Foreground="#64748B" FontSize="13"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Margin="20"/>
+                </Border>
             </Grid>
         </Border>
         

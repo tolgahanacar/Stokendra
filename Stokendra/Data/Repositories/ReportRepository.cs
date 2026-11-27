@@ -40,16 +40,13 @@ public sealed class ReportRepository(IDbConnectionFactory connectionFactory) : I
                 GROUP BY s.Id
             )
             SELECT
-                (SELECT COUNT(*) FROM StockCards WHERE CardType = 'Child') AS TotalCards,
-                (SELECT COALESCE(SUM(CASE
-                    WHEN m.Type IN ('Entry', 'Giris', 'Giriş') THEN m.Quantity
-                    WHEN m.Type IN ('Exit', 'Cikis', 'Çıkış') THEN -m.Quantity
-                    ELSE 0
-                END), 0) FROM StockMovements m INNER JOIN StockCards s ON m.StockCardId = s.Id WHERE s.CardType = 'Child') AS TotalStock,
-                (SELECT COUNT(*) FROM StockBalances WHERE Balance <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END) AS LowStock,
-                (SELECT COUNT(*) FROM StockBalances WHERE Balance <= 0) AS DepletedStock,
+                COUNT(*) AS TotalCards,
+                COALESCE(SUM(Balance), 0) AS TotalStock,
+                COALESCE(SUM(CASE WHEN Balance <= CASE WHEN MinStock > 0 THEN MinStock ELSE @Fallback END THEN 1 ELSE 0 END), 0) AS LowStock,
+                COALESCE(SUM(CASE WHEN Balance <= 0 THEN 1 ELSE 0 END), 0) AS DepletedStock,
                 (SELECT COUNT(*) FROM StockMovements) AS TotalMovements,
                 (SELECT COUNT(*) FROM StockMovements WHERE Date >= date('now', 'localtime') AND Date < date('now', 'localtime', '+1 day')) AS TodayMovements
+            FROM StockBalances
             """;
 
         var record = await conn.QuerySingleOrDefaultAsync<DashboardStatsRecord>(new CommandDefinition(

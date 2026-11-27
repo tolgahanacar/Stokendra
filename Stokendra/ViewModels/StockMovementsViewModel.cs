@@ -19,8 +19,8 @@ public partial class StockMovementsViewModel : ViewModelBase
     private readonly IDepartmentRepository _departments;
     private readonly IDialogService _dialogService;
     // Filters
-    [ObservableProperty] private DateTime _startDate = new DateTime(2024, 1, 1);
-    [ObservableProperty] private DateTime _endDate   = DateTime.Today;
+    [ObservableProperty] private DateTime? _startDate = new DateTime(2024, 1, 1);
+    [ObservableProperty] private DateTime? _endDate   = DateTime.Today;
     [ObservableProperty] private string   _searchText = "";
     [ObservableProperty] private int      _selectedStockIndex = 0;
     [ObservableProperty] private int      _selectedTypeIndex  = 0;
@@ -31,14 +31,24 @@ public partial class StockMovementsViewModel : ViewModelBase
     // State
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    [NotifyCanExecuteChangedFor(nameof(LoadMovementsCommand))]
     private bool   _isLoading;
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private StockMovement? _selectedMovement;
 
     public bool IsNotLoading => !IsLoading;
 
-    [ObservableProperty] private int _currentPage = 1;
-    [ObservableProperty] private int _totalPages = 1;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PrevPageCommand))]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _currentPage = 1;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(NextPageCommand))]
+    private int _totalPages = 1;
+
+    public bool CanPrevPage => CurrentPage > 1;
+    public bool CanNextPage => CurrentPage < TotalPages;
     private const int PageSize = 30;
 
     public bool IsMovementSelected => SelectedMovement != null || SelectedMovements.Count > 0;
@@ -76,14 +86,10 @@ public partial class StockMovementsViewModel : ViewModelBase
         TypeItems.Add(LocalizationManager.L("type_empty"));
 
         DataEvents.DataChanged += OnDataChanged;
-
-        AsyncHelper.RunSafe(
-            () => InitAsync(),
-            ex => { AppLogger.LogError("Init error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private bool _isLoaded;
-    private bool _cardsDirty;
+    private bool _cardsDirty = true;
 
     private void OnDataChanged(DataDomain domain)
     {
@@ -118,7 +124,8 @@ public partial class StockMovementsViewModel : ViewModelBase
                 ? _allCards[previousIndex - 1].Id
                 : null;
 
-            _allCards = await _stockCards.GetChildCardsAsync();
+            var lookup = await _stockCards.GetCardLookupsAsync("Child");
+            _allCards = (lookup != null && lookup.Count > 0) ? lookup : (await _stockCards.GetChildCardsAsync() ?? new List<StockCard>());
             StockItems.Clear();
             StockItems.Add(LocalizationManager.L("all"));
             foreach (var k in _allCards) StockItems.Add($"{k.Code} - {k.Name}");
@@ -158,14 +165,16 @@ public partial class StockMovementsViewModel : ViewModelBase
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
             string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
 
-            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
-            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: StartDate.Date, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+            var totalCount = await _movements.GetCountAsync(stockCardId: cardId, startDate: safeStart, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
             TotalPages = Math.Max(1, (int)Math.Ceiling(totalCount / (double)PageSize));
 
             if (CurrentPage > TotalPages) CurrentPage = TotalPages;
             if (CurrentPage < 1) CurrentPage = 1;
 
-            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: StartDate.Date, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
+            var data = await _movements.GetPagedAsync(CurrentPage, PageSize, stockCardId: cardId, startDate: safeStart, endDate: safeEnd, department: null, movementType: type, category: null, searchTerm: search, cancellationToken: token);
 
             token.ThrowIfCancellationRequested();
 
@@ -203,8 +212,8 @@ public partial class StockMovementsViewModel : ViewModelBase
         await LoadMovementsAsync();
     }
 
-    [RelayCommand] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadMovementsAsync(); } }
-    [RelayCommand] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadMovementsAsync(); } }
+    [RelayCommand(CanExecute = nameof(CanNextPage))] public async Task NextPageAsync() { if (CurrentPage < TotalPages) { CurrentPage++; await LoadMovementsAsync(); } }
+    [RelayCommand(CanExecute = nameof(CanPrevPage))] public async Task PrevPageAsync() { if (CurrentPage > 1) { CurrentPage--; await LoadMovementsAsync(); } }
 
     partial void OnSearchTextChanged(string value) => ScheduleSearch();
 
@@ -311,11 +320,14 @@ public partial class StockMovementsViewModel : ViewModelBase
     public async Task EditMovementAsync()
     {
         if (!EnsureCanEditForSession()) return;
-        if (SelectedMovements.Count == 0) return;
+        var selectedList = SelectedMovements.Count > 0
+            ? SelectedMovements.ToList()
+            : (SelectedMovement != null ? new List<StockMovement> { SelectedMovement } : new List<StockMovement>());
+        if (selectedList.Count == 0) return;
         
-        if (SelectedMovements.Count == 1)
+        if (selectedList.Count == 1)
         {
-            var target = SelectedMovements[0];
+            var target = selectedList[0];
             var vm = new AddMovementViewModel(_stockCards, _departments, target);
             if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
             {
@@ -335,7 +347,7 @@ public partial class StockMovementsViewModel : ViewModelBase
         }
         else
         {
-            var vm = new BulkEditMovementsViewModel(SelectedMovements.ToList(), _movements, _departments, _dialogService);
+            var vm = new BulkEditMovementsViewModel(selectedList, _movements, _departments, _dialogService);
             if (await _dialogService.ShowDialogAsync(vm) && vm.Result != null)
             {
                 DataEvents.NotifyChanged(DataDomain.Movements);
@@ -371,8 +383,11 @@ public partial class StockMovementsViewModel : ViewModelBase
             int? cardId = SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count ? _allCards[SelectedStockIndex - 1].Id : null;
             string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
 
-            DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
-            var recordsToExport = await _movements.GetAllAsync(cardId, StartDate.Date, safeEnd, null, type, null, null);
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+            string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var recordsToExport = await _movements.GetPagedAsync(1, 50000, cardId, safeStart, safeEnd, null, type, null, search);
             if (recordsToExport.Count == 0)
             {
                 recordsToExport = Movements.ToList();
@@ -430,6 +445,9 @@ public partial class StockMovementsViewModel : ViewModelBase
                 _cardsDirty = false;
             }
             var cardsSnapshot = _allCards.ToList();
+            var cardByCode = cardsSnapshot
+                .GroupBy(c => c.Code, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
             int count = 0;
             await Task.Run(async () => 
             {
@@ -455,8 +473,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                     string code = col["code"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["code"])) : "";
                     if (string.IsNullOrEmpty(code)) return null;
 
-                    var card = cardsSnapshot.FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
-                    if (card == null) return null;
+                    if (!cardByCode.TryGetValue(code, out var card)) return null;
 
                     string typeRaw = col["type"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["type"])) : "";
                     string lowerType = typeRaw.ToTurkishLower();
@@ -498,6 +515,7 @@ public partial class StockMovementsViewModel : ViewModelBase
                     count = movementsToImport.Count;
                 }
             });
+            if (count > 0) DataEvents.NotifyChanged(DataDomain.Movements);
             await LoadMovementsAsync();
             StatusText = LocalizationManager.L("import_success", count);
             await _dialogService.ShowMessageAsync(LocalizationManager.L("info"), LocalizationManager.L("import_success", count));
@@ -515,7 +533,19 @@ public partial class StockMovementsViewModel : ViewModelBase
     {
         try
         {
-            var snapshot = Movements.ToList();
+            int? cardId = SelectedStockIndex > 0 && SelectedStockIndex - 1 < _allCards.Count ? _allCards[SelectedStockIndex - 1].Id : null;
+            string? type = SelectedTypeIndex switch { 1 => "Entry", 2 => "Exit", 3 => "Blank", _ => null };
+            string? search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+            DateTime endVal = (EndDate ?? DateTime.Today).Date;
+            DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
+
+            var snapshot = await _movements.GetPagedAsync(1, 50000, cardId, safeStart, safeEnd, null, type, null, search);
+            if (snapshot.Count == 0)
+            {
+                snapshot = Movements.ToList();
+            }
+
             if (snapshot.Count == 0)
             {
                 await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
@@ -523,40 +553,47 @@ public partial class StockMovementsViewModel : ViewModelBase
             }
 
             StatusText = LocalizationManager.L("preparing_print");
-            var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th style='width: 8%;'>{LocalizationManager.L("code_no")}</th>");
-            sbHeaders.Append($"<th style='width: 32%; text-align: left;'>{LocalizationManager.L("stock_name")}</th>");
-            sbHeaders.Append($"<th style='width: 7%;'>{LocalizationManager.L("quantity")}</th>");
-            sbHeaders.Append($"<th style='width: 6%;'>{LocalizationManager.L("type")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("department")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("delivered_to")}</th>");
-            sbHeaders.Append($"<th style='width: 17%;'>{LocalizationManager.L("date")}</th>");
-            
-            var sbBody = new System.Text.StringBuilder();
-            foreach (var h in snapshot)
+            string title = LocalizationManager.L("movements_report");
+            string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
+            string footer = LocalizationManager.L("total_records_page", snapshot.Count, 1, 1);
+
+            string html = await Task.Run(() =>
             {
-                string clr = h.IsEntry ? "green" : "red";
-                sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(h.StockCardCode)}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.StockCardName)}</td>");
-                sbBody.Append($"<td class='num bold {clr}'>{h.Quantity}</td>");
-                sbBody.Append($"<td class='num bold {clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
-                sbBody.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
-                sbBody.Append("</tr>");
-            }
+                var sbHeaders = new System.Text.StringBuilder();
+                sbHeaders.Append($"<th style='width: 8%;'>{LocalizationManager.L("code_no")}</th>");
+                sbHeaders.Append($"<th style='width: 32%; text-align: left;'>{LocalizationManager.L("stock_name")}</th>");
+                sbHeaders.Append($"<th style='width: 7%;'>{LocalizationManager.L("quantity")}</th>");
+                sbHeaders.Append($"<th style='width: 6%;'>{LocalizationManager.L("type")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("department")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("delivered_to")}</th>");
+                sbHeaders.Append($"<th style='width: 17%;'>{LocalizationManager.L("date")}</th>");
+
+                var sbBody = new System.Text.StringBuilder(snapshot.Count * 180);
+                foreach (var h in snapshot)
+                {
+                    string clr = h.IsEntry ? "green" : "red";
+                    sbBody.Append("<tr>");
+                    sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(h.StockCardCode)}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.StockCardName)}</td>");
+                    sbBody.Append($"<td class='num bold {clr}'>{h.Quantity}</td>");
+                    sbBody.Append($"<td class='num bold {clr}'>{PrintTemplateBuilder.Escape(h.DisplayType)}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Department)}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(h.Recipient)}</td>");
+                    sbBody.Append($"<td>{h.Date:dd.MM.yyyy HH:mm}</td>");
+                    sbBody.Append("</tr>");
+                }
+
+                return PrintTemplateBuilder.BuildReportHtml(
+                    title: title,
+                    headerTitle: title.ToUpper(),
+                    dateInfo: dateInfo,
+                    tableHeadersHtml: sbHeaders.ToString(),
+                    tableBodyHtml: sbBody.ToString(),
+                    footerHtml: footer
+                );
+            });
             
-            string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("movements_report"),
-                headerTitle: LocalizationManager.L("movements_report").ToUpper(),
-                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
-                tableHeadersHtml: sbHeaders.ToString(),
-                tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", snapshot.Count, 1, 1)
-            );
-            
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("movements_report"), html);
+            var previewVm = new PrintPreviewViewModel(title, html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("printing_finished");

@@ -19,6 +19,9 @@ public interface INoteRepository
     /// <summary>Updates an existing note asynchronously.</summary>
     Task UpdateAsync(Note note, CancellationToken cancellationToken = default);
 
+    /// <summary>Updates multiple notes in bulk asynchronously in a single transaction.</summary>
+    Task UpdateBulkAsync(IEnumerable<Note> notes, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes the note with the specified ID asynchronously.</summary>
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 

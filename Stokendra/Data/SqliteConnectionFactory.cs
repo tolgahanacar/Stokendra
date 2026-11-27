@@ -13,7 +13,7 @@ public sealed class SqliteConnectionFactory : IDbConnectionFactory
         {
             DataSource = AppPaths.NormalizeDatabasePath(dbPath),
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
+            Cache = SqliteCacheMode.Default,
             Pooling = true,
             ForeignKeys = true,
             DefaultTimeout = 15

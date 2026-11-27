@@ -25,10 +25,6 @@ public partial class DepartmentsViewModel : ViewModelBase
         _dialogService = dialogService;
 
         DataEvents.DataChanged += OnDataChanged;
-
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => AppLogger.LogError("Departments load failed", ex));
     }
 
     private void OnDataChanged(DataDomain domain)

@@ -4,8 +4,8 @@
         xmlns:infra="using:Stokendra.Infrastructure"
         x:Class="Stokendra.Views.StockCardDetailWindow"
         Title="{infra:L stock_card_detail}"
-        Width="1000" Height="720"
-        MinWidth="800" MinHeight="520"
+        Width="960" Height="640"
+        MinWidth="780" MinHeight="500"
         MaxHeight="960"
         WindowStartupLocation="CenterOwner"
         Background="#0C0E14" x:CompileBindings="False">
@@ -142,6 +142,13 @@
             <ProgressBar IsIndeterminate="True"
                           VerticalAlignment="Top"
                           IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Movements.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
         </Grid>
 
         <!-- Footer -->
@@ -165,6 +172,7 @@
                 <Button Grid.Column="1"
                         Content="{infra:L close}"
                         Classes="Secondary"
+                        IsCancel="True"
                         Command="{Binding CloseCommand}"
                         HorizontalAlignment="Right"
                         Width="90" MinHeight="36"/>

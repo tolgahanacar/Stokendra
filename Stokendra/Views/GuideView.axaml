@@ -16,20 +16,20 @@
 
         <!-- System Metadata Info Card -->
         <Border Grid.Row="1" Classes="Card" Background="#111827" BorderBrush="#1F2937" CornerRadius="10" Padding="18,12" Margin="0,0,0,16">
-            <StackPanel Orientation="Horizontal" Spacing="36">
-                <StackPanel Spacing="2">
+            <WrapPanel Orientation="Horizontal">
+                <StackPanel Spacing="2" Margin="0,0,32,4">
                     <TextBlock Text="{infra:L guide_app_version}" FontSize="10" Foreground="#64748B" FontWeight="Bold"/>
                     <TextBlock Text="{Binding AppVersion}" FontSize="13" Foreground="#38AEFF" FontWeight="Bold"/>
                 </StackPanel>
-                <StackPanel Spacing="2">
+                <StackPanel Spacing="2" Margin="0,0,32,4">
                     <TextBlock Text="{infra:L guide_db_path}" FontSize="10" Foreground="#64748B" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding DatabasePath}" FontSize="12" Foreground="#D0D8F0" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding DatabasePath}" FontSize="12" Foreground="#D0D8F0" FontWeight="SemiBold" TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Spacing="2">
+                <StackPanel Spacing="2" Margin="0,0,0,4">
                     <TextBlock Text="{infra:L guide_settings_path}" FontSize="10" Foreground="#64748B" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding SettingsPath}" FontSize="12" Foreground="#D0D8F0" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SettingsPath}" FontSize="12" Foreground="#D0D8F0" FontWeight="SemiBold" TextWrapping="Wrap"/>
                 </StackPanel>
-            </StackPanel>
+            </WrapPanel>
         </Border>
 
         <!-- Search Box -->

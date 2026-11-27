@@ -7,58 +7,64 @@
              x:DataType="vm:StocksViewModel"
              Background="#0C0E14">
 
-    <Design.DataContext>
-        <vm:StocksViewModel/>
-    </Design.DataContext>
-
     <Grid RowDefinitions="Auto,Auto,*,Auto">
         
         <!-- Header -->
-        <StackPanel Grid.Row="0" Margin="40,40,40,0" Spacing="8">
-            <TextBlock Text="{infra:L menu_stocks}" FontSize="32" FontWeight="Black" Foreground="#F8FAFC"/>
-            <TextBlock Text="{infra:L stocks_subtitle}" FontSize="14" Foreground="#94A3B8"/>
+        <StackPanel Grid.Row="0" Margin="40,32,40,0" Spacing="6">
+            <TextBlock Text="{infra:L menu_stocks}" FontSize="30" FontWeight="Black" Foreground="#F8FAFC"/>
+            <TextBlock Text="{infra:L stocks_subtitle}" FontSize="13" Foreground="#94A3B8"/>
         </StackPanel>
 
         <!-- Search and Filter -->
         <Border Grid.Row="1" Background="#161B27" Margin="28,16,28,0" CornerRadius="10" Padding="16,12">
-            <StackPanel Orientation="Horizontal" Spacing="10">
+            <WrapPanel Orientation="Horizontal">
                 <TextBox Text="{Binding SearchText}"
                           Watermark="{infra:L search_placeholder}"
-                          Width="350"/>
-                <Button Content="{infra:L clear_filter}" Classes="Secondary" Command="{Binding ClearSearchCommand}"/>
-                <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}"/>
-                <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportCommand}"/>
-            </StackPanel>
+                          Width="280" Margin="0,0,10,6"/>
+                <Button Content="{infra:L clear_filter}" Classes="Secondary" Command="{Binding ClearSearchCommand}" Margin="0,0,8,6"/>
+                <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}" Margin="0,0,8,6"/>
+                <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportCommand}" Margin="0,0,0,6"/>
+            </WrapPanel>
         </Border>
 
         <!-- Grid -->
-        <DataGrid Grid.Row="2"
-                  Margin="40,24,40,24"
-                  ItemsSource="{Binding Stocks}"
-                  IsReadOnly="True"
-                  CanUserResizeColumns="True">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"         Width="100"/>
-                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"         Width="250"/>
-                <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"     Width="150"/>
-                <DataGridTemplateColumn Header="{infra:L status}" Width="120">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate x:DataType="models:StockCard">
-                            <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2" Margin="4" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding StatusLabel}"
-                                           Foreground="#FFFFFF"
-                                           FontSize="12" FontWeight="Bold"/>
-                            </Border>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="{infra:L entry}" Binding="{Binding TotalEntry}" Width="100"/>
-                <DataGridTextColumn Header="{infra:L exit}" Binding="{Binding TotalExit}" Width="100"/>
-                <DataGridTextColumn Header="{infra:L current_stock}"    Binding="{Binding CurrentStock}" Width="100"/>
-                <DataGridTextColumn Header="{infra:L min_stock}"       Binding="{Binding MinStock}"    Width="100"/>
-                <DataGridTextColumn Header="{infra:L unit}"     Binding="{Binding Unit}"      Width="100"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="2">
+            <DataGrid Margin="28,16,28,16"
+                      ItemsSource="{Binding Stocks}"
+                      IsReadOnly="True"
+                      CanUserResizeColumns="True"
+                      HorizontalScrollBarVisibility="Auto">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"         Width="85" MinWidth="65"/>
+                    <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"         Width="2*" MinWidth="130"/>
+                    <DataGridTextColumn Header="{infra:L category}"      Binding="{Binding Category}"     Width="*"  MinWidth="90"/>
+                    <DataGridTemplateColumn Header="{infra:L status}" Width="105" MinWidth="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate x:DataType="models:StockCard">
+                                <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2" Margin="4" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding StatusLabel}"
+                                               Foreground="#FFFFFF"
+                                               FontSize="12" FontWeight="Bold"/>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="{infra:L entry}"         Binding="{Binding TotalEntry}"   Width="80" MinWidth="60"/>
+                    <DataGridTextColumn Header="{infra:L exit}"          Binding="{Binding TotalExit}"    Width="80" MinWidth="60"/>
+                    <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding CurrentStock}" Width="85" MinWidth="65"/>
+                    <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}"     Width="80" MinWidth="60"/>
+                    <DataGridTextColumn Header="{infra:L unit}"          Binding="{Binding Unit}"         Width="75" MinWidth="55"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding IsNotLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Stocks.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
+        </Grid>
 
         <!-- Status Bar -->
         <Border Grid.Row="3" Background="#161B27" Padding="28,8">

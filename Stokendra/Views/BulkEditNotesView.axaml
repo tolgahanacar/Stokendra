@@ -38,7 +38,7 @@
                     <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
                         <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDate, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Grid.Column="1" Text="{infra:L date_filter}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" HorizontalAlignment="Stretch" Height="28"/>
+                        <views:SafeCalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" HorizontalAlignment="Stretch" Height="28"/>
                     </Grid>
 
                     <!-- Title Prefix (Row 0, Col 1) -->
@@ -130,10 +130,13 @@
                     <Button Content="{infra:L cancel}"
                             Classes="Secondary"
                             Command="{Binding CancelCommand}"
+                            IsCancel="True"
                             Width="100" MinHeight="36"/>
                     <Button Content="{infra:L save}"
                             Classes="Primary"
                             Command="{Binding SaveCommand}"
+                            IsDefault="True"
+                            IsEnabled="{Binding CanSave}"
                             Width="100" MinHeight="36"/>
                 </StackPanel>
             </Grid>

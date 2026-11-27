@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Data.Sqlite;
 using Stokendra.Data.Interfaces;
 using Stokendra.Models;
 using System;
@@ -49,7 +50,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
             }, 
             cancellationToken: cancellationToken));
             
-        LogAudit("Insert", "ServiceRecords", record.Id, $"Device: {record.DeviceName}");
+        LogAudit(conn, null, "Insert", "ServiceRecords", record.Id, $"Device: {record.DeviceName}");
     }
 
     public async Task UpdateAsync(ServiceRecord record, CancellationToken cancellationToken = default)
@@ -77,7 +78,49 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
             }, 
             cancellationToken: cancellationToken));
             
-        LogAudit("Update", "ServiceRecords", record.Id, $"Device: {record.DeviceName}");
+        LogAudit(conn, null, "Update", "ServiceRecords", record.Id, $"Device: {record.DeviceName}");
+    }
+
+    public async Task UpdateBulkAsync(IEnumerable<ServiceRecord> records, CancellationToken cancellationToken = default)
+    {
+        var list = records.ToList();
+        if (list.Count == 0) return;
+
+        foreach (var r in list)
+        {
+            if (string.IsNullOrWhiteSpace(r.DeviceName))
+                throw new ArgumentException(LocalizationManager.L("device_name_required"));
+        }
+
+        using var conn = ConnectionFactory.CreateConnection();
+        using var trans = await conn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var sql = """
+                UPDATE ServiceRecords SET 
+                    DeviceName=@DeviceName, SerialNumber=@SerialNumber, Company=@Company, 
+                    ServiceDate=@ServiceDateString, Issue=@Issue, Result=@Result 
+                WHERE Id=@Id
+                """;
+            var nowTime = DateTime.Now.TimeOfDay;
+            var payload = list.Select(r => new {
+                DeviceName = r.DeviceName.Trim(),
+                SerialNumber = r.SerialNumber ?? "",
+                Company = r.Company ?? "",
+                ServiceDateString = r.ServiceDate.Date.Add(nowTime).ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
+                Issue = r.Issue ?? "",
+                Result = r.Result ?? "",
+                r.Id
+            });
+            await conn.ExecuteAsync(new CommandDefinition(sql, payload, transaction: trans, cancellationToken: cancellationToken)).ConfigureAwait(false);
+            LogAudit(conn, (SqliteTransaction)trans, "Update", "ServiceRecords", 0, $"Bulk Service Update ({list.Count})");
+            await trans.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            await trans.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
@@ -87,7 +130,7 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
             "DELETE FROM ServiceRecords WHERE Id=@Id", 
             new { Id = id }, 
             cancellationToken: cancellationToken));
-        LogAudit("Delete", "ServiceRecords", id, "");
+        LogAudit(conn, null, "Delete", "ServiceRecords", id, "");
     }
 
     public async Task DeleteBulkAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
@@ -100,8 +143,8 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
         try 
         {
             await conn.ExecuteAsync(new CommandDefinition("DELETE FROM ServiceRecords WHERE Id IN @Ids", new { Ids = idList }, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Delete", "ServiceRecords", 0, "Bulk ServiceRecord Delete");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Delete", "ServiceRecords", 0, "Bulk ServiceRecord Delete");
         } 
         catch 
         { 
@@ -129,8 +172,8 @@ public sealed class ServiceRecordRepository(IDbConnectionFactory connectionFacto
                 Result = r.Result ?? ""
             });
             await conn.ExecuteAsync(new CommandDefinition(sql, data, transaction: trans, cancellationToken: cancellationToken));
+            LogAudit(conn, (SqliteTransaction)trans, "Insert", "ServiceRecords", 0, "Bulk Insert");
             await trans.CommitAsync(cancellationToken);
-            LogAudit("Insert", "ServiceRecords", 0, "Bulk Insert");
         }
         catch
         {

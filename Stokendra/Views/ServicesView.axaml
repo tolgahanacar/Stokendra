@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infra="using:Stokendra.Infrastructure"
+             xmlns:views="using:Stokendra.Views"
              x:Class="Stokendra.Views.ServicesView"
              Background="#0C0E14" x:CompileBindings="False">
 
@@ -19,9 +20,9 @@
             <WrapPanel Orientation="Horizontal">
                 <TextBox Text="{Binding SearchText, Mode=TwoWay}"
                          Watermark="{infra:L service_search_placeholder}"
-                         Width="260" Margin="0,0,10,8"/>
-                <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8"/>
-                <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8"/>
+                         Width="240" Margin="0,0,10,8"/>
+                <views:SafeCalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L start_date}"/>
+                <views:SafeCalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L end_date}"/>
                 <Button Content="{infra:L filter}" Classes="Primary"
                         Command="{Binding SearchCommand}"
                         Margin="0,0,8,8"/>
@@ -32,48 +33,65 @@
         </Border>
 
         <!-- Toolbar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="40,14,40,0">
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="40,14,40,0">
             <Button Content="{infra:L add}" Classes="Primary"
                     Command="{Binding AddCommand}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
             <Button Content="{infra:L edit}" Classes="Secondary"
                     Command="{Binding EditCommand}"
                     IsEnabled="{Binding IsRecordSelected}"
-                    IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
             <Button Content="{infra:L delete}" Classes="Danger"
                     Command="{Binding DeleteCommand}"
                     IsEnabled="{Binding IsRecordSelected}"
-                    IsVisible="{Binding CanEdit}"/>
-            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
+                    IsVisible="{Binding CanEdit}"
+                    Margin="0,0,8,6"/>
+            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="0,0,8,6" VerticalAlignment="Center" IsVisible="{Binding CanEdit}"/>
             <Button Content="{infra:L export_excel}" Classes="Secondary"
-                    Command="{Binding ExportExcelCommand}"/>
+                    Command="{Binding ExportExcelCommand}"
+                    Margin="0,0,8,6"/>
             <Button Content="{infra:L import_excel}" Classes="Secondary"
                     IsVisible="{Binding CanEdit}"
-                    Command="{Binding ImportCommand}"/>
+                    Command="{Binding ImportCommand}"
+                    Margin="0,0,8,6"/>
             <Button Content="{infra:L print}" Classes="Success"
-                    Command="{Binding PrintCommand}"/>
-        </StackPanel>
+                    Command="{Binding PrintCommand}"
+                    Margin="0,0,0,6"/>
+        </WrapPanel>
 
         <!-- DataGrid -->
-        <DataGrid Grid.Row="3"
-                  Name="ServicesGrid"
-                  Margin="40,16,40,16"
-                  ItemsSource="{Binding Records}"
-                  SelectedItem="{Binding SelectedRecord}"
-                  SelectionMode="Extended"
-                  IsReadOnly="True"
-                  CanUserResizeColumns="True"
-                  Background="#0C0E14"
-                  BorderThickness="0">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="{infra:L device_name}"  Binding="{Binding DeviceName}"     Width="250"/>
-                <DataGridTextColumn Header="{infra:L serial_number}"    Binding="{Binding SerialNumber}"  Width="200"/>
-                <DataGridTextColumn Header="{infra:L company}"      Binding="{Binding Company}"         Width="180"/>
-                <DataGridTextColumn Header="{infra:L problem}"      Binding="{Binding Issue}"         Width="250"/>
-                <DataGridTextColumn Header="{infra:L result}"      Binding="{Binding Result}"         Width="250"/>
-                <DataGridTextColumn Header="{infra:L date}"      Binding="{Binding ServiceDate, StringFormat=dd.MM.yyyy}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid Grid.Row="3">
+            <DataGrid Name="ServicesGrid"
+                      Margin="40,16,40,16"
+                      ItemsSource="{Binding Records}"
+                      SelectedItem="{Binding SelectedRecord}"
+                      SelectionMode="Extended"
+                      IsReadOnly="True"
+                      CanUserResizeColumns="True"
+                      HorizontalScrollBarVisibility="Auto"
+                      DoubleTapped="ServicesGrid_DoubleTapped"
+                      Background="#0C0E14"
+                      BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="{infra:L device_name}"   Binding="{Binding DeviceName}"   Width="1.4*" MinWidth="120"/>
+                    <DataGridTextColumn Header="{infra:L serial_number}" Binding="{Binding SerialNumber}" Width="*"    MinWidth="100"/>
+                    <DataGridTextColumn Header="{infra:L company}"       Binding="{Binding Company}"      Width="*"    MinWidth="100"/>
+                    <DataGridTextColumn Header="{infra:L problem}"       Binding="{Binding Issue}"        Width="1.4*" MinWidth="120"/>
+                    <DataGridTextColumn Header="{infra:L result}"        Binding="{Binding Result}"       Width="1.4*" MinWidth="120"/>
+                    <DataGridTextColumn Header="{infra:L date}"          Binding="{Binding ServiceDate, StringFormat=dd.MM.yyyy}" Width="110" MinWidth="95"/>
+                </DataGrid.Columns>
+            </DataGrid>
+            <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding !IsLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Records.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
+        </Grid>
 
         <!-- Status bar -->
         <Border Grid.Row="4" Background="#0E1119" Padding="40,8">

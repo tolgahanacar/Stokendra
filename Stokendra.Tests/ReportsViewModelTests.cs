@@ -54,7 +54,7 @@ public class ReportsViewModelTests
         Assert.Equal(LocalizationManager.L("all"), vm.SelectedUser);
         Assert.Equal(StockCardReportItem.All, vm.SelectedStockCard);
         Assert.Equal(DateTime.Today.AddDays(-30), vm.StartDate);
-        Assert.Equal(DateTime.Today, vm.EndDate.Date);
+        Assert.Equal(DateTime.Today, vm.EndDate?.Date);
     }
 
     [Fact]

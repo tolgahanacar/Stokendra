@@ -3,6 +3,7 @@
              xmlns:vm="using:Stokendra.ViewModels"
              xmlns:models="using:Stokendra.Models"
              xmlns:infra="using:Stokendra.Infrastructure"
+             xmlns:views="using:Stokendra.Views"
              x:Class="Stokendra.Views.StockMovementsView"
              x:DataType="vm:StockMovementsViewModel"
              Background="#0C0E14">
@@ -39,8 +40,8 @@
                           Watermark="{infra:L search_placeholder}"
                           Width="230" Margin="0,0,10,8"/>
 
-                <CalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L start_date}"/>
-                <CalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L end_date}"/>
+                <views:SafeCalendarDatePicker SelectedDate="{Binding StartDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L start_date}"/>
+                <views:SafeCalendarDatePicker SelectedDate="{Binding EndDate}" Width="150" Margin="0,0,10,8" Watermark="{infra:L end_date}"/>
 
                 <Button Content="{infra:L filter}" Classes="Primary"
                         Command="{Binding LoadMovementsCommand}"
@@ -52,31 +53,32 @@
         </Border>
 
         <!-- Toolbar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="40,14,40,0">
-            <Button Content="{infra:L new_movement}" Classes="Primary" Command="{Binding AddMovementCommand}" IsVisible="{Binding CanEdit}"/>
-            <Button Content="{infra:L bulk_movement}" Classes="Secondary" Command="{Binding BulkMovementCommand}" IsVisible="{Binding CanEdit}"/>
-            <Button Content="{infra:L edit}" Classes="Secondary" Command="{Binding EditMovementCommand}" IsEnabled="{Binding IsMovementSelected}" IsVisible="{Binding CanEdit}"/>
-            <Button Content="{infra:L delete}" Classes="Danger" Command="{Binding DeleteMovementCommand}" IsEnabled="{Binding IsMovementSelected}" IsVisible="{Binding CanEdit}"/>
-            
-            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="4,0" IsVisible="{Binding CanEdit}"/>
-            
-            <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportExcelCommand}"/>
-            <Button Content="{infra:L import_excel}" Classes="Secondary" Command="{Binding ImportXlsxCommand}" IsVisible="{Binding CanEdit}"/>
-            <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}"/>
-        </StackPanel>
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="40,14,40,0">
+            <Button Content="{infra:L new_movement}" Classes="Primary" Command="{Binding AddMovementCommand}" IsVisible="{Binding CanEdit}" Margin="0,0,8,6"/>
+            <Button Content="{infra:L bulk_movement}" Classes="Secondary" Command="{Binding BulkMovementCommand}" IsVisible="{Binding CanEdit}" Margin="0,0,8,6"/>
+            <Button Content="{infra:L edit}" Classes="Secondary" Command="{Binding EditMovementCommand}" IsEnabled="{Binding IsMovementSelected}" IsVisible="{Binding CanEdit}" Margin="0,0,8,6"/>
+            <Button Content="{infra:L delete}" Classes="Danger" Command="{Binding DeleteMovementCommand}" IsEnabled="{Binding IsMovementSelected}" IsVisible="{Binding CanEdit}" Margin="0,0,8,6"/>
+
+            <Rectangle Width="1" Height="22" Fill="#1E2D45" Margin="0,0,8,6" VerticalAlignment="Center" IsVisible="{Binding CanEdit}"/>
+
+            <Button Content="{infra:L export_excel}" Classes="Secondary" Command="{Binding ExportExcelCommand}" Margin="0,0,8,6"/>
+            <Button Content="{infra:L import_excel}" Classes="Secondary" Command="{Binding ImportXlsxCommand}" IsVisible="{Binding CanEdit}" Margin="0,0,8,6"/>
+            <Button Content="{infra:L print}" Classes="Success" Command="{Binding PrintCommand}" Margin="0,0,0,6"/>
+        </WrapPanel>
 
         <!-- DataGrid -->
-        <DataGrid Grid.Row="3"
-                  Name="MovementsGrid"
-                  Margin="28,12,28,12"
-                  ItemsSource="{Binding Movements}"
-                  SelectedItem="{Binding SelectedMovement}"
-                  SelectionMode="Extended"
-                  IsReadOnly="True"
-                  CanUserResizeColumns="True"
-                  HorizontalScrollBarVisibility="Visible"
-                  Background="#0C0E14"
-                  BorderThickness="0">
+        <Grid Grid.Row="3">
+            <DataGrid Name="MovementsGrid"
+                      Margin="28,12,28,12"
+                      ItemsSource="{Binding Movements}"
+                      SelectedItem="{Binding SelectedMovement}"
+                      SelectionMode="Extended"
+                      IsReadOnly="True"
+                      CanUserResizeColumns="True"
+                      HorizontalScrollBarVisibility="Visible"
+                      DoubleTapped="MovementsGrid_DoubleTapped"
+                      Background="#0C0E14"
+                      BorderThickness="0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding StockCardCode}" Width="110" MinWidth="80"/>
                 <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding StockCardName}" Width="1.6*" MinWidth="120"/>
@@ -112,6 +114,15 @@
                 <DataGridTextColumn Header="{infra:L description}"   Binding="{Binding Description}"   Width="2*"  MinWidth="120"/>
             </DataGrid.Columns>
         </DataGrid>
+            <ProgressBar IsIndeterminate="True" VerticalAlignment="Top" IsVisible="{Binding IsLoading}"/>
+            <Border IsVisible="{Binding IsNotLoading}" IsHitTestVisible="False">
+                <TextBlock Text="{infra:L no_records_found}"
+                           IsVisible="{Binding Movements.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                           Foreground="#64748B" FontSize="13"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Margin="20"/>
+            </Border>
+        </Grid>
 
         <!-- Status bar -->
         <Border Grid.Row="4" Background="#0E1119" Padding="40,8">

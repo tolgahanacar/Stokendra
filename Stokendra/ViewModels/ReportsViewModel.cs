@@ -23,8 +23,8 @@ public partial class ReportsViewModel : ViewModelBase
     private readonly IDepartmentRepository _departments;
     private readonly IStockCardRepository _stockCards;
     private readonly IDialogService _dialogService;
-    [ObservableProperty] private DateTime _startDate = DateTime.Today.AddDays(-30);
-    [ObservableProperty] private DateTime _endDate = DateTime.Today;
+    [ObservableProperty] private DateTime? _startDate = DateTime.Today.AddDays(-30);
+    [ObservableProperty] private DateTime? _endDate = DateTime.Today;
     [ObservableProperty] private string _selectedDepartment = LocalizationManager.L("all");
     [ObservableProperty] private string _selectedCategory = LocalizationManager.L("all");
     [ObservableProperty] private string _selectedUser = LocalizationManager.L("all");
@@ -56,9 +56,6 @@ public partial class ReportsViewModel : ViewModelBase
         _stockCards = stockCards;
         _dialogService = dialogService;
         DataEvents.DataChanged += OnDataChanged;
-        AsyncHelper.RunSafe(
-            () => EnsureLoadedAsync(),
-            ex => AppLogger.LogError("Reports initialize failed", ex));
     }
 
     private void OnDataChanged(DataDomain domain)
@@ -96,11 +93,12 @@ public partial class ReportsViewModel : ViewModelBase
             int? prevCardId = SelectedStockCard?.Id;
             string allLabel = LocalizationManager.L("all");
 
-            var depts = await _departments.GetAllAsync();
-            var cards = await _stockCards.GetChildCardsAsync();
+            var depts = await _departments.GetAllAsync() ?? new List<string>();
+            var cardsLookup = await _stockCards.GetCardLookupsAsync("Child");
+            var cards = (cardsLookup != null && cardsLookup.Count > 0) ? cardsLookup : (await _stockCards.GetChildCardsAsync() ?? new List<StockCard>());
             var cats = cards.Select(c => c.Category).Where(k => !string.IsNullOrEmpty(k)).Distinct().OrderBy(k => k).ToList();
             var sortedCards = cards.OrderBy(c => c.Code).ThenBy(c => c.Name).ToList();
-            var users = _movements.GetDeliveredPersons();
+            var users = await _movements.GetDeliveredPersonsAsync() ?? _movements.GetDeliveredPersons();
 
             Departments.Clear();
             Departments.Add(allLabel);
@@ -166,11 +164,13 @@ public partial class ReportsViewModel : ViewModelBase
             while (true)
             {
                 token.ThrowIfCancellationRequested();
-                DateTime safeEnd = EndDate.Date >= DateTime.MaxValue.Date ? DateTime.MaxValue : EndDate.Date.AddDays(1);
+                DateTime safeStart = (StartDate ?? new DateTime(2024, 1, 1)).Date;
+                DateTime endVal = (EndDate ?? DateTime.Today).Date;
+                DateTime safeEnd = endVal >= DateTime.MaxValue.Date ? DateTime.MaxValue : endVal.AddDays(1);
                 var batch = await _movements.GetPagedAsync(
                     page, batchSize,
                     stockCardId: cardId,
-                    startDate: StartDate.Date,
+                    startDate: safeStart,
                     endDate: safeEnd,
                     department: dept,
                     movementType: "Exit",
@@ -316,48 +316,58 @@ public partial class ReportsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("reports_print_preparing");
-            
-            var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th>{LocalizationManager.L("date")}</th>");
-            sbHeaders.Append($"<th>{LocalizationManager.L("code_no")}</th>");
-            sbHeaders.Append($"<th>{LocalizationManager.L("stock_name")}</th>");
-            sbHeaders.Append($"<th>{LocalizationManager.L("quantity")}</th>");
-            sbHeaders.Append($"<th>{LocalizationManager.L("department")}</th>");
-            sbHeaders.Append($"<th>{LocalizationManager.L("delivered_to_header")}</th>");
-            
-            var sbBody = new System.Text.StringBuilder();
-            foreach (var r in ReportRows)
+            var rowsSnapshot = ReportRows.ToList();
+            double totalConsumption = TotalConsumption;
+            int uniqueItemCount = UniqueItemCount;
+            string dateRange = $"{(StartDate ?? new DateTime(2024, 1, 1)):dd.MM.yyyy} - {(EndDate ?? DateTime.Today):dd.MM.yyyy}";
+            string printedUser = PrintTemplateBuilder.Escape(AppServices.TryGetCurrent(out var app) ? (app?.Session?.Username ?? "admin") : "admin");
+            string title = LocalizationManager.L("consumption_report_title");
+            string headerTitle = LocalizationManager.L("consumption_report_header");
+
+            string html = await Task.Run(() =>
             {
-                sbBody.Append("<tr>");
-                sbBody.Append($"<td>{r.Date:dd.MM.yyyy HH:mm}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardCode)}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardName)}</td>");
-                sbBody.Append($"<td>{r.Quantity}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Department)}</td>");
-                sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Recipient)}</td>");
-                sbBody.Append("</tr>");
-            }
+                var sbHeaders = new System.Text.StringBuilder();
+                sbHeaders.Append($"<th>{LocalizationManager.L("date")}</th>");
+                sbHeaders.Append($"<th>{LocalizationManager.L("code_no")}</th>");
+                sbHeaders.Append($"<th>{LocalizationManager.L("stock_name")}</th>");
+                sbHeaders.Append($"<th>{LocalizationManager.L("quantity")}</th>");
+                sbHeaders.Append($"<th>{LocalizationManager.L("department")}</th>");
+                sbHeaders.Append($"<th>{LocalizationManager.L("delivered_to_header")}</th>");
+
+                var sbBody = new System.Text.StringBuilder(rowsSnapshot.Count * 160);
+                foreach (var r in rowsSnapshot)
+                {
+                    sbBody.Append("<tr>");
+                    sbBody.Append($"<td>{r.Date:dd.MM.yyyy HH:mm}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardCode)}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.StockCardName)}</td>");
+                    sbBody.Append($"<td>{r.Quantity}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Department)}</td>");
+                    sbBody.Append($"<td>{PrintTemplateBuilder.Escape(r.Recipient)}</td>");
+                    sbBody.Append("</tr>");
+                }
+
+                string summaryHtml = "<div class='summary'>" +
+                    $"<div class='summary-item'><div class='summary-value'>{totalConsumption}</div><div class='summary-label'>{LocalizationManager.L("total_consumption")}</div></div>" +
+                    $"<div class='summary-item'><div class='summary-value'>{uniqueItemCount}</div><div class='summary-label'>{LocalizationManager.L("unique_items")}</div></div>" +
+                    $"<div class='summary-item'><div class='summary-value'>{rowsSnapshot.Count}</div><div class='summary-label'>{LocalizationManager.L("transaction_count")}</div></div>" +
+                    "</div>";
+
+                return PrintTemplateBuilder.BuildReportHtml(
+                    title: title,
+                    headerTitle: headerTitle,
+                    dateInfo: LocalizationManager.L("report_date_label") + $"<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b><br/>{dateRange}",
+                    tableHeadersHtml: sbHeaders.ToString(),
+                    tableBodyHtml: sbBody.ToString(),
+                    footerHtml: string.Format(
+                        LocalizationManager.L("printed_by"),
+                        DateTime.Now.ToString("dd.MM.yyyy HH:mm"),
+                        printedUser),
+                    additionalSummaryHtml: summaryHtml
+                );
+            });
             
-            string summaryHtml = "<div class='summary'>" +
-                $"<div class='summary-item'><div class='summary-value'>{TotalConsumption}</div><div class='summary-label'>{LocalizationManager.L("total_consumption")}</div></div>" +
-                $"<div class='summary-item'><div class='summary-value'>{UniqueItemCount}</div><div class='summary-label'>{LocalizationManager.L("unique_items")}</div></div>" +
-                $"<div class='summary-item'><div class='summary-value'>{ReportRows.Count}</div><div class='summary-label'>{LocalizationManager.L("transaction_count")}</div></div>" +
-                "</div>";
-            
-            string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("consumption_report_title"),
-                headerTitle: LocalizationManager.L("consumption_report_header"),
-                dateInfo: LocalizationManager.L("report_date_label") + $"<br/><b>{DateTime.Now:dd.MM.yyyy HH:mm}</b><br/>{StartDate:dd.MM.yyyy} - {EndDate:dd.MM.yyyy}",
-                tableHeadersHtml: sbHeaders.ToString(),
-                tableBodyHtml: sbBody.ToString(),
-                footerHtml: string.Format(
-                    LocalizationManager.L("printed_by"),
-                    DateTime.Now.ToString("dd.MM.yyyy HH:mm"),
-                    PrintTemplateBuilder.Escape(AppServices.TryGetCurrent(out var app) ? (app?.Session?.Username ?? "admin") : "admin")),
-                additionalSummaryHtml: summaryHtml
-            );
-            
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("consumption_report_title"), html);
+            var previewVm = new PrintPreviewViewModel(title, html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("print_done_or_cancelled");

@@ -23,7 +23,12 @@ public partial class NotesViewModel : ViewModelBase
     [ObservableProperty] private string _editContent = "";
     [ObservableProperty] private DateTimeOffset _editCreatedAt = DateTimeOffset.Now;
     [ObservableProperty] private bool   _isEditing;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NoteEditHeader))]
+    private bool _isNewNote;
     private int _editingId = 0;
+
+    public string NoteEditHeader => IsNewNote ? LocalizationManager.L("note_new_title") : LocalizationManager.L("note_edit_title");
 
     public BulkObservableCollection<Note> Notes { get; } = new();
     public BulkObservableCollection<Note> SelectedNotes { get; } = new();
@@ -38,9 +43,6 @@ public partial class NotesViewModel : ViewModelBase
         DataEvents.DataChanged += OnDataChanged;
 
         SelectedNotes.CollectionChanged += (s, e) => OnPropertyChanged(nameof(HasSelection));
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => { AppLogger.LogError("Notes load failed", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private bool _isLoaded;
@@ -84,6 +86,7 @@ public partial class NotesViewModel : ViewModelBase
     {
         if (!EnsureCanEditForSession()) return;
         _editingId   = 0;
+        IsNewNote    = true;
         EditTitle    = "";
         EditContent  = "";
         EditCreatedAt = DateTimeOffset.Now;
@@ -113,6 +116,7 @@ public partial class NotesViewModel : ViewModelBase
         {
             var note = list.First();
             _editingId = note.Id;
+            IsNewNote = false;
             EditTitle = note.Title;
             EditContent = note.Content;
             EditCreatedAt = SafeDateTimeOffset(note.CreatedAt);
@@ -211,6 +215,13 @@ public partial class NotesViewModel : ViewModelBase
     [RelayCommand]
     public async Task ExportExcelAsync()
     {
+        var snapshot = Notes.ToList();
+        if (snapshot.Count == 0)
+        {
+            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
+            return;
+        }
+
         string baseName = LocalizationManager.L("export_fn_notes");
         string fileName = $"{baseName}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
         string? path = await _dialogService.SaveFileAsync(
@@ -219,13 +230,6 @@ public partial class NotesViewModel : ViewModelBase
             LocalizationManager.L("svc_excel_filter"));
             
         if (string.IsNullOrEmpty(path)) return;
-
-        var snapshot = Notes.ToList();
-        if (snapshot.Count == 0)
-        {
-            await _dialogService.ShowMessageAsync(LocalizationManager.L("warning"), LocalizationManager.L("bulk_operation_empty"));
-            return;
-        }
 
         IsLoading = true;
         try

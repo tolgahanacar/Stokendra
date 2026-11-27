@@ -37,7 +37,7 @@ public sealed class DepartmentRepository(IDbConnectionFactory connectionFactory)
             "INSERT INTO Departments (Name) VALUES (@Name)",
             new { Name = cleanName },
             cancellationToken: cancellationToken));
-        LogAudit("Insert", "Departments", 0, cleanName);
+        LogAudit(conn, null, "Insert", "Departments", 0, cleanName);
     }
 
     public async Task DeleteAsync(string name, CancellationToken cancellationToken = default)

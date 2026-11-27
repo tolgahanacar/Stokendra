@@ -37,10 +37,7 @@ public partial class DashboardViewModel : ViewModelBase
         _stockCards = stockCards;
 
         DataEvents.DataChanged += OnDataChanged;
-
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => AppLogger.LogError("Dashboard load failed", ex));
+        // Loaded lazily by MainViewModel.NavigateToDashboard()
     }
 
     private void OnDataChanged(DataDomain domain)

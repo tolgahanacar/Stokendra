@@ -17,6 +17,11 @@ public partial class BulkEditServicesViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     [ObservableProperty] private string _title = "";
     [ObservableProperty] private string _errorMessage = "";
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    private bool _isSaving;
+
+    public bool CanSave => !IsSaving;
 
     // Bulk Apply Fields
     [ObservableProperty] private bool _isApplyDate;
@@ -76,47 +81,37 @@ public partial class BulkEditServicesViewModel : ViewModelBase
     private void ApplyBulk()
     {
         ErrorMessage = "";
-        int updatedCount = 0;
 
         foreach (var r in EditingRecords)
         {
             if (IsApplyDate && ServiceDate.HasValue)
             {
                 r.ServiceDate = ServiceDate.Value.Date.Add(r.ServiceDate.TimeOfDay);
-                updatedCount++;
             }
             if (IsApplyCompany)
             {
                 r.Company = Company ?? "";
-                updatedCount++;
             }
             if (IsApplyDeviceName && !string.IsNullOrWhiteSpace(DeviceName))
             {
                 r.DeviceName = DeviceName;
-                updatedCount++;
             }
             if (IsApplyIssue)
             {
                 r.Issue = Issue ?? "";
-                updatedCount++;
             }
             if (IsApplyResult)
             {
                 r.Result = ResultText ?? "";
-                updatedCount++;
             }
-        }
-
-        if (updatedCount > 0)
-        {
-            var temp = EditingRecords.ToList();
-            EditingRecords.ReplaceAll(temp);
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
+        if (IsSaving) return;
+        IsSaving = true;
         ErrorMessage = "";
         ApplyBulk();
         try
@@ -130,10 +125,7 @@ public partial class BulkEditServicesViewModel : ViewModelBase
                 }
             }
 
-            foreach (var r in EditingRecords)
-            {
-                await _services.UpdateAsync(r);
-            }
+            await _services.UpdateBulkAsync(EditingRecords);
 
             CloseAction?.Invoke(true);
         }
@@ -141,6 +133,10 @@ public partial class BulkEditServicesViewModel : ViewModelBase
         {
             AppLogger.LogError("Bulk services edit save error", ex);
             ErrorMessage = $"⚠️ {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 

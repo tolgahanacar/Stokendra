@@ -164,4 +164,8 @@
         <Setter Property="Background" Value="Transparent"/>
     </Style>
 
+    <Style Selector="Button:disabled">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+
 </Styles>

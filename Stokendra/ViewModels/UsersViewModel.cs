@@ -33,10 +33,6 @@ public partial class UsersViewModel : ViewModelBase
         _dialogService = dialogService;
 
         DataEvents.DataChanged += OnDataChanged;
-
-        AsyncHelper.RunSafe(
-            () => LoadUsersAsync(),
-            ex => AppLogger.LogError("Users load failed", ex));
     }
 
     private void OnDataChanged(DataDomain domain)
@@ -204,7 +200,8 @@ public partial class UsersViewModel : ViewModelBase
             {
                 DataEvents.NotifyChanged(DataDomain.Users);
                 await LoadUsersAsync();
-                StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, nextRole);
+                string roleDisplay = nextRole == "admin" ? LocalizationManager.L("role_admin") : LocalizationManager.L("role_user");
+                StatusMessage = string.Format(LocalizationManager.L("user_role_updated"), targetUser.Username, roleDisplay);
                 IsSuccess = true;
             }
             else
@@ -289,13 +286,7 @@ public partial class UsersViewModel : ViewModelBase
         StatusMessage = "";
         _isLoaded = false;
 
-        if (IsAdmin)
-        {
-            AsyncHelper.RunSafe(
-                () => LoadUsersAsync(),
-                ex => AppLogger.LogError("Users refresh failed", ex));
-        }
-        else
+        if (!IsAdmin)
         {
             Users.Clear();
             SelectedUser = null;

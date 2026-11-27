@@ -84,3 +84,59 @@ public class FirstLetterConverter : IValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
 }
+
+public class SuccessColorConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value is true
+            ? Avalonia.Media.Brush.Parse("#10B981")
+            : Avalonia.Media.Brush.Parse("#EF4444");
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+public class SuccessIconConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value is true ? "✔" : "⚠";
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Maps nullable NumericUpDown decimal values to non-nullable double (null maps to 0).
+/// </summary>
+public class SafeDoubleConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is double d) return System.Convert.ToDecimal(d);
+        if (value is decimal m) return m;
+        return 0m;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value == null) return 0d;
+        if (value is decimal m) return System.Convert.ToDouble(m);
+        if (value is double d) return d;
+        return 0d;
+    }
+}
+
+/// <summary>
+/// Returns true when integer count equals zero (for empty state visibility).
+/// </summary>
+public class ZeroToBoolConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        return value is int count && count == 0;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) => throw new NotImplementedException();
+}

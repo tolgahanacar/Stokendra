@@ -39,7 +39,8 @@ public partial class FeedbackViewModel : ViewModelBase
         _feedbackService = feedbackService;
         _dialogService = dialogService;
 
-        RefreshSession();
+        TargetEmailDisplay = _feedbackService.TargetEmail;
+        SelectedType = FeedbackTypes[0];
     }
 
     public override void RefreshSession()
@@ -59,7 +60,6 @@ public partial class FeedbackViewModel : ViewModelBase
             : FeedbackTypes[0];
 
         TargetEmailDisplay = _feedbackService.TargetEmail;
-        RefreshDiagnostics();
     }
 
     [RelayCommand]

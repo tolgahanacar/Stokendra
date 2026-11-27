@@ -74,6 +74,9 @@ public interface IMovementRepository
     /// <summary>Gets a distinct list of recipients.</summary>
     List<string> GetDeliveredPersons();
 
+    /// <summary>Gets a distinct list of recipients asynchronously.</summary>
+    Task<List<string>> GetDeliveredPersonsAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Gets paged stock movements matching the specified filters.</summary>
     Task<List<StockMovement>> GetPagedAsync(
         int page, int pageSize,

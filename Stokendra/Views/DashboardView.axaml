@@ -72,20 +72,27 @@
                     <TextBlock Text="{infra:L low_stock_alerts}"
                                FontSize="15" FontWeight="Bold" Foreground="#F39C12"/>
 
-                    <DataGrid ItemsSource="{Binding LowStockItems}"
-                               Height="220"
-                               IsReadOnly="True"
-                               CanUserResizeColumns="True"
-                               Background="#0C0E14"
-                               BorderThickness="0">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"     Width="150"/>
-                            <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"     Width="200"/>
-                            <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding Current}"  Width="150"/>
-                            <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}" Width="150"/>
-                            <DataGridTextColumn Header="{infra:L status}"        Binding="{Binding Status}"    Width="200"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <Grid>
+                        <DataGrid ItemsSource="{Binding LowStockItems}"
+                                  Height="220"
+                                  IsReadOnly="True"
+                                  CanUserResizeColumns="True"
+                                  Background="#0C0E14"
+                                  BorderThickness="0">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="{infra:L code_no}"       Binding="{Binding Code}"     Width="150"/>
+                                <DataGridTextColumn Header="{infra:L stock_name}"    Binding="{Binding Name}"     Width="200"/>
+                                <DataGridTextColumn Header="{infra:L current_stock}" Binding="{Binding Current}"  Width="150"/>
+                                <DataGridTextColumn Header="{infra:L min_stock}"     Binding="{Binding MinStock}" Width="150"/>
+                                <DataGridTextColumn Header="{infra:L status}"        Binding="{Binding Status}"    Width="200"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock Text="{infra:L no_low_stock}"
+                                   IsVisible="{Binding LowStockItems.Count, Converter={StaticResource ZeroToBoolConverter}}"
+                                   IsHitTestVisible="False"
+                                   Foreground="#10B981" FontSize="14" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
                 </StackPanel>
             </Border>
 

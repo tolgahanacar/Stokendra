@@ -21,6 +21,8 @@ public partial class StockCardsViewModel : ViewModelBase
     [ObservableProperty] private string    _searchText = "";
     [ObservableProperty] 
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     private bool      _isLoading;
     [ObservableProperty] private string    _statusText = "";
     [ObservableProperty] private StockCard? _selectedCard;
@@ -69,10 +71,6 @@ public partial class StockCardsViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsCardSelected));
             OnPropertyChanged(nameof(IsSingleCardSelected));
         };
-        
-        AsyncHelper.RunSafe(
-            () => LoadAsync(),
-            ex => { AppLogger.LogError("Load error", ex); StatusText = $"{LocalizationManager.L("error")}: {ex.Message}"; });
     }
 
     private void OnDataChanged(DataDomain domain)
@@ -283,6 +281,7 @@ public partial class StockCardsViewModel : ViewModelBase
             StatusText = LocalizationManager.L("loading");
             int count = 0;
             await Task.Run(() => {
+                string defaultUnit = LocalizationManager.L("default_unit");
                 var mappings = new Dictionary<string, string[]>
                 {
                     { "code", new[] { "code", "kod", "kodno", "stok kodu", "stokkodu" } },
@@ -311,7 +310,7 @@ public partial class StockCardsViewModel : ViewModelBase
                         Code = code,
                         Name = name,
                         Category = col["category"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["category"])) : "",
-                        Unit = col["unit"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["unit"]), "Adet") : "Adet",
+                        Unit = col["unit"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["unit"]), defaultUnit) : defaultUnit,
                         MinStock = col["minStock"] > 0 ? ExcelImportHelper.ParseCellInt(row.Cell(col["minStock"]), 0) : 0,
                         CardType = "Child",
                         Description = col["description"] > 0 ? ExcelImportHelper.ParseCellString(row.Cell(col["description"])) : ""
@@ -414,38 +413,44 @@ public partial class StockCardsViewModel : ViewModelBase
         try
         {
             StatusText = LocalizationManager.L("preparing_print");
-            
-            var sbHeaders = new System.Text.StringBuilder();
-            sbHeaders.Append($"<th style='width: 10%;'>{LocalizationManager.L("code_no")}</th>");
-            sbHeaders.Append($"<th style='width: 30%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("card_type")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("category")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("current_stock")}</th>");
-            sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("min_stock")}</th>");
-            
-            var sbBody = new System.Text.StringBuilder();
-            foreach (var c in snapshot)
+            string title = LocalizationManager.L("stock_cards");
+            string dateInfo = LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm"));
+            string footer = LocalizationManager.L("total_records_page", snapshot.Count, 1, 1);
+
+            string html = await Task.Run(() =>
             {
-                sbBody.Append("<tr>");
-                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Code)}</td>");
-                sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(c.Name)}</td>");
-                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.CardTypeDisplay)}</td>");
-                sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Category)}</td>");
-                sbBody.Append($"<td class='num'>{(c.IsParentCard ? "-" : c.CurrentStock.ToString())}</td>");
-                sbBody.Append($"<td class='num'>{c.MinStock}</td>");
-                sbBody.Append("</tr>");
-            }
+                var sbHeaders = new System.Text.StringBuilder();
+                sbHeaders.Append($"<th style='width: 10%;'>{LocalizationManager.L("code_no")}</th>");
+                sbHeaders.Append($"<th style='width: 30%; text-align: left; padding-left: 8px;'>{LocalizationManager.L("stock_name")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("card_type")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("category")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("current_stock")}</th>");
+                sbHeaders.Append($"<th style='width: 15%;'>{LocalizationManager.L("min_stock")}</th>");
+
+                var sbBody = new System.Text.StringBuilder(snapshot.Count * 160);
+                foreach (var c in snapshot)
+                {
+                    sbBody.Append("<tr>");
+                    sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Code)}</td>");
+                    sbBody.Append($"<td style='text-align: left; padding-left: 8px;'>{PrintTemplateBuilder.Escape(c.Name)}</td>");
+                    sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.CardTypeDisplay)}</td>");
+                    sbBody.Append($"<td class='num'>{PrintTemplateBuilder.Escape(c.Category)}</td>");
+                    sbBody.Append($"<td class='num'>{(c.IsParentCard ? "-" : c.CurrentStock.ToString())}</td>");
+                    sbBody.Append($"<td class='num'>{c.MinStock}</td>");
+                    sbBody.Append("</tr>");
+                }
+
+                return PrintTemplateBuilder.BuildReportHtml(
+                    title: title,
+                    headerTitle: title.ToUpper(),
+                    dateInfo: dateInfo,
+                    tableHeadersHtml: sbHeaders.ToString(),
+                    tableBodyHtml: sbBody.ToString(),
+                    footerHtml: footer
+                );
+            });
             
-            string html = PrintTemplateBuilder.BuildReportHtml(
-                title: LocalizationManager.L("stock_cards"),
-                headerTitle: LocalizationManager.L("stock_cards").ToUpper(),
-                dateInfo: LocalizationManager.L("report_date", DateTime.Now.ToString("dd.MM.yyyy HH:mm")),
-                tableHeadersHtml: sbHeaders.ToString(),
-                tableBodyHtml: sbBody.ToString(),
-                footerHtml: LocalizationManager.L("total_records_page", snapshot.Count, 1, 1)
-            );
-            
-            var previewVm = new PrintPreviewViewModel(LocalizationManager.L("stock_cards"), html);
+            var previewVm = new PrintPreviewViewModel(title, html);
             await _dialogService.ShowDialogAsync(previewVm);
             
             StatusText = LocalizationManager.L("printing_finished");

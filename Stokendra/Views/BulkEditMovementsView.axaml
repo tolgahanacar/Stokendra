@@ -6,16 +6,12 @@
         xmlns:views="using:Stokendra.Views"
         x:Class="Stokendra.Views.BulkEditMovementsView"
         Title="{Binding Title}"
-        Width="1000" Height="650"
+        Width="1000" Height="620"
         MinWidth="800" MinHeight="500"
         WindowStartupLocation="CenterOwner"
         CanResize="True"
         Background="#111522"
         x:CompileBindings="False">
-
-    <Design.DataContext>
-        <vm:BulkEditMovementsViewModel/>
-    </Design.DataContext>
 
     <Grid RowDefinitions="Auto,Auto,*,Auto">
 
@@ -42,7 +38,7 @@
                     <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="Auto,85,*" VerticalAlignment="Center">
                         <CheckBox Grid.Column="0" IsChecked="{Binding IsApplyDate, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Grid.Column="1" Text="{infra:L date_filter}" VerticalAlignment="Center" Foreground="#8A9BBF" FontSize="12"/>
-                        <CalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" Watermark="{infra:L date_filter}" HorizontalAlignment="Stretch" Height="28"/>
+                        <views:SafeCalendarDatePicker Grid.Column="2" SelectedDate="{Binding Date, Mode=TwoWay}" IsEnabled="{Binding IsApplyDate}" Watermark="{infra:L date_filter}" HorizontalAlignment="Stretch" Height="28"/>
                     </Grid>
 
                     <!-- Department (Row 0, Col 1) -->
@@ -116,7 +112,7 @@
                     <DataGridTemplateColumn Header="{infra:L quantity}" Width="110">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate x:DataType="models:StockMovement">
-                                <NumericUpDown Value="{Binding Quantity, Mode=TwoWay}"
+                                <NumericUpDown Value="{Binding Quantity, Mode=TwoWay, Converter={StaticResource SafeDoubleConverter}}"
                                                Minimum="0"
                                                FormatString="N2"
                                                Height="28"
@@ -190,10 +186,13 @@
                     <Button Content="{infra:L cancel}"
                             Classes="Secondary"
                             Command="{Binding CancelCommand}"
+                            IsCancel="True"
                             Width="100" MinHeight="36"/>
                     <Button Content="{infra:L save}"
                             Classes="Primary"
                             Command="{Binding SaveCommand}"
+                            IsDefault="True"
+                            IsEnabled="{Binding CanSave}"
                             Width="100" MinHeight="36"/>
                 </StackPanel>
             </Grid>
