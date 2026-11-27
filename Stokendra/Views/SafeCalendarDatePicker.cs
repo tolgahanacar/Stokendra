@@ -1,3 +1,4 @@
+using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 
@@ -5,6 +6,8 @@ namespace Stokendra.Views;
 
 public class SafeCalendarDatePicker : CalendarDatePicker
 {
+    protected override Type StyleKeyOverride => typeof(CalendarDatePicker);
+
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         if (IsKeyboardFocusWithin)

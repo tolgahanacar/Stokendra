@@ -201,4 +201,16 @@ public class PerformanceAndUiImprovementsTests : IDisposable
             LocalizationManager.L("bulk_checked_missing_quantity", 1));
         await movMock.DidNotReceive().AddBulkAsync(Arg.Any<IEnumerable<StockMovement>>());
     }
+
+    [Fact]
+    public void Test_SafeCalendarDatePicker_InheritsCalendarDatePickerStyleKey()
+    {
+        var picker = new Stokendra.Views.SafeCalendarDatePicker();
+        var styleKeyProp = typeof(Avalonia.StyledElement).GetProperty(
+            "StyleKeyOverride",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(styleKeyProp);
+        var styleKey = styleKeyProp!.GetValue(picker) as Type;
+        Assert.Equal(typeof(Avalonia.Controls.CalendarDatePicker), styleKey);
+    }
 }
